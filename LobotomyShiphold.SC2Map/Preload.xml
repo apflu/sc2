@@ -3,6 +3,8 @@
 <Actor id="SYSTEM_ActorConfig"/>
 <Terrain id="KorhalPlatformEx2"/>
 <Unit id="Lob_Marker_Spawn"/>
+<Unit id="Lob_Core_Basic"/>
+<Unit id="Lob_CoreDown_Basic"/>
 <Unit id="Lob_Device_Basic"/>
 <Unit id="Lob_Pile_Ore" Variations="0"/>
 <Unit id="Lob_Recycler_Basic"/>

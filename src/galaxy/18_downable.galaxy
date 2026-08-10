@@ -1,0 +1,86 @@
+//--------------------------------------------------------------------------------------------------
+// Things that answer a killing blow by going offline instead of dying.
+//
+// Devices do it (baseline 4.5) and the rest hall core does it (baseline 3.2,
+// losing the inner layer is reversible), and there will be more. The pattern is
+// always the same: a fatal hit swaps the unit for its Down counterpart, and
+// repairing that back to full swaps it in return.
+//
+// The type-name convention carries the pairing: Lob_<Thing>_<Variant> against
+// Lob_<Thing>Down_<Variant>. State is the first segment rather than a suffix
+// on the variant, which is what keeps ObjectsGen_Scan<Thing>() meaning "the
+// ones that are working" without any filtering. See docs/dev/authoring-contract.md.
+//
+// Each system keeps its own trigger and calls in here, rather than this module
+// dispatching. Dispatch would need a type table Galaxy cannot walk, and the
+// glue per system is three lines.
+//--------------------------------------------------------------------------------------------------
+
+// Life a downed thing is born at. Not zero, and low enough that repairing it is
+// a visible job rather than a formality.
+const fixed c_downedLife = 1.0;
+
+//--------------------------------------------------------------------------------------------------
+// Swaps one type prefix for the other, keeping the variant segment.
+//--------------------------------------------------------------------------------------------------
+string Downable_Retype (string from, string fromPrefix, string toPrefix) {
+    return toPrefix + StringSub(from, StringLength(fromPrefix) + 1, StringLength(from));
+}
+
+//--------------------------------------------------------------------------------------------------
+// Replaces a unit with its counterpart in the other state, in place.
+//--------------------------------------------------------------------------------------------------
+void Downable_Morph (unit which, string toType, fixed life) {
+    point where;
+    fixed facing;
+    int owner;
+
+    where = UnitGetPosition(which);
+    facing = UnitGetFacing(which);
+    owner = UnitGetOwner(which);
+
+    // Remove rather than kill: killing would fire the death handlers, and going
+    // offline is not a death in any sense the rest of the code means. Removing
+    // also frees the footprint before the replacement needs it, though placement
+    // is ignored anyway for good measure.
+    UnitRemove(which);
+
+    UnitCreate(1, toType, c_unitCreateIgnorePlacement, owner, where, facing);
+    UnitSetPropertyFixed(UnitLastCreated(), c_unitPropLife, life);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Takes the killing blow off a unit and puts its downed counterpart there.
+//--------------------------------------------------------------------------------------------------
+void Downable_TakeDown (unit victim, string upPrefix, string downPrefix) {
+    // Clamp first so the unit cannot die between here and the morph.
+    UnitSetPropertyFixed(victim, c_unitPropLife, c_downedLife);
+    Downable_Morph(victim,
+                   Downable_Retype(UnitGetType(victim), upPrefix, downPrefix),
+                   c_downedLife);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Puts back anything in `down` that has been repaired to full.
+//
+// Counting down, not up: morphing removes the unit, and a unit group drops units
+// that stop existing, so walking forwards would renumber the tail and skip every
+// second one that finished repairing on the same tick.
+//--------------------------------------------------------------------------------------------------
+void Downable_RestoreRepaired (unitgroup down, string downPrefix, string upPrefix) {
+    unit which;
+    int count;
+    int i;
+
+    count = UnitGroupCount(down, c_unitCountAlive);
+    i = count;
+    while (i >= 1) {
+        which = UnitGroupUnit(down, i);
+        if (which != null && UnitGetPropertyFixed(which, c_unitPropLifePercent, true) >= 99.0) {
+            Downable_Morph(which,
+                           Downable_Retype(UnitGetType(which), downPrefix, upPrefix),
+                           UnitGetPropertyFixed(which, c_unitPropLifeMax, true));
+        }
+        i = i - 1;
+    }
+}

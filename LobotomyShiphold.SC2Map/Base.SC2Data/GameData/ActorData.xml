@@ -91,6 +91,43 @@
             <Image value="Assets\Textures\Wireframe-Terran-Refinery.dds"/>
         </Wireframe>
     </CActorUnit>
+    <CActorUnit id="Lob_Core_Basic" parent="TerranBuildingEx" unitName="Lob_Core_Basic">
+        <Aliases value="_UnitHuge"/>
+        <Model value="Armory"/>
+        <BuildModel value="Armory"/>
+        <PlacementModel value="ArmoryPlacement"/>
+        <PortraitModel value="ArmoryPortrait"/>
+        <DeathArray index="Normal" ModelLink="ArmoryDeath"/>
+        <BarOffset value="110"/>
+        <BarWidth value="135"/>
+        <GroupIcon>
+            <Image value="Assets\Textures\Wireframe-Terran-Armory.dds"/>
+        </GroupIcon>
+        <UnitIcon value="Assets\Textures\btn-building-terran-armory.dds"/>
+        <HeroIcon value="Assets\Textures\btn-building-terran-armory.dds"/>
+        <Wireframe>
+            <Image value="Assets\Textures\Wireframe-Terran-Armory.dds"/>
+        </Wireframe>
+    </CActorUnit>
+    <CActorUnit id="Lob_CoreDown_Basic" parent="TerranBuildingEx" unitName="Lob_CoreDown_Basic">
+        <On Terms="UnitBirth.Lob_CoreDown_Basic" Send="SetTintColor 70,70,80"/>
+        <Aliases value="_UnitHuge"/>
+        <Model value="Armory"/>
+        <BuildModel value="Armory"/>
+        <PlacementModel value="ArmoryPlacement"/>
+        <PortraitModel value="ArmoryPortrait"/>
+        <DeathArray index="Normal" ModelLink="ArmoryDeath"/>
+        <BarOffset value="110"/>
+        <BarWidth value="135"/>
+        <GroupIcon>
+            <Image value="Assets\Textures\Wireframe-Terran-Armory.dds"/>
+        </GroupIcon>
+        <UnitIcon value="Assets\Textures\btn-building-terran-armory.dds"/>
+        <HeroIcon value="Assets\Textures\btn-building-terran-armory.dds"/>
+        <Wireframe>
+            <Image value="Assets\Textures\Wireframe-Terran-Armory.dds"/>
+        </Wireframe>
+    </CActorUnit>
     <CActorUnit id="Lob_Debris_4x4" parent="DestructibleUnitStandard" unitName="Lob_Debris_Normal">
         <Model value="DestructibleDebris4x4"/>
         <BuildModel value="DestructibleDebris4x4"/>

@@ -1,0 +1,187 @@
+//--------------------------------------------------------------------------------------------------
+// Sectors and the inner layer.
+//
+// Baseline 3.2 splits every player's sector in two: an outer work face where
+// being overrun is only a fight, and an inner core where the economy and the
+// department passives live. That split is the structural reason section 1's
+// no-punish principle holds -- a neighbour's mistake pushes zerg into your
+// outer layer, but only your own failure to hold the inner layer touches what
+// you are actually worth.
+//
+// The inner layer is a unit: Lob_Core_Basic, one per player. Expressing it as a
+// unit rather than a region gets four things from one object -- where the rest
+// hall is, whether it is still held, an owner, and eventually the command card
+// that department and fortification upgrades hang off. Baseline 3.2 already
+// lists a department core as inner-layer content, so this is not an invention.
+//
+// Losing it is reversible, per 3.2, so it uses the same disable-not-destroy
+// mechanic devices do: the core morphs to Lob_CoreDown_Basic and stays there
+// until somebody repairs it.
+//
+// What is here is the state and one consequence -- rest hall recovery. The
+// department framework that keys off Sector_InnerHeld is the next system, not
+// this one.
+//
+// Numbered early on purpose. Galaxy needs a declaration before its use and the
+// modules concatenate in filename order, so anything other systems query has to
+// come before them, whatever order it was written in.
+//--------------------------------------------------------------------------------------------------
+
+const string c_coreUpPrefix = "Lob_Core_";
+const string c_coreDownPrefix = "Lob_CoreDown_";
+
+// How far from the core still counts as being in the rest hall. Deliberately
+// generous: this is meant to be a room you are in, not a tile you stand on.
+const fixed c_restHallRadius = 12.0;
+
+const fixed c_sectorPeriod = 1.0;
+
+const string c_restHallBuff = "Lob_RestHall_Recovery";
+
+trigger gt_coreFatal;
+trigger gt_sectorTick;
+
+//--------------------------------------------------------------------------------------------------
+// Whether this player still holds their inner layer.
+//
+// The question is asked of the world rather than of a flag, so there is nothing
+// that can drift: a held core is a Lob_Core_ unit owned by them existing, and a
+// lost one is a Lob_CoreDown_ unit in its place.
+//--------------------------------------------------------------------------------------------------
+bool Sector_InnerHeld (int player) {
+    unitgroup cores;
+    unit core;
+    int count;
+    int i;
+
+    cores = ObjectsGen_ScanCore();
+    count = UnitGroupCount(cores, c_unitCountAlive);
+
+    i = 1;
+    while (i <= count) {
+        core = UnitGroupUnit(cores, i);
+        if (core != null && UnitGetOwner(core) == player) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is inside its owner's rest hall, with that rest hall intact.
+//
+// A downed core does not shelter anybody: the room is still there, but the
+// thing that made it a rest hall is not. That is the whole point of 3.2.
+//--------------------------------------------------------------------------------------------------
+bool Sector_InRestHall (unit which) {
+    unitgroup cores;
+    unit core;
+    int count;
+    int i;
+
+    if (which == null) {
+        return false;
+    }
+
+    cores = ObjectsGen_ScanCore();
+    count = UnitGroupCount(cores, c_unitCountAlive);
+
+    i = 1;
+    while (i <= count) {
+        core = UnitGroupUnit(cores, i);
+        if (core != null
+            && UnitGetOwner(core) == UnitGetOwner(which)
+            && DistanceBetweenPoints(UnitGetPosition(core), UnitGetPosition(which))
+               <= c_restHallRadius) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// The inner layer, for the greybox readout.
+//--------------------------------------------------------------------------------------------------
+string Sector_HeldText (int player) {
+    if (Sector_InnerHeld(player)) {
+        return "held";
+    }
+    return "LOST";
+}
+
+//--------------------------------------------------------------------------------------------------
+// Intercepts the killing blow on a core. Same shape as the device handler.
+//--------------------------------------------------------------------------------------------------
+bool Sector_CoreFatal_Func (bool testConds, bool runActions) {
+    unit victim;
+
+    if (!runActions) {
+        return true;
+    }
+
+    victim = EventUnit();
+    if (!ObjectsGen_IsCore(victim)) {
+        return true;
+    }
+
+    Downable_TakeDown(victim, c_coreUpPrefix, c_coreDownPrefix);
+    UIDisplayMessage(
+        PlayerGroupAll(),
+        c_messageAreaSubtitle,
+        StringToText("inner layer lost -- repair the core to get it back")
+    );
+    return true;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Restores repaired cores, and keeps rest hall recovery matched to who is
+// actually standing in one.
+//
+// Applied and removed rather than left on, so the buff icon on the character is
+// an honest readout of whether the room is doing anything for them.
+//--------------------------------------------------------------------------------------------------
+bool Sector_Tick_Func (bool testConds, bool runActions) {
+    unitgroup people;
+    unit who;
+    int count;
+    int i;
+    bool sheltered;
+    bool buffed;
+
+    if (!runActions) {
+        return true;
+    }
+
+    Downable_RestoreRepaired(ObjectsGen_ScanCoreDown(), c_coreDownPrefix, c_coreUpPrefix);
+
+    people = ObjectsGen_ScanHero();
+    UnitGroupAddUnitGroup(people, ObjectsGen_ScanSCV());
+    count = UnitGroupCount(people, c_unitCountAlive);
+
+    i = 1;
+    while (i <= count) {
+        who = UnitGroupUnit(people, i);
+        if (who != null && UnitIsAlive(who)) {
+            sheltered = Sector_InRestHall(who);
+            buffed = UnitHasBehavior2(who, c_restHallBuff);
+            if (sheltered && !buffed) {
+                UnitBehaviorAdd(who, c_restHallBuff, who, 1);
+            }
+            else if (!sheltered && buffed) {
+                UnitBehaviorRemove(who, c_restHallBuff, 1);
+            }
+        }
+        i = i + 1;
+    }
+    return true;
+}
+
+void Sector_Init () {
+    gt_coreFatal = TriggerCreate("Sector_CoreFatal_Func");
+    TriggerAddEventUnitDamaged(gt_coreFatal, null, c_unitDamageTypeAny, c_unitDamageFatal, null);
+
+    gt_sectorTick = TriggerCreate("Sector_Tick_Func");
+    TriggerAddEventTimePeriodic(gt_sectorTick, c_sectorPeriod, c_timeGame);
+}

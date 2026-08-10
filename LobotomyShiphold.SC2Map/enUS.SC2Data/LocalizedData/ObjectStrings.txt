@@ -1,5 +1,7 @@
 ﻿Actor/Name/Lob_Hero_Agent=Lob_Hero_Agent
 Actor/Name/Lob_Debris_4x4=Lob_Debris_4x4
+Actor/Name/Lob_Core_Basic=Lob_Core_Basic
+Actor/Name/Lob_CoreDown_Basic=Lob_CoreDown_Basic
 Actor/Name/Lob_Device_Basic=Lob_Device_Basic
 Actor/Name/Lob_Pile_Ore=Lob_Pile_Ore
 Actor/Name/Lob_Recycler_Basic=Lob_Recycler_Basic

@@ -127,6 +127,51 @@
         <ResourceDropOff index="Minerals" value="1"/>
         <EditorCategories value="ObjectType:Structure,ObjectFamily:Campaign"/>
     </CUnit>
+    <!-- The rest hall core. Baseline 3.2 lists it as inner-layer content, and
+         making it a real unit is what lets one object carry everything the
+         inner layer has to answer: where the rest hall is, whether it is still
+         held, and later the command card that department upgrades live on.
+
+         It goes down the same way a device does, because baseline 3.2 also says
+         losing the inner layer is reversible. Same mechanic, same code. -->
+    <CUnit id="Lob_Core_Basic">
+        <DeathRevealRadius value="3"/>
+        <Race value="Terr"/>
+        <FlagArray index="Turnable" value="0"/>
+        <FlagArray index="PreventDefeat" value="1"/>
+        <FlagArray index="PreventDestroy" value="1"/>
+        <FlagArray index="UseLineOfSight" value="1"/>
+        <FlagArray index="TownAlert" value="1"/>
+        <FlagArray index="NoPortraitTalk" value="1"/>
+        <FogVisibility value="Snapshot"/>
+        <PlaneArray index="Ground" value="1"/>
+        <Collide index="Ground" value="1"/>
+        <Collide index="Structure" value="1"/>
+        <Collide index="Small" value="1"/>
+        <Attributes index="Armored" value="1"/>
+        <Attributes index="Mechanical" value="1"/>
+        <Attributes index="Structure" value="1"/>
+        <LifeStart value="1500"/>
+        <LifeMax value="1500"/>
+        <LifeArmor value="2"/>
+        <LifeArmorName value="Unit/LifeArmorName/TerranBuildingPlating"/>
+        <Sight value="11"/>
+        <RepairTime value="60"/>
+        <AttackTargetPriority value="30"/>
+        <Radius value="1.25"/>
+        <SeparationRadius value="1.25"/>
+        <Footprint value="Footprint3x3Contour"/>
+        <PlacementFootprint value="Footprint3x3"/>
+        <MinimapRadius value="1.75"/>
+        <EditorCategories value="ObjectType:Structure,ObjectFamily:Campaign"/>
+    </CUnit>
+    <!-- Inner layer lost. No passives while this is what is standing there.
+         Invulnerable for the same two reasons the downed device is: nothing
+         keeps hitting it, repair still reaches it. -->
+    <CUnit id="Lob_CoreDown_Basic" parent="Lob_Core_Basic">
+        <FlagArray index="Invulnerable" value="1"/>
+        <LifeStart value="1"/>
+    </CUnit>
     <CUnit id="Lob_Debris_Normal">
         <DeathRevealRadius value="3"/>
         <FlagArray index="CreateVisible" value="1"/>
