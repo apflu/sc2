@@ -1,50 +1,3 @@
-//==================================================================================================
-//
-// GENERATED FILE -- DO NOT EDIT.
-//
-// Built from src/galaxy/ by tools/build_galaxy.py
-// Edit the sources there and rerun the build.
-//
-//==================================================================================================
-include "TriggerLibs/NativeLib"
-
-//--------------------------------------------------------------------------------------------------
-// src/galaxy/01_p0_smoke.galaxy
-//--------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------
-// P0 smoke test.
-//
-// Sole purpose: prove the text-first pipeline works end to end -- sources in
-// src/galaxy/ get built into MapScript.galaxy, the map loads them, and our own
-// triggers fire. No gameplay here. Delete once P0 proper starts.
-//
-// Also confirms melee initialization is gone: no starting resources, no worker
-// line, no melee AI. A custom map sets all of that up itself.
-//--------------------------------------------------------------------------------------------------
-
-trigger gt_P0Smoke;
-
-bool P0Smoke_Func (bool testConds, bool runActions) {
-    if (!runActions) {
-        return true;
-    }
-
-    UIDisplayMessage(
-        PlayerGroupAll(),
-        c_messageAreaSubtitle,
-        StringToText("P0 pipeline OK -- built from src/galaxy/")
-    );
-    return true;
-}
-
-void P0Smoke_Init () {
-    gt_P0Smoke = TriggerCreate("P0Smoke_Func");
-    TriggerAddEventTimeElapsed(gt_P0Smoke, 1.0, c_timeGame);
-}
-
-//--------------------------------------------------------------------------------------------------
-// src/galaxy/10_registry.galaxy
-//--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
 // Object registry.
 //
@@ -118,13 +71,4 @@ void Registry_Init () {
     gv_devices = UnitGroup(null, c_playerDevice, RegionEntireMap(), null, 0);
     Registry_ConsumeSpawnMarkers();
     Registry_Report();
-}
-
-//--------------------------------------------------------------------------------------------------
-// Map Initialization
-//--------------------------------------------------------------------------------------------------
-void InitMap () {
-    libNtve_InitLib();
-    P0Smoke_Init();
-    Registry_Init();
 }
