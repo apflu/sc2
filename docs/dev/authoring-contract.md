@@ -114,6 +114,27 @@ SC2 按固定文件名自动加载这个目录，新增一个 catalog 不需要�
 
 **唯一必须重申的字段是 actor 的 `Model`。**暴雪的很多 actor 根本不写 `Model`——它靠 actor id 和 model id 同名来解析。继承一个"未设置"的字段，意味着子 actor 会拿自己的 id 去找模型，然后找不到。
 
+**但 actor 不能继承具体单位的 actor。**这是实测撞出来的：
+
+```
+Scope[Lob_Hero_Agent, Unit] Unable to create unit actor
+```
+
+单位 catalog 是惰性数据，继承得很干净；**actor 是消息总线的订阅者**，而父 actor 携带的订阅是烤死在父单位名字上的。子 actor 上写 `unitName` **不会**重定向它们——`parent="Marine"` 的子 actor 仍然只监听 `UnitBirth.Marine`，我们的单位出生时没人应答，于是无法创建。
+
+暴雪自己的 `CarrierInterceptorDummy`（`parent="Carrier"`）展示了变通办法，也顺便展示了为什么不该用它：
+
+```xml
+<On index="0" Terms="UnitBirth.CarrierInterceptorDummy"/>
+<On index="1" Terms="UnitBirth.CarrierInterceptorDummy"/>
+...
+<On index="73" removed="1"/>
+```
+
+它得**按数组下标**逐条改写继承来的订阅。暴雪哪天调整父 actor 的事件顺序，这套下标就静默失效了。
+
+**结论**：`CUnit` 继承具体单位（`parent="Marine"`）没问题；`CActorUnit` 只继承抽象基类（`GenericUnitStandard` / `TerranBuildingEx` / `DestructibleUnitStandard`），需要什么字段显式写。
+
 ### 依赖
 
 地图当前依赖 `Void (Mod)`，也就是多人数据链（core + liberty + swarm + void 的 multi 部分）。

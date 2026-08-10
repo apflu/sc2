@@ -58,6 +58,8 @@ bool Economy_Status_Func (bool testConds, bool runActions) {
             + "  cleared=" + IntToString(gv_debrisCleared)
             + "  pile=" + IntToString(gv_orePile)
             + "  power=" + IntToString(gv_power)
+            + " (" + IntToString(gv_devicesOnline) + "/" + IntToString(gv_devicesTotal)
+            + " online, +" + IntToString(gv_devicesOnline * c_powerPerDevicePerTick) + "/tick)"
             + "  workers=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Worker(), c_unitCountAlive))
             + "  miners=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Miner(), c_unitCountAlive))
         )

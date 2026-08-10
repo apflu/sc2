@@ -64,16 +64,51 @@
             <Image value="Assets\Textures\Wireframe-General-DestructibleDebris-4x4.dds"/>
         </Wireframe>
     </CActorUnit>
-    <CActorUnit id="Lob_Hero_Agent" parent="Marine" unitName="Lob_Hero_Agent">
-        <!-- Model has to be restated even though everything else is inherited:
-             the stock Marine actor never declares one, it resolves by actor id
-             matching the model id. Inheriting an unset field means our actor
-             would go looking for a model called Lob_Hero_Agent and find none. -->
-        <Model value="Marine"/>
+    <CActorUnit id="Lob_Hero_Agent" parent="GenericUnitStandard" unitName="Lob_Hero_Agent">
+        <!-- Parented to the abstract base, NOT to Marine, even though the unit
+             above is parented to the Marine CUnit. Unit catalogs are inert data
+             and inherit cleanly; actors are message-bus subscribers, and the
+             subscriptions a parent actor carries are baked to the parent's unit
+             name. Setting unitName on the child does not retarget them, so a
+             child of the Marine actor still listens for UnitBirth.Marine and
+             nothing answers for ours: "Unable to create unit actor".
+
+             Blizzard's own CarrierInterceptorDummy (parent="Carrier") shows the
+             alternative, and shows why we are not taking it: it has to rewrite
+             the inherited subscriptions by array index, On index="0" through
+             "5", which silently rots the moment Blizzard reorders the parent. -->
+        <Aliases value="_UnitSmall"/>
+        <Macros value="UnloadDropAnim"/>
+        <Macros value="PhysicsDeathsSwarmGround"/>
+        <!-- Attack bracket subscribed on WeaponStart.* rather than by weapon
+             name, exactly as the stock Marine actor does, so the animation
+             follows the character's weapon whatever we rename it to later. -->
+        <On Terms="Abil.attack.ReadyStart" Send="AnimGroupApply Ready"/>
+        <On Terms="Abil.attack.ReadyStop" Send="AnimGroupRemove Ready"/>
+        <On Terms="WeaponStart.*.AttackStart" Send="AnimBracketStart Attack Attack"/>
+        <On Terms="WeaponStop.*.AttackStop" Send="AnimBracketStop Attack"/>
         <!-- Greybox tell, same idea as the SCV tints below: in a fight the
              player's own unit has to be the one that obviously is not
              everything else. -->
         <On Terms="UnitBirth.Lob_Hero_Agent" Send="SetTintColor 120,255,140"/>
+        <Model value="Marine"/>
+        <ModelFlags index="OutlineEmitter" value="1"/>
+        <BuildModel value="Marine"/>
+        <PlacementModel value="Marine"/>
+        <DeathArray index="Normal" ModelLink="MarineDeath"/>
+        <PortraitModel value="MarinePortrait"/>
+        <WalkAnimMoveSpeed value="2.25"/>
+        <BarOffset value="40"/>
+        <BarWidth value="36"/>
+        <GroupIcon>
+            <Image value="Assets\Textures\Wireframe-Terran-Marine.dds"/>
+        </GroupIcon>
+        <HeroIcon value="Assets\Textures\btn-unit-terran-marine.dds"/>
+        <UnitIcon value="Assets\Textures\btn-unit-terran-marine.dds"/>
+        <LifeArmorIcon value="Assets\Textures\btn-upgrade-terran-infantryarmorlevel0.dds"/>
+        <Wireframe>
+            <Image value="Assets\Textures\Wireframe-Terran-Marine.dds"/>
+        </Wireframe>
     </CActorUnit>
     <CActorUnit id="Lob_SCV" parent="GenericUnitStandard" unitName="None">
         <!-- One actor for every SCV role: the models are identical, so the roles

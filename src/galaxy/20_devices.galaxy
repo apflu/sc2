@@ -24,6 +24,13 @@ const fixed c_deviceDisabledLife = 1.0;
 
 int gv_power;
 
+// How many devices were producing on the last tick, and how many exist at all.
+// The accumulated total answers "how much have I banked"; only these answer
+// "is my grid healthy right now", which is the question a player actually has
+// while a device is being chewed on.
+int gv_devicesOnline;
+int gv_devicesTotal;
+
 trigger gt_deviceFatal;
 trigger gt_deviceTick;
 
@@ -84,11 +91,15 @@ bool Devices_Tick_Func (bool testConds, bool runActions) {
     devices = ObjectsGen_ScanDevice();
     count = UnitGroupCount(devices, c_unitCountAlive);
 
+    gv_devicesTotal = count;
+    gv_devicesOnline = 0;
+
     i = 1;
     while (i <= count) {
         device = UnitGroupUnit(devices, i);
         if (device != null
             && UnitGetPropertyFixed(device, c_unitPropLifePercent, true) >= c_deviceOnlineLifePercent) {
+            gv_devicesOnline = gv_devicesOnline + 1;
             gv_power = gv_power + c_powerPerDevicePerTick;
         }
         i = i + 1;
@@ -98,6 +109,8 @@ bool Devices_Tick_Func (bool testConds, bool runActions) {
 
 void Devices_Init () {
     gv_power = 0;
+    gv_devicesOnline = 0;
+    gv_devicesTotal = 0;
 
     gt_deviceFatal = TriggerCreate("Devices_Fatal_Func");
     TriggerAddEventUnitDamaged(gt_deviceFatal, null, c_unitDamageTypeAny, c_unitDamageFatal, null);
