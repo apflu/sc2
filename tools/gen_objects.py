@@ -30,6 +30,14 @@ OUT = ROOT / "src" / "galaxy" / "05_objects_gen.galaxy"
 PREFIX = "Lob_"
 INT32_MAX = 2**31 - 1
 
+# Categories the Galaxy side expects to exist. Emitted with empty tables when no
+# unit has been authored yet, so code referencing ObjectsGen_ScanDevice() still
+# compiles and simply finds nothing -- the two machines don't have to land their
+# halves in the same order. A scan of an empty table returns an empty group and
+# the predicate returns false, so unwritten content stays inert rather than
+# breaking the build.
+EXPECTED_CATEGORIES = ["Debris", "Device", "Hero", "Marker", "Miner", "Worker"]
+
 HEADER = """//--------------------------------------------------------------------------------------------------
 // GENERATED FILE -- DO NOT EDIT.
 //
@@ -43,9 +51,9 @@ HEADER = """//------------------------------------------------------------------
 def read_categories() -> dict[str, list[str]]:
     """Bucket custom unit types by the category segment of their id."""
     if not UNIT_DATA.is_file():
-        return {}
+        return {c: [] for c in EXPECTED_CATEGORIES}
 
-    categories: dict[str, list[str]] = {}
+    categories: dict[str, list[str]] = {c: [] for c in EXPECTED_CATEGORIES}
     for unit in ET.parse(UNIT_DATA).getroot().iter("CUnit"):
         uid = unit.get("id", "")
         if not uid.startswith(PREFIX):
@@ -143,6 +151,24 @@ def build() -> str:
             f"        i = i + 1;\n"
             f"    }}\n"
             f"    return found;\n"
+            f"}}\n\n"
+            f"//--------------------------------------------------------------------------------------------------\n"
+            f"// Whether a unit is a {category}, whatever variant. False for an empty\n"
+            f"// category, so code can be written ahead of the units existing.\n"
+            f"//--------------------------------------------------------------------------------------------------\n"
+            f"bool ObjectsGen_Is{category} (unit target) {{\n"
+            f"    int i;\n\n"
+            f"    if (target == null) {{\n"
+            f"        return false;\n"
+            f"    }}\n"
+            f"    i = 0;\n"
+            f"    while (i < c_types{category}Count) {{\n"
+            f"        if (UnitGetType(target) == gvg_types{category}[i]) {{\n"
+            f"            return true;\n"
+            f"        }}\n"
+            f"        i = i + 1;\n"
+            f"    }}\n"
+            f"    return false;\n"
             f"}}\n\n"
         )
 

@@ -1,40 +1,27 @@
 //--------------------------------------------------------------------------------------------------
-// Object registry.
+// Startup self-check.
 //
-// What the code side knows about the editor side. Objects are identified by
-// UNIT TYPE, resolved through the tables in 05_objects_gen.galaxy.
+// There is no registry object to maintain: the generated scan functions in
+// 05_objects_gen.galaxy already answer "what is on the map", live, including
+// for units spawned at runtime. This module only reports what they see once at
+// startup, which is where authoring mistakes show up.
 //
-// Type rather than placed id, because the editor assigns ids randomly and they
-// cannot be chosen by hand -- and more importantly because type is the one
-// channel that also covers units spawned at runtime, which is where debris is
-// eventually headed.
-//
-// Type rather than owning player, because ownership carries engine semantics we
-// do not control (alliance, default right-click, selection, minimap colour) and
-// there are only fifteen slots to spend on six players plus the swarm.
+// Type counts come from a runtime scan; the group count comes from the build's
+// snapshot of Objects. Printing them side by side is deliberate: a nonzero type
+// count next to a zero group count means the build did not run after the last
+// editor save, which is otherwise an invisible and very confusing state.
 //--------------------------------------------------------------------------------------------------
 
-unitgroup gv_debris;
-unitgroup gv_scvs;
-
-//--------------------------------------------------------------------------------------------------
-// Prints what the scan found. While greyboxing this is the fastest way to spot
-// a unit placed with the wrong type -- the count comes back short.
-//--------------------------------------------------------------------------------------------------
-void Registry_Report () {
+void Registry_Init () {
     UIDisplayMessage(
         PlayerGroupAll(),
         c_messageAreaSubtitle,
         StringToText(
-            "registry: debris=" + IntToString(UnitGroupCount(gv_debris, c_unitCountAlive))
-            + " scv=" + IntToString(UnitGroupCount(gv_scvs, c_unitCountAlive))
-            + " group(debris)=" + IntToString(UnitGroupCount(ObjectsGen_Group("debris"), c_unitCountAlive))
+            "scan: debris=" + IntToString(UnitGroupCount(ObjectsGen_ScanDebris(), c_unitCountAlive))
+            + " worker=" + IntToString(UnitGroupCount(ObjectsGen_ScanWorker(), c_unitCountAlive))
+            + " miner=" + IntToString(UnitGroupCount(ObjectsGen_ScanMiner(), c_unitCountAlive))
+            + " device=" + IntToString(UnitGroupCount(ObjectsGen_ScanDevice(), c_unitCountAlive))
+            + " | group(debris)=" + IntToString(UnitGroupCount(ObjectsGen_Group("debris"), c_unitCountAlive))
         )
     );
-}
-
-void Registry_Init () {
-    gv_debris = ObjectsGen_ScanDebris();
-    gv_scvs = ObjectsGen_ScanSCV();
-    Registry_Report();
 }

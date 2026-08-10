@@ -1,0 +1,73 @@
+//--------------------------------------------------------------------------------------------------
+// The second stage of the resource chain: ore pile -> spendable resources.
+//
+// Fully automatic and independent of power, per the design baseline. The player
+// never touches this; their only job is to keep the pile stocked, which is what
+// makes clearing feel like it feeds something rather than paying out directly.
+//
+// Throughput scales with the miner headcount, so miners are a real investment
+// and losing them is a real setback -- without ever letting a teammate's
+// mistake touch this rate. See docs/design/gameplay-baseline.md section 1.
+//--------------------------------------------------------------------------------------------------
+
+const fixed c_minePeriod = 2.0;
+const int c_minePerMinerPerTick = 5;
+
+const fixed c_statusPeriod = 5.0;
+
+trigger gt_mineTick;
+trigger gt_status;
+
+bool Economy_MineTick_Func (bool testConds, bool runActions) {
+    int miners;
+    int moved;
+
+    if (!runActions) {
+        return true;
+    }
+
+    miners = UnitGroupCount(ObjectsGen_ScanMiner(), c_unitCountAlive);
+    moved = miners * c_minePerMinerPerTick;
+    if (moved > gv_orePile) {
+        moved = gv_orePile;
+    }
+    if (moved <= 0) {
+        return true;
+    }
+
+    gv_orePile = gv_orePile - moved;
+    PlayerModifyPropertyInt(c_p0Player, c_playerPropMinerals, c_playerPropOperAdd, moved);
+    return true;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Greybox readout. P0 is about whether the loop pulls in three directions at
+// once, so the numbers that matter have to be visible without alt-tabbing to
+// read a log. Goes away once there is a real UI.
+//--------------------------------------------------------------------------------------------------
+bool Economy_Status_Func (bool testConds, bool runActions) {
+    if (!runActions) {
+        return true;
+    }
+
+    UIDisplayMessage(
+        PlayerGroupAll(),
+        c_messageAreaSubtitle,
+        StringToText(
+            "debris left=" + IntToString(UnitGroupCount(ObjectsGen_ScanDebris(), c_unitCountAlive))
+            + "  cleared=" + IntToString(gv_debrisCleared)
+            + "  pile=" + IntToString(gv_orePile)
+            + "  workers=" + IntToString(UnitGroupCount(ObjectsGen_ScanWorker(), c_unitCountAlive))
+            + "  miners=" + IntToString(UnitGroupCount(ObjectsGen_ScanMiner(), c_unitCountAlive))
+        )
+    );
+    return true;
+}
+
+void Economy_Init () {
+    gt_mineTick = TriggerCreate("Economy_MineTick_Func");
+    TriggerAddEventTimePeriodic(gt_mineTick, c_minePeriod, c_timeGame);
+
+    gt_status = TriggerCreate("Economy_Status_Func");
+    TriggerAddEventTimePeriodic(gt_status, c_statusPeriod, c_timeGame);
+}
