@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Catalog>
+    <!-- The player character's weapon.
+         20 damage on a 1.0s period is 20 DPS, against the worker SCV's
+         FusionCutter at 5 / 1.5s = 3.3 DPS. That ~6x gap is the design
+         baseline's "a player clears far faster than an SCV does, at first";
+         the SCVs are meant to win it back later through numbers and upgrades.
+         Range 5 so the character can open on zerglings before contact, but
+         not so far that walking away from a fight is free. -->
+    <CWeaponLegacy id="Lob_Hero_Rifle">
+        <EditorCategories value="Race:Terran"/>
+        <Icon value="Assets\Textures\btn-upgrade-terran-infantryweaponslevel0.dds"/>
+        <TargetFilters value="Visible;Missile,Stasis,Dead,Hidden,Invulnerable"/>
+        <Range value="5"/>
+        <Period value="1.0"/>
+        <DamagePoint value="0.05"/>
+        <Backswing value="0.5"/>
+        <Effect value="Lob_Hero_Rifle"/>
+    </CWeaponLegacy>
+</Catalog>

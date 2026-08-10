@@ -69,10 +69,10 @@ python3 tools/build_galaxy.py
 地图加载后打印：
 
 ```
-registry: debris=N scv=N group(debris)=N
+scan: hero=N debris=N worker=N miner=N device=N | group(debris)=N
 ```
 
-前两个数来自类型扫描，第三个来自 group 表。**如果 group 那个数是 0 而 debris 不是 0，说明构建没跟上编辑器的存盘**，重跑一次构建即可。
+前几个数来自类型扫描，最后一个来自 group 表。**如果 group 那个数是 0 而 debris 不是 0，说明构建没跟上编辑器的存盘**，重跑一次构建即可。
 
 > 如果三个数字全是 0，说明预放单位在 `InitMap()` 执行时还没创建完。届时把扫描挪到 0 秒定时触发器里即可，代码侧改一行。
 
@@ -81,12 +81,27 @@ registry: debris=N scv=N group(debris)=N
 一个扇区，先不做多扇区。
 
 1. **地形**：一个内层房间 + 通向外层的走廊 + 外层开阔区。粗糙即可。
-2. **玩家英雄**：内层放一个，先用现成单位顶替。
+2. **玩家角色** `Lob_Hero_Agent`：内层放**恰好一个**。它摆在哪就在哪复活——脚本不另设复活点，因为一个会和出生点漂移开的复活点迟早会变成 bug。
 3. **残骸** `Lob_Debris_*`：外层摆 8-12 个，堵住部分通路。
-4. **设备** `Lob_Device_*`（还没建这个单位）：外层摆 2 个，至少一个**被残骸挡住**。
+4. **设备** `Lob_Device_*`：外层摆 2 个，至少一个**被残骸挡住**。
 5. **虫群入口**：外层边缘 1-2 处。
 
 **摆放的设计意图**：内层、设备、虫群入口三者的距离关系，决定了"跑过去修" vs "留下来打"这个取舍存不存在。设备离内层太近，玩家就不需要做选择，P0 白测。让至少一个设备远到跑一趟要付出真实代价。
+
+## 数据文件
+
+`Base.SC2Data/GameData/` 下目前有四个 catalog，都是手写的：
+
+| 文件 | 内容 |
+|------|------|
+| `UnitData.xml` | `CUnit` |
+| `ActorData.xml` | `CActorUnit` |
+| `WeaponData.xml` | `CWeaponLegacy` |
+| `EffectData.xml` | `CEffectDamage` |
+
+SC2 按固定文件名自动加载这个目录，新增一个 catalog 不需要改 `ComponentList.SC2Components`。
+
+**XML 注释里不能出现 `--`**。这是 XML 规范本身的限制，不是 SC2 的。写中文破折号或者改标点。构建时 `gen_objects.py` 会解析 `UnitData.xml`，所以这类错误至少会在构建时炸出来，而不是留到游戏里。
 
 ## 扇区划分（P0.5+）
 
