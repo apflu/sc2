@@ -1,989 +1,183 @@
 //==================================================================================================
-//
-// GENERATED FILE -- DO NOT EDIT.
-//
-// Built from src/galaxy/ by tools/build_galaxy.py
-// Edit the sources there and rerun the build.
-//
+// 
+// Generated Map Script
+// 
+// Name:   Just Another StarCraft II Map
+// 
 //==================================================================================================
 include "TriggerLibs/NativeLib"
+include "ai485CA51A"
 
 //--------------------------------------------------------------------------------------------------
-// src/galaxy/00_config.galaxy
+// Library Initialization
 //--------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------
-// Shared constants.
-//
-// Lives in the lowest-numbered module because Galaxy needs a declaration before
-// its use and modules are concatenated in filename order.
-//--------------------------------------------------------------------------------------------------
-
-// P0 is single player. The map's default slots are 1 = the player, 2 = Hostile.
-const int c_p0Player = 1;
-const int c_p0Zerg = 2;
-
-//--------------------------------------------------------------------------------------------------
-// src/galaxy/05_objects_gen.galaxy
-//--------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------
-// GENERATED FILE -- DO NOT EDIT.
-//
-// Built from the map's UnitData.xml and Objects by tools/gen_objects.py.
-// Place things in the editor, rebuild, and the tables below follow.
-//--------------------------------------------------------------------------------------------------
-
-// Unit types, by the category segment of their id.
-const int c_typesDebrisCount = 1;
-string[1] gvg_typesDebris;
-const int c_typesDebris_NormalCount = 1;
-string[1] gvg_typesDebris_Normal;
-const int c_typesDeviceCount = 1;
-string[1] gvg_typesDevice;
-const int c_typesDevice_BasicCount = 1;
-string[1] gvg_typesDevice_Basic;
-const int c_typesHeroCount = 0;
-string[1] gvg_typesHero;
-const int c_typesMarkerCount = 1;
-string[1] gvg_typesMarker;
-const int c_typesMarker_SpawnCount = 1;
-string[1] gvg_typesMarker_Spawn;
-const int c_typesSCVCount = 3;
-string[3] gvg_typesSCV;
-const int c_typesSCV_MinerCount = 1;
-string[1] gvg_typesSCV_Miner;
-const int c_typesSCV_UnassignedCount = 1;
-string[1] gvg_typesSCV_Unassigned;
-const int c_typesSCV_WorkerCount = 1;
-string[1] gvg_typesSCV_Worker;
-
-// Editor object groups, flattened: names[i] owns the members
-// slice starting at groupFirst[i] and running groupSize[i] long.
-const int c_groupCount = 1;
-string[1] gvg_groupNames;
-int[1] gvg_groupFirst;
-int[1] gvg_groupSize;
-int[2] gvg_groupMembers;
-
-void ObjectsGen_Init () {
-    gvg_typesDebris[0] = "Lob_Debris_Normal";
-    gvg_typesDebris_Normal[0] = "Lob_Debris_Normal";
-    gvg_typesDevice[0] = "Lob_Device_Basic";
-    gvg_typesDevice_Basic[0] = "Lob_Device_Basic";
-    gvg_typesMarker[0] = "Lob_Marker_Spawn";
-    gvg_typesMarker_Spawn[0] = "Lob_Marker_Spawn";
-    gvg_typesSCV[0] = "Lob_SCV_Miner";
-    gvg_typesSCV[1] = "Lob_SCV_Unassigned";
-    gvg_typesSCV[2] = "Lob_SCV_Worker";
-    gvg_typesSCV_Miner[0] = "Lob_SCV_Miner";
-    gvg_typesSCV_Unassigned[0] = "Lob_SCV_Unassigned";
-    gvg_typesSCV_Worker[0] = "Lob_SCV_Worker";
-    gvg_groupNames[0] = "debris";
-    gvg_groupFirst[0] = 0;
-    gvg_groupSize[0] = 2;
-    gvg_groupMembers[0] = 982629277;
-    gvg_groupMembers[1] = 1070187309;
+void InitLibs () {
+    libNtve_InitLib();
 }
 
 //--------------------------------------------------------------------------------------------------
-// Every live Debris unit on the map, whichever variant and whoever owns it.
-// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+// Trigger Variables
 //--------------------------------------------------------------------------------------------------
-unitgroup ObjectsGen_ScanDebris () {
-    unitgroup found;
-    int i;
+trigger gt_MeleeInitialization;
 
-    found = UnitGroupEmpty();
-    i = 0;
-    while (i < c_typesDebrisCount) {
-        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesDebris[i], c_playerAny,
-                                               RegionEntireMap(), null, 0));
-        i = i + 1;
+//--------------------------------------------------------------------------------------------------
+// Custom AI Functions
+//--------------------------------------------------------------------------------------------------
+string[17] cai_playerAI;
+
+//--------------------------------------------------------------------------------------------------
+void InitCustomAI () {
+    int init_i;
+
+    for (init_i = 0; init_i <= 16; init_i += 1) {
+        cai_playerAI[init_i] = null;
     }
-    return found;
 }
 
 //--------------------------------------------------------------------------------------------------
-// Whether a unit is a Debris, whatever variant. False for an empty
-// category, so code can be written ahead of the units existing.
-//--------------------------------------------------------------------------------------------------
-bool ObjectsGen_IsDebris (unit target) {
-    int i;
+void cai_start (string ai, int p) {
+    if (p < 0 || p >= 16) {
+        return;
+    }
+    cai_playerAI[p] = ai;
 
-    if (target == null) {
+    if (cai_playerAI[p] == "ai485CA51A") { ai485CA51A_start(p); }
+}
+
+//--------------------------------------------------------------------------------------------------
+void cai_setDefGather (int p, point val) {
+    if (p < 0 || p >= 16) {
+        return;
+    }
+    if (cai_playerAI[p] == "ai485CA51A") { ai485CA51A_setDefGather(p, val); }
+}
+
+//--------------------------------------------------------------------------------------------------
+string cai_getCustomData (int p) {
+    if (p < 0 || p >= 16) {
+        return null;
+    }
+    if (cai_playerAI[p] == "ai485CA51A") { return ai485CA51A_getCustomData(p); }
+    return null;
+}
+
+//--------------------------------------------------------------------------------------------------
+wave cai_getLastWave (int p) {
+    if (p < 0 || p >= 16) {
+        return null;
+    }
+    if (cai_playerAI[p] == "ai485CA51A") { return ai485CA51A_getLastWave(p); }
+    return null;
+}
+
+//--------------------------------------------------------------------------------------------------
+void cai_waves_run (int p, playergroup target) {
+    if (p < 0 || p >= 16) {
+        return;
+    }
+    if (cai_playerAI[p] == "ai485CA51A") { ai485CA51A_waves_run(p, target); }
+}
+
+//--------------------------------------------------------------------------------------------------
+void cai_waves_enable (int p, bool val) {
+    if (p < 0 || p >= 16) {
+        return;
+    }
+    if (cai_playerAI[p] == "ai485CA51A") { ai485CA51A_waves_enable(p, val); }
+}
+
+//--------------------------------------------------------------------------------------------------
+void cai_waves_stop (string ai) {
+    if (ai == "ai485CA51A") { ai485CA51A_waves_stop(); }
+}
+
+//--------------------------------------------------------------------------------------------------
+void cai_wave_run (int w, int p, playergroup target, bool wait) {
+    if (p < 0 || p >= 16) {
+        return;
+    }
+    if (cai_playerAI[p] == "ai485CA51A") { ai485CA51A_wave_run(w, p, target, wait); }
+}
+
+//--------------------------------------------------------------------------------------------------
+void cai_wave_enable (int w, int p, bool val) {
+    if (p < 0 || p >= 16) {
+        return;
+    }
+    if (cai_playerAI[p] == "ai485CA51A") { ai485CA51A_wave_enable(w, p, val); }
+}
+
+//--------------------------------------------------------------------------------------------------
+bool cai_wave_isEnabled (int w, int p) {
+    if (p < 0 || p >= 16) {
         return false;
     }
-    i = 0;
-    while (i < c_typesDebrisCount) {
-        if (UnitGetType(target) == gvg_typesDebris[i]) {
-            return true;
-        }
-        i = i + 1;
-    }
+    if (cai_playerAI[p] == "ai485CA51A") { return ai485CA51A_wave_isEnabled(w, p); }
     return false;
 }
 
 //--------------------------------------------------------------------------------------------------
-// Every live Debris_Normal unit on the map, whichever variant and whoever owns it.
-// Works for runtime-spawned units too, unlike anything keyed on placed ids.
-//--------------------------------------------------------------------------------------------------
-unitgroup ObjectsGen_ScanDebris_Normal () {
-    unitgroup found;
-    int i;
-
-    found = UnitGroupEmpty();
-    i = 0;
-    while (i < c_typesDebris_NormalCount) {
-        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesDebris_Normal[i], c_playerAny,
-                                               RegionEntireMap(), null, 0));
-        i = i + 1;
+unitgroup cai_wave_createdUnits (int w, int p) {
+    if (p < 0 || p >= 16) {
+        return null;
     }
-    return found;
+    if (cai_playerAI[p] == "ai485CA51A") { return ai485CA51A_wave_createdUnits(w, p); }
+    return null;
 }
 
 //--------------------------------------------------------------------------------------------------
-// Whether a unit is a Debris_Normal, whatever variant. False for an empty
-// category, so code can be written ahead of the units existing.
-//--------------------------------------------------------------------------------------------------
-bool ObjectsGen_IsDebris_Normal (unit target) {
-    int i;
-
-    if (target == null) {
-        return false;
+wave cai_wave_createdWave (int w, int p) {
+    if (p < 0 || p >= 16) {
+        return null;
     }
-    i = 0;
-    while (i < c_typesDebris_NormalCount) {
-        if (UnitGetType(target) == gvg_typesDebris_Normal[i]) {
-            return true;
-        }
-        i = i + 1;
-    }
-    return false;
+    if (cai_playerAI[p] == "ai485CA51A") { return ai485CA51A_wave_createdWave(w, p); }
+    return null;
 }
 
 //--------------------------------------------------------------------------------------------------
-// Every live Device unit on the map, whichever variant and whoever owns it.
-// Works for runtime-spawned units too, unlike anything keyed on placed ids.
-//--------------------------------------------------------------------------------------------------
-unitgroup ObjectsGen_ScanDevice () {
-    unitgroup found;
-    int i;
-
-    found = UnitGroupEmpty();
-    i = 0;
-    while (i < c_typesDeviceCount) {
-        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesDevice[i], c_playerAny,
-                                               RegionEntireMap(), null, 0));
-        i = i + 1;
-    }
-    return found;
+void cai_startall () {
 }
 
 //--------------------------------------------------------------------------------------------------
-// Whether a unit is a Device, whatever variant. False for an empty
-// category, so code can be written ahead of the units existing.
-//--------------------------------------------------------------------------------------------------
-bool ObjectsGen_IsDevice (unit target) {
-    int i;
-
-    if (target == null) {
-        return false;
-    }
-    i = 0;
-    while (i < c_typesDeviceCount) {
-        if (UnitGetType(target) == gvg_typesDevice[i]) {
-            return true;
-        }
-        i = i + 1;
-    }
-    return false;
+void cai_runall () {
+    playergroup target = PlayerGroupEmpty();
 }
 
 //--------------------------------------------------------------------------------------------------
-// Every live Device_Basic unit on the map, whichever variant and whoever owns it.
-// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+// Trigger: Melee Initialization
 //--------------------------------------------------------------------------------------------------
-unitgroup ObjectsGen_ScanDevice_Basic () {
-    unitgroup found;
-    int i;
-
-    found = UnitGroupEmpty();
-    i = 0;
-    while (i < c_typesDevice_BasicCount) {
-        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesDevice_Basic[i], c_playerAny,
-                                               RegionEntireMap(), null, 0));
-        i = i + 1;
-    }
-    return found;
-}
-
-//--------------------------------------------------------------------------------------------------
-// Whether a unit is a Device_Basic, whatever variant. False for an empty
-// category, so code can be written ahead of the units existing.
-//--------------------------------------------------------------------------------------------------
-bool ObjectsGen_IsDevice_Basic (unit target) {
-    int i;
-
-    if (target == null) {
-        return false;
-    }
-    i = 0;
-    while (i < c_typesDevice_BasicCount) {
-        if (UnitGetType(target) == gvg_typesDevice_Basic[i]) {
-            return true;
-        }
-        i = i + 1;
-    }
-    return false;
-}
-
-//--------------------------------------------------------------------------------------------------
-// Every live Hero unit on the map, whichever variant and whoever owns it.
-// Works for runtime-spawned units too, unlike anything keyed on placed ids.
-//--------------------------------------------------------------------------------------------------
-unitgroup ObjectsGen_ScanHero () {
-    unitgroup found;
-    int i;
-
-    found = UnitGroupEmpty();
-    i = 0;
-    while (i < c_typesHeroCount) {
-        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesHero[i], c_playerAny,
-                                               RegionEntireMap(), null, 0));
-        i = i + 1;
-    }
-    return found;
-}
-
-//--------------------------------------------------------------------------------------------------
-// Whether a unit is a Hero, whatever variant. False for an empty
-// category, so code can be written ahead of the units existing.
-//--------------------------------------------------------------------------------------------------
-bool ObjectsGen_IsHero (unit target) {
-    int i;
-
-    if (target == null) {
-        return false;
-    }
-    i = 0;
-    while (i < c_typesHeroCount) {
-        if (UnitGetType(target) == gvg_typesHero[i]) {
-            return true;
-        }
-        i = i + 1;
-    }
-    return false;
-}
-
-//--------------------------------------------------------------------------------------------------
-// Every live Marker unit on the map, whichever variant and whoever owns it.
-// Works for runtime-spawned units too, unlike anything keyed on placed ids.
-//--------------------------------------------------------------------------------------------------
-unitgroup ObjectsGen_ScanMarker () {
-    unitgroup found;
-    int i;
-
-    found = UnitGroupEmpty();
-    i = 0;
-    while (i < c_typesMarkerCount) {
-        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesMarker[i], c_playerAny,
-                                               RegionEntireMap(), null, 0));
-        i = i + 1;
-    }
-    return found;
-}
-
-//--------------------------------------------------------------------------------------------------
-// Whether a unit is a Marker, whatever variant. False for an empty
-// category, so code can be written ahead of the units existing.
-//--------------------------------------------------------------------------------------------------
-bool ObjectsGen_IsMarker (unit target) {
-    int i;
-
-    if (target == null) {
-        return false;
-    }
-    i = 0;
-    while (i < c_typesMarkerCount) {
-        if (UnitGetType(target) == gvg_typesMarker[i]) {
-            return true;
-        }
-        i = i + 1;
-    }
-    return false;
-}
-
-//--------------------------------------------------------------------------------------------------
-// Every live Marker_Spawn unit on the map, whichever variant and whoever owns it.
-// Works for runtime-spawned units too, unlike anything keyed on placed ids.
-//--------------------------------------------------------------------------------------------------
-unitgroup ObjectsGen_ScanMarker_Spawn () {
-    unitgroup found;
-    int i;
-
-    found = UnitGroupEmpty();
-    i = 0;
-    while (i < c_typesMarker_SpawnCount) {
-        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesMarker_Spawn[i], c_playerAny,
-                                               RegionEntireMap(), null, 0));
-        i = i + 1;
-    }
-    return found;
-}
-
-//--------------------------------------------------------------------------------------------------
-// Whether a unit is a Marker_Spawn, whatever variant. False for an empty
-// category, so code can be written ahead of the units existing.
-//--------------------------------------------------------------------------------------------------
-bool ObjectsGen_IsMarker_Spawn (unit target) {
-    int i;
-
-    if (target == null) {
-        return false;
-    }
-    i = 0;
-    while (i < c_typesMarker_SpawnCount) {
-        if (UnitGetType(target) == gvg_typesMarker_Spawn[i]) {
-            return true;
-        }
-        i = i + 1;
-    }
-    return false;
-}
-
-//--------------------------------------------------------------------------------------------------
-// Every live SCV unit on the map, whichever variant and whoever owns it.
-// Works for runtime-spawned units too, unlike anything keyed on placed ids.
-//--------------------------------------------------------------------------------------------------
-unitgroup ObjectsGen_ScanSCV () {
-    unitgroup found;
-    int i;
-
-    found = UnitGroupEmpty();
-    i = 0;
-    while (i < c_typesSCVCount) {
-        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesSCV[i], c_playerAny,
-                                               RegionEntireMap(), null, 0));
-        i = i + 1;
-    }
-    return found;
-}
-
-//--------------------------------------------------------------------------------------------------
-// Whether a unit is a SCV, whatever variant. False for an empty
-// category, so code can be written ahead of the units existing.
-//--------------------------------------------------------------------------------------------------
-bool ObjectsGen_IsSCV (unit target) {
-    int i;
-
-    if (target == null) {
-        return false;
-    }
-    i = 0;
-    while (i < c_typesSCVCount) {
-        if (UnitGetType(target) == gvg_typesSCV[i]) {
-            return true;
-        }
-        i = i + 1;
-    }
-    return false;
-}
-
-//--------------------------------------------------------------------------------------------------
-// Every live SCV_Miner unit on the map, whichever variant and whoever owns it.
-// Works for runtime-spawned units too, unlike anything keyed on placed ids.
-//--------------------------------------------------------------------------------------------------
-unitgroup ObjectsGen_ScanSCV_Miner () {
-    unitgroup found;
-    int i;
-
-    found = UnitGroupEmpty();
-    i = 0;
-    while (i < c_typesSCV_MinerCount) {
-        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesSCV_Miner[i], c_playerAny,
-                                               RegionEntireMap(), null, 0));
-        i = i + 1;
-    }
-    return found;
-}
-
-//--------------------------------------------------------------------------------------------------
-// Whether a unit is a SCV_Miner, whatever variant. False for an empty
-// category, so code can be written ahead of the units existing.
-//--------------------------------------------------------------------------------------------------
-bool ObjectsGen_IsSCV_Miner (unit target) {
-    int i;
-
-    if (target == null) {
-        return false;
-    }
-    i = 0;
-    while (i < c_typesSCV_MinerCount) {
-        if (UnitGetType(target) == gvg_typesSCV_Miner[i]) {
-            return true;
-        }
-        i = i + 1;
-    }
-    return false;
-}
-
-//--------------------------------------------------------------------------------------------------
-// Every live SCV_Unassigned unit on the map, whichever variant and whoever owns it.
-// Works for runtime-spawned units too, unlike anything keyed on placed ids.
-//--------------------------------------------------------------------------------------------------
-unitgroup ObjectsGen_ScanSCV_Unassigned () {
-    unitgroup found;
-    int i;
-
-    found = UnitGroupEmpty();
-    i = 0;
-    while (i < c_typesSCV_UnassignedCount) {
-        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesSCV_Unassigned[i], c_playerAny,
-                                               RegionEntireMap(), null, 0));
-        i = i + 1;
-    }
-    return found;
-}
-
-//--------------------------------------------------------------------------------------------------
-// Whether a unit is a SCV_Unassigned, whatever variant. False for an empty
-// category, so code can be written ahead of the units existing.
-//--------------------------------------------------------------------------------------------------
-bool ObjectsGen_IsSCV_Unassigned (unit target) {
-    int i;
-
-    if (target == null) {
-        return false;
-    }
-    i = 0;
-    while (i < c_typesSCV_UnassignedCount) {
-        if (UnitGetType(target) == gvg_typesSCV_Unassigned[i]) {
-            return true;
-        }
-        i = i + 1;
-    }
-    return false;
-}
-
-//--------------------------------------------------------------------------------------------------
-// Every live SCV_Worker unit on the map, whichever variant and whoever owns it.
-// Works for runtime-spawned units too, unlike anything keyed on placed ids.
-//--------------------------------------------------------------------------------------------------
-unitgroup ObjectsGen_ScanSCV_Worker () {
-    unitgroup found;
-    int i;
-
-    found = UnitGroupEmpty();
-    i = 0;
-    while (i < c_typesSCV_WorkerCount) {
-        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesSCV_Worker[i], c_playerAny,
-                                               RegionEntireMap(), null, 0));
-        i = i + 1;
-    }
-    return found;
-}
-
-//--------------------------------------------------------------------------------------------------
-// Whether a unit is a SCV_Worker, whatever variant. False for an empty
-// category, so code can be written ahead of the units existing.
-//--------------------------------------------------------------------------------------------------
-bool ObjectsGen_IsSCV_Worker (unit target) {
-    int i;
-
-    if (target == null) {
-        return false;
-    }
-    i = 0;
-    while (i < c_typesSCV_WorkerCount) {
-        if (UnitGetType(target) == gvg_typesSCV_Worker[i]) {
-            return true;
-        }
-        i = i + 1;
-    }
-    return false;
-}
-
-//--------------------------------------------------------------------------------------------------
-// The placed objects of a named editor group. Preplaced only -- runtime
-// spawns have no group. Returns empty for an unknown name.
-//--------------------------------------------------------------------------------------------------
-unitgroup ObjectsGen_Group (string name) {
-    unitgroup found;
-    int i;
-    int m;
-
-    found = UnitGroupEmpty();
-    i = 0;
-    while (i < c_groupCount) {
-        if (gvg_groupNames[i] == name) {
-            m = gvg_groupFirst[i];
-            while (m < gvg_groupFirst[i] + gvg_groupSize[i]) {
-                UnitGroupAdd(found, UnitFromId(gvg_groupMembers[m]));
-                m = m + 1;
-            }
-            return found;
-        }
-        i = i + 1;
-    }
-    return found;
-}
-
-//--------------------------------------------------------------------------------------------------
-// src/galaxy/10_registry.galaxy
-//--------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------
-// Startup self-check.
-//
-// There is no registry object to maintain: the generated scan functions in
-// 05_objects_gen.galaxy already answer "what is on the map", live, including
-// for units spawned at runtime. This module only reports what they see once at
-// startup, which is where authoring mistakes show up.
-//
-// Type counts come from a runtime scan; the group count comes from the build's
-// snapshot of Objects. Printing them side by side is deliberate: a nonzero type
-// count next to a zero group count means the build did not run after the last
-// editor save, which is otherwise an invisible and very confusing state.
-//--------------------------------------------------------------------------------------------------
-
-void Registry_Init () {
-    UIDisplayMessage(
-        PlayerGroupAll(),
-        c_messageAreaSubtitle,
-        StringToText(
-            "scan: debris=" + IntToString(UnitGroupCount(ObjectsGen_ScanDebris(), c_unitCountAlive))
-            + " worker=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Worker(), c_unitCountAlive))
-            + " miner=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Miner(), c_unitCountAlive))
-            + " device=" + IntToString(UnitGroupCount(ObjectsGen_ScanDevice(), c_unitCountAlive))
-            + " | group(debris)=" + IntToString(UnitGroupCount(ObjectsGen_Group("debris"), c_unitCountAlive))
-        )
-    );
-}
-
-//--------------------------------------------------------------------------------------------------
-// src/galaxy/20_devices.galaxy
-//--------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------
-// Resource devices.
-//
-// Devices produce power on a tick while intact, and lethal damage disables them
-// instead of destroying them, per the design baseline. Disabling is not a
-// separate state flag: a device is online when its health is above a threshold,
-// and fatal damage is intercepted and clamped to near zero. Repair is then just
-// the native SCV repair ability putting health back, and the device comes back
-// online on its own.
-//
-// Modelling it that way means the health bar already shows the disabled state,
-// repair needs no bespoke mechanic, and there is no flag that can drift out of
-// sync with the unit it describes.
-//--------------------------------------------------------------------------------------------------
-
-const fixed c_devicePeriod = 3.0;
-const int c_powerPerDevicePerTick = 3;
-
-// Above this share of max health the device runs; below it, it is disabled.
-const fixed c_deviceOnlineLifePercent = 50.0;
-
-// What a device is left on after lethal damage. Not zero -- zero is death.
-const fixed c_deviceDisabledLife = 1.0;
-
-int gv_power;
-
-trigger gt_deviceFatal;
-trigger gt_deviceTick;
-
-//--------------------------------------------------------------------------------------------------
-// Devices that have taken any damage, for the workers to prioritise.
-//--------------------------------------------------------------------------------------------------
-unitgroup Devices_Damaged () {
-    unitgroup all;
-    unitgroup damaged;
-    unit device;
-    int count;
-    int i;
-
-    all = ObjectsGen_ScanDevice();
-    damaged = UnitGroupEmpty();
-    count = UnitGroupCount(all, c_unitCountAlive);
-
-    i = 1;
-    while (i <= count) {
-        device = UnitGroupUnit(all, i);
-        if (device != null && UnitGetPropertyFixed(device, c_unitPropLifePercent, true) < 99.0) {
-            UnitGroupAdd(damaged, device);
-        }
-        i = i + 1;
-    }
-    return damaged;
-}
-
-//--------------------------------------------------------------------------------------------------
-// Intercepts the killing blow and leaves the device standing at minimum health.
-//--------------------------------------------------------------------------------------------------
-bool Devices_Fatal_Func (bool testConds, bool runActions) {
-    unit victim;
-
+bool gt_MeleeInitialization_Func (bool testConds, bool runActions) {
+    // Automatic Variable Declarations
+    // Actions
     if (!runActions) {
         return true;
     }
 
-    victim = EventUnit();
-    if (!ObjectsGen_IsDevice(victim)) {
-        return true;
-    }
-
-    UnitSetPropertyFixed(victim, c_unitPropLife, c_deviceDisabledLife);
-    return true;
-}
-
-bool Devices_Tick_Func (bool testConds, bool runActions) {
-    unitgroup devices;
-    unit device;
-    int count;
-    int i;
-
-    if (!runActions) {
-        return true;
-    }
-
-    devices = ObjectsGen_ScanDevice();
-    count = UnitGroupCount(devices, c_unitCountAlive);
-
-    i = 1;
-    while (i <= count) {
-        device = UnitGroupUnit(devices, i);
-        if (device != null
-            && UnitGetPropertyFixed(device, c_unitPropLifePercent, true) >= c_deviceOnlineLifePercent) {
-            gv_power = gv_power + c_powerPerDevicePerTick;
-        }
-        i = i + 1;
-    }
-    return true;
-}
-
-void Devices_Init () {
-    gv_power = 0;
-
-    gt_deviceFatal = TriggerCreate("Devices_Fatal_Func");
-    TriggerAddEventUnitDamaged(gt_deviceFatal, null, c_unitDamageTypeAny, c_unitDamageFatal, null);
-
-    gt_deviceTick = TriggerCreate("Devices_Tick_Func");
-    TriggerAddEventTimePeriodic(gt_deviceTick, c_devicePeriod, c_timeGame);
-}
-
-//--------------------------------------------------------------------------------------------------
-// src/galaxy/25_clearing.galaxy
-//--------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------
-// Debris clearing.
-//
-// Clearing is modelled as damage, not as a custom progress bar: debris is a
-// destructible with a large health pool, and both the player and the workers
-// clear it by attacking it. That buys the health bar as progress feedback for
-// free, and makes the "player clears far faster than a worker" curve a pure
-// weapon-damage question that lives in data where it can be tuned, rather than
-// in two hand-written rate constants here.
-//
-// Worker assignment lives in 30_workers.galaxy; this module only owns what
-// clearing pays out.
-//--------------------------------------------------------------------------------------------------
-
-// Credit banked into the ore pile when a piece of debris is finished off. The
-// pile is the inner-room stockpile; converting it into spendable resources is
-// the miners' job, in 30_economy.galaxy.
-const int c_oreCreditPerDebris = 25;
-
-int gv_orePile;
-int gv_debrisCleared;
-
-trigger gt_debrisDied;
-
-//--------------------------------------------------------------------------------------------------
-// Any unit death, filtered down to debris. Cheaper and far less bookkeeping
-// than registering a death event per placed object, and it covers debris
-// spawned at runtime for free -- which is where debris is headed.
-//--------------------------------------------------------------------------------------------------
-bool Clearing_DebrisDied_Func (bool testConds, bool runActions) {
-    if (!runActions) {
-        return true;
-    }
-    if (!ObjectsGen_IsDebris(EventUnit())) {
-        return true;
-    }
-
-    gv_orePile = gv_orePile + c_oreCreditPerDebris;
-    gv_debrisCleared = gv_debrisCleared + 1;
-    return true;
-}
-
-void Clearing_Init () {
-    gv_orePile = 0;
-    gv_debrisCleared = 0;
-
-    gt_debrisDied = TriggerCreate("Clearing_DebrisDied_Func");
-    TriggerAddEventUnitDied(gt_debrisDied, null);
-}
-
-//--------------------------------------------------------------------------------------------------
-// src/galaxy/30_workers.galaxy
-//--------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------
-// Worker assignment.
-//
-// Workers pick their own job, repair before clearing. That ordering is the NPC
-// side of the same tension P0 is testing on the player: a damaged device pulls
-// a worker off the debris it was chewing on, so losing devices costs clearing
-// throughput as well as power.
-//
-// Only idle workers get an order. Reissuing every tick would reset the attack
-// of a worker already mid-swing and nothing would ever finish.
-//
-// The work-order marking UI is deliberately not in P0 -- see
-// docs/design/p0-scope.md. Until then this stands in for it.
-//--------------------------------------------------------------------------------------------------
-
-const fixed c_workerAssignPeriod = 1.0;
-
-trigger gt_workerAssign;
-
-bool Workers_Assign_Func (bool testConds, bool runActions) {
-    unitgroup workers;
-    unitgroup damaged;
-    unitgroup debris;
-    unit worker;
-    unit target;
-    point where;
-    int count;
-    int i;
-
-    if (!runActions) {
-        return true;
-    }
-
-    workers = ObjectsGen_ScanSCV_Worker();
-    count = UnitGroupCount(workers, c_unitCountAlive);
-    if (count == 0) {
-        return true;
-    }
-
-    damaged = Devices_Damaged();
-    debris = ObjectsGen_ScanDebris();
-
-    i = 1;
-    while (i <= count) {
-        worker = UnitGroupUnit(workers, i);
-        if (worker != null && UnitIsAlive(worker) && UnitOrderCount(worker) == 0) {
-            where = UnitGetPosition(worker);
-
-            target = UnitGroupClosestToPoint(damaged, where);
-            if (target != null) {
-                UnitIssueOrder(
-                    worker,
-                    OrderTargetingUnit(AbilityCommand("Repair", 0), target),
-                    c_orderQueueReplace
-                );
-            }
-            else {
-                target = UnitGroupClosestToPoint(debris, where);
-                if (target != null) {
-                    UnitIssueOrder(
-                        worker,
-                        OrderTargetingUnit(AbilityCommand("attack", 0), target),
-                        c_orderQueueReplace
-                    );
-                }
-            }
-        }
-        i = i + 1;
-    }
-    return true;
-}
-
-void Workers_Init () {
-    gt_workerAssign = TriggerCreate("Workers_Assign_Func");
-    TriggerAddEventTimePeriodic(gt_workerAssign, c_workerAssignPeriod, c_timeGame);
-}
-
-//--------------------------------------------------------------------------------------------------
-// src/galaxy/40_economy.galaxy
-//--------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------
-// The second stage of the resource chain: ore pile -> spendable resources.
-//
-// Fully automatic and independent of power, per the design baseline. The player
-// never touches this; their only job is to keep the pile stocked, which is what
-// makes clearing feel like it feeds something rather than paying out directly.
-//
-// Throughput scales with the miner headcount, so miners are a real investment
-// and losing them is a real setback -- without ever letting a teammate's
-// mistake touch this rate. See docs/design/gameplay-baseline.md section 1.
-//--------------------------------------------------------------------------------------------------
-
-const fixed c_minePeriod = 2.0;
-const int c_minePerMinerPerTick = 5;
-
-const fixed c_statusPeriod = 5.0;
-
-trigger gt_mineTick;
-trigger gt_status;
-
-bool Economy_MineTick_Func (bool testConds, bool runActions) {
-    int miners;
-    int moved;
-
-    if (!runActions) {
-        return true;
-    }
-
-    miners = UnitGroupCount(ObjectsGen_ScanSCV_Miner(), c_unitCountAlive);
-    moved = miners * c_minePerMinerPerTick;
-    if (moved > gv_orePile) {
-        moved = gv_orePile;
-    }
-    if (moved <= 0) {
-        return true;
-    }
-
-    gv_orePile = gv_orePile - moved;
-    PlayerModifyPropertyInt(c_p0Player, c_playerPropMinerals, c_playerPropOperAdd, moved);
+    MeleeInitResources();
+    MeleeInitUnits();
+    MeleeInitAI();
+    MeleeInitOptions();
     return true;
 }
 
 //--------------------------------------------------------------------------------------------------
-// Greybox readout. P0 is about whether the loop pulls in three directions at
-// once, so the numbers that matter have to be visible without alt-tabbing to
-// read a log. Goes away once there is a real UI.
-//--------------------------------------------------------------------------------------------------
-bool Economy_Status_Func (bool testConds, bool runActions) {
-    if (!runActions) {
-        return true;
-    }
-
-    UIDisplayMessage(
-        PlayerGroupAll(),
-        c_messageAreaSubtitle,
-        StringToText(
-            "debris left=" + IntToString(UnitGroupCount(ObjectsGen_ScanDebris(), c_unitCountAlive))
-            + "  cleared=" + IntToString(gv_debrisCleared)
-            + "  pile=" + IntToString(gv_orePile)
-            + "  power=" + IntToString(gv_power)
-            + "  workers=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Worker(), c_unitCountAlive))
-            + "  miners=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Miner(), c_unitCountAlive))
-        )
-    );
-    return true;
-}
-
-void Economy_Init () {
-    gt_mineTick = TriggerCreate("Economy_MineTick_Func");
-    TriggerAddEventTimePeriodic(gt_mineTick, c_minePeriod, c_timeGame);
-
-    gt_status = TriggerCreate("Economy_Status_Func");
-    TriggerAddEventTimePeriodic(gt_status, c_statusPeriod, c_timeGame);
+void gt_MeleeInitialization_Init () {
+    gt_MeleeInitialization = TriggerCreate("gt_MeleeInitialization_Func");
+    TriggerAddEventMapInit(gt_MeleeInitialization);
 }
 
 //--------------------------------------------------------------------------------------------------
-// src/galaxy/50_waves.galaxy
+// Trigger Initialization
 //--------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------
-// Zerg waves.
-//
-// One wave per spawn marker on a fixed interval, walking in on attack-move.
-// Wave size grows by one per wave -- a placeholder ramp, not a difficulty
-// curve. The baseline deliberately defers that until the mechanics it would be
-// balancing against exist.
-//
-// Waves aim at the nearest device rather than at the player, so that "leave the
-// fight to go repair" and "leave the repair to go fight" are the same decision
-// seen from two sides. Falling back to the nearest worker keeps them walking
-// somewhere meaningful before any device is placed.
-//--------------------------------------------------------------------------------------------------
-
-const fixed c_waveInterval = 45.0;
-const int c_waveBaseSize = 3;
-const string c_waveUnitType = "Zergling";
-
-int gv_waveNumber;
-
-trigger gt_wave;
-
-//--------------------------------------------------------------------------------------------------
-// What a wave spawning at `from` should walk towards.
-//--------------------------------------------------------------------------------------------------
-point Waves_TargetFrom (point from) {
-    unit target;
-
-    target = UnitGroupClosestToPoint(ObjectsGen_ScanDevice(), from);
-    if (target == null) {
-        target = UnitGroupClosestToPoint(ObjectsGen_ScanSCV(), from);
-    }
-    if (target == null) {
-        return from;
-    }
-    return UnitGetPosition(target);
-}
-
-bool Waves_Spawn_Func (bool testConds, bool runActions) {
-    unitgroup markers;
-    unitgroup spawned;
-    point where;
-    int markerCount;
-    int i;
-
-    if (!runActions) {
-        return true;
-    }
-
-    markers = ObjectsGen_ScanMarker_Spawn();
-    markerCount = UnitGroupCount(markers, c_unitCountAlive);
-    if (markerCount == 0) {
-        return true;
-    }
-
-    gv_waveNumber = gv_waveNumber + 1;
-
-    i = 1;
-    while (i <= markerCount) {
-        where = UnitGetPosition(UnitGroupUnit(markers, i));
-        spawned = UnitCreate(
-            c_waveBaseSize + gv_waveNumber,
-            c_waveUnitType,
-            0,
-            c_p0Zerg,
-            where,
-            270.0
-        );
-        UnitGroupIssueOrder(
-            spawned,
-            OrderTargetingPoint(AbilityCommand("attack", 0), Waves_TargetFrom(where)),
-            c_orderQueueReplace
-        );
-        i = i + 1;
-    }
-
-    UIDisplayMessage(
-        PlayerGroupAll(),
-        c_messageAreaSubtitle,
-        StringToText("wave " + IntToString(gv_waveNumber) + " incoming")
-    );
-    return true;
-}
-
-void Waves_Init () {
-    gv_waveNumber = 0;
-
-    gt_wave = TriggerCreate("Waves_Spawn_Func");
-    TriggerAddEventTimePeriodic(gt_wave, c_waveInterval, c_timeGame);
+void InitTriggers () {
+    gt_MeleeInitialization_Init();
 }
 
 //--------------------------------------------------------------------------------------------------
 // Map Initialization
 //--------------------------------------------------------------------------------------------------
 void InitMap () {
-    libNtve_InitLib();
-    ObjectsGen_Init();
-    Registry_Init();
-    Devices_Init();
-    Clearing_Init();
-    Workers_Init();
-    Economy_Init();
-    Waves_Init();
+    InitLibs();
+    InitCustomAI();
+    InitTriggers();
 }
