@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PlacedObjects Version="27">
     <ObjectUnit Id="1209983674" Position="47.7504,86.9882,0" Rotation="0.8247" Scale="1,1,1" UnitType="Lob_SCV_Miner" Player="1"/>
+    <ObjectUnit Id="1441002004" Position="48.9,85.6,0" Rotation="0.8247" Scale="1,1,1" UnitType="Lob_SCV_Miner" Player="1"/>
     <ObjectUnit Id="1650842594" Position="42.6557,87.2116,0" Rotation="1.5532" Scale="1,1,1" UnitType="Lob_SCV_Worker" Player="1"/>
     <ObjectUnit Id="1070187309" Position="49,90,0" Rotation="3.0197" Scale="1,1,1" UnitType="Lob_Debris_Normal"/>
     <ObjectUnit Id="982629277" Position="41,91,0" Rotation="1.5703" Scale="1,1,1" UnitType="Lob_Debris_Normal"/>

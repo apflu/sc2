@@ -626,8 +626,10 @@ const fixed c_heroRespawnDelay = 15.0;
 
 unit gv_hero;
 point gv_heroHome;
+timer gv_heroRespawn;
 
 trigger gt_heroDied;
+trigger gt_heroBack;
 
 //--------------------------------------------------------------------------------------------------
 // Creates the character at its home point and hands it to the player.
@@ -637,7 +639,11 @@ void Hero_Spawn () {
         return;
     }
 
-    UnitCreate(1, gvg_typesHero[0], 0, c_p0Player, gv_heroHome, 270.0);
+    // Ignoring placement is not optional. The home point may well be full of
+    // zerglings at exactly the moment the character is due back, and "the
+    // player does not respawn" is not a cost the design ever asked for.
+    UnitCreate(1, gvg_typesHero[0], c_unitCreateIgnorePlacement,
+               c_p0Player, gv_heroHome, 270.0);
     gv_hero = UnitLastCreated();
     UnitSelect(gv_hero, c_p0Player, true);
     CameraPan(c_p0Player, gv_heroHome, 0.0, -1.0, 10.0, true);
@@ -663,7 +669,22 @@ bool Hero_Died_Func (bool testConds, bool runActions) {
         StringToText("agent down -- back in "
                      + IntToString(FixedToInt(c_heroRespawnDelay)) + "s")
     );
-    Wait(c_heroRespawnDelay, c_timeGame);
+    TimerStart(gv_heroRespawn, c_heroRespawnDelay, false, c_timeGame);
+    return true;
+}
+
+//--------------------------------------------------------------------------------------------------
+// The respawn is a timer rather than a Wait inside the death handler. This
+// trigger runs on every unit death on the map, so waiting inside it would park
+// the whole handler for the delay and queue up every death that happened
+// meanwhile. Those queued runs would all no-op on the type check, but a handler
+// that is deaf for fifteen seconds at a time is not something to leave in place
+// on the assumption that nothing will ever need it.
+//--------------------------------------------------------------------------------------------------
+bool Hero_Back_Func (bool testConds, bool runActions) {
+    if (!runActions) {
+        return true;
+    }
     Hero_Spawn();
     return true;
 }
@@ -681,6 +702,11 @@ void Hero_Init () {
 
     UnitSelect(gv_hero, c_p0Player, true);
     CameraPan(c_p0Player, gv_heroHome, 0.0, -1.0, 10.0, true);
+
+    gv_heroRespawn = TimerCreate();
+
+    gt_heroBack = TriggerCreate("Hero_Back_Func");
+    TriggerAddEventTimer(gt_heroBack, gv_heroRespawn);
 
     gt_heroDied = TriggerCreate("Hero_Died_Func");
     TriggerAddEventUnitDied(gt_heroDied, null);
@@ -817,7 +843,14 @@ void Devices_Init () {
 // Credit banked into the ore pile when a piece of debris is finished off. The
 // pile is the inner-room stockpile; converting it into spendable resources is
 // the miners' job, in 30_economy.galaxy.
-const int c_oreCreditPerDebris = 25;
+// Sized against how long the pile then takes to drain, not against how much a
+// piece of debris "should" be worth. At 25 the two starting miners ate a whole
+// debris in five seconds, so the pile was empty essentially always -- which
+// makes miner headcount irrelevant and quietly guts the separate miner upgrade
+// line in baseline section 5.2. At 120 a debris is about 24 seconds of mining
+// against about 30 seconds of a player clearing it, so the pile backs up as
+// soon as the workers help, and more miners start being worth something.
+const int c_oreCreditPerDebris = 120;
 
 int gv_orePile;
 int gv_debrisCleared;
@@ -1074,7 +1107,7 @@ bool Waves_Spawn_Func (bool testConds, bool runActions) {
         spawned = UnitCreate(
             c_waveBaseSize + gv_waveNumber,
             c_waveUnitType,
-            0,
+            c_unitCreateIgnorePlacement,
             c_p0Zerg,
             where,
             270.0
