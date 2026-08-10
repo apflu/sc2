@@ -2,5 +2,9 @@
 <Preload>
 <Actor id="SYSTEM_ActorConfig"/>
 <Terrain id="KorhalPlatformEx2"/>
+<Unit id="Lob_Marker_Spawn"/>
+<Unit id="Lob_Device_Basic"/>
 <Unit id="Lob_Debris_Normal"/>
+<Unit id="Lob_SCV_Miner"/>
+<Unit id="Lob_SCV_Worker"/>
 </Preload>
