@@ -1,0 +1,100 @@
+//--------------------------------------------------------------------------------------------------
+// Debris clearing.
+//
+// Clearing is modelled as damage, not as a custom progress bar: debris is a
+// destructible with a large health pool, and both the player and the workers
+// clear it by attacking it. That buys the health bar as progress feedback for
+// free, and makes the "player clears far faster than a worker" curve a pure
+// weapon-damage question that lives in data where it can be tuned, rather than
+// in two hand-written rate constants here.
+//
+// Workers auto-assign to the nearest debris. The work-order marking UI is
+// deliberately NOT in P0 -- see docs/design/p0-scope.md.
+//--------------------------------------------------------------------------------------------------
+
+const int c_p0Player = 1;
+
+// Credit banked into the ore pile when a piece of debris is finished off. The
+// pile is the inner-room stockpile; converting it into spendable resources is
+// the miners' job, in 30_economy.galaxy.
+const int c_oreCreditPerDebris = 25;
+
+const fixed c_workerAssignPeriod = 1.0;
+
+int gv_orePile;
+int gv_debrisCleared;
+
+trigger gt_debrisDied;
+trigger gt_workerAssign;
+
+//--------------------------------------------------------------------------------------------------
+// Any unit death, filtered down to debris. Cheaper and far less bookkeeping
+// than registering a death event per placed object, and it covers debris
+// spawned at runtime for free -- which is where debris is headed.
+//--------------------------------------------------------------------------------------------------
+bool Clearing_DebrisDied_Func (bool testConds, bool runActions) {
+    if (!runActions) {
+        return true;
+    }
+    if (!ObjectsGen_IsDebris(EventUnit())) {
+        return true;
+    }
+
+    gv_orePile = gv_orePile + c_oreCreditPerDebris;
+    gv_debrisCleared = gv_debrisCleared + 1;
+    return true;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Points idle workers at the nearest remaining debris.
+//
+// Only idle ones: reissuing every tick would reset the attack of a worker that
+// is already chewing on something, and nothing would ever get cleared.
+//--------------------------------------------------------------------------------------------------
+bool Clearing_WorkerAssign_Func (bool testConds, bool runActions) {
+    unitgroup debris;
+    unitgroup workers;
+    unit worker;
+    unit target;
+    int count;
+    int i;
+
+    if (!runActions) {
+        return true;
+    }
+
+    debris = ObjectsGen_ScanDebris();
+    if (UnitGroupCount(debris, c_unitCountAlive) == 0) {
+        return true;
+    }
+
+    workers = ObjectsGen_ScanWorker();
+    count = UnitGroupCount(workers, c_unitCountAlive);
+    i = 1;
+    while (i <= count) {
+        worker = UnitGroupUnit(workers, i);
+        if (worker != null && UnitIsAlive(worker) && UnitOrderCount(worker) == 0) {
+            target = UnitGroupClosestToPoint(debris, UnitGetPosition(worker));
+            if (target != null) {
+                UnitIssueOrder(
+                    worker,
+                    OrderTargetingUnit(AbilityCommand("attack", 0), target),
+                    c_orderQueueReplace
+                );
+            }
+        }
+        i = i + 1;
+    }
+    return true;
+}
+
+void Clearing_Init () {
+    gv_orePile = 0;
+    gv_debrisCleared = 0;
+
+    gt_debrisDied = TriggerCreate("Clearing_DebrisDied_Func");
+    TriggerAddEventUnitDied(gt_debrisDied, null);
+
+    gt_workerAssign = TriggerCreate("Clearing_WorkerAssign_Func");
+    TriggerAddEventTimePeriodic(gt_workerAssign, c_workerAssignPeriod, c_timeGame);
+}
