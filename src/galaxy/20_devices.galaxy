@@ -1,20 +1,37 @@
 //--------------------------------------------------------------------------------------------------
 // Resource devices.
 //
-// Devices produce power on a tick while intact, and lethal damage disables them
+// Devices hold up the power grid while intact, and lethal damage disables them
 // instead of destroying them, per the design baseline. Disabling is not a
 // separate state flag: a device is online when its health is above a threshold,
 // and fatal damage is intercepted and clamped to near zero. Repair is then just
 // the native SCV repair ability putting health back, and the device comes back
 // online on its own.
 //
+// Power is the engine's supply meter. That is not a shortcut, it is the right
+// model: supply is a capacity rather than a bank, it is per-player natively
+// (which is what the baseline's independent grids need, for free), it comes
+// with an always-visible readout that turns red on its own, and device output
+// stays a data field rather than a script constant.
+//
+// A disabled device has to stop counting, and Food on the unit cannot express
+// that -- it is static, and the engine derives supplies-made from whichever
+// units are alive. So devices carry no Food and this module writes the total
+// each tick instead. Whether the engine leaves that write alone is the one
+// thing about this that is unproven; see the read-back below.
+//
 // Modelling it that way means the health bar already shows the disabled state,
 // repair needs no bespoke mechanic, and there is no flag that can drift out of
 // sync with the unit it describes.
 //--------------------------------------------------------------------------------------------------
 
-const fixed c_devicePeriod = 3.0;
-const int c_powerPerDevicePerTick = 3;
+// Fast, because this is what makes a device being chewed on legible: capacity
+// has to fall while the player is still deciding whether to go over there.
+const fixed c_devicePeriod = 1.0;
+
+// Capacity each online device contributes. Not an income rate -- power is the
+// supply meter now, so this is a ceiling that exists while the device does.
+const int c_powerPerDevice = 3;
 
 // Above this share of max health the device runs; below it, it is disabled.
 const fixed c_deviceOnlineLifePercent = 50.0;
@@ -22,12 +39,14 @@ const fixed c_deviceOnlineLifePercent = 50.0;
 // What a device is left on after lethal damage. Not zero -- zero is death.
 const fixed c_deviceDisabledLife = 1.0;
 
-int gv_power;
+// Read back from the engine after we write it, rather than trusted from what we
+// wrote. Supply-made is normally derived from units that carry a Food value, so
+// there is a real chance the engine recomputes it out from under us on the next
+// unit birth or death. Reading it back means the greybox readout shows what the
+// player's UI actually shows, and a mismatch is visible instead of silent.
+int gv_powerMade;
+int gv_powerUsed;
 
-// How many devices were producing on the last tick, and how many exist at all.
-// The accumulated total answers "how much have I banked"; only these answer
-// "is my grid healthy right now", which is the question a player actually has
-// while a device is being chewed on.
 int gv_devicesOnline;
 int gv_devicesTotal;
 
@@ -100,15 +119,21 @@ bool Devices_Tick_Func (bool testConds, bool runActions) {
         if (device != null
             && UnitGetPropertyFixed(device, c_unitPropLifePercent, true) >= c_deviceOnlineLifePercent) {
             gv_devicesOnline = gv_devicesOnline + 1;
-            gv_power = gv_power + c_powerPerDevicePerTick;
         }
         i = i + 1;
     }
+
+    PlayerModifyPropertyInt(c_p0Player, c_playerPropSuppliesMade,
+                            c_playerPropOperSetTo,
+                            gv_devicesOnline * c_powerPerDevice);
+    gv_powerMade = PlayerGetPropertyInt(c_p0Player, c_playerPropSuppliesMade);
+    gv_powerUsed = PlayerGetPropertyInt(c_p0Player, c_playerPropSuppliesUsed);
     return true;
 }
 
 void Devices_Init () {
-    gv_power = 0;
+    gv_powerMade = 0;
+    gv_powerUsed = 0;
     gv_devicesOnline = 0;
     gv_devicesTotal = 0;
 
