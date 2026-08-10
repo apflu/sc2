@@ -53,6 +53,14 @@ const int c_typesMarkerCount = 1;
 string[1] gvg_typesMarker;
 const int c_typesMarker_SpawnCount = 1;
 string[1] gvg_typesMarker_Spawn;
+const int c_typesPileCount = 1;
+string[1] gvg_typesPile;
+const int c_typesPile_OreCount = 1;
+string[1] gvg_typesPile_Ore;
+const int c_typesRecyclerCount = 1;
+string[1] gvg_typesRecycler;
+const int c_typesRecycler_BasicCount = 1;
+string[1] gvg_typesRecycler_Basic;
 const int c_typesSCVCount = 3;
 string[3] gvg_typesSCV;
 const int c_typesSCV_MinerCount = 1;
@@ -81,6 +89,10 @@ void ObjectsGen_Init () {
     gvg_typesHero_Agent[0] = "Lob_Hero_Agent";
     gvg_typesMarker[0] = "Lob_Marker_Spawn";
     gvg_typesMarker_Spawn[0] = "Lob_Marker_Spawn";
+    gvg_typesPile[0] = "Lob_Pile_Ore";
+    gvg_typesPile_Ore[0] = "Lob_Pile_Ore";
+    gvg_typesRecycler[0] = "Lob_Recycler_Basic";
+    gvg_typesRecycler_Basic[0] = "Lob_Recycler_Basic";
     gvg_typesSCV[0] = "Lob_SCV_Miner";
     gvg_typesSCV[1] = "Lob_SCV_Unassigned";
     gvg_typesSCV[2] = "Lob_SCV_Worker";
@@ -467,6 +479,158 @@ bool ObjectsGen_IsMarker_Spawn (unit target) {
     i = 0;
     while (i < c_typesMarker_SpawnCount) {
         if (UnitGetType(target) == gvg_typesMarker_Spawn[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live Pile unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanPile () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesPileCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesPile[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Pile, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsPile (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesPileCount) {
+        if (UnitGetType(target) == gvg_typesPile[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live Pile_Ore unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanPile_Ore () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesPile_OreCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesPile_Ore[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Pile_Ore, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsPile_Ore (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesPile_OreCount) {
+        if (UnitGetType(target) == gvg_typesPile_Ore[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live Recycler unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanRecycler () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesRecyclerCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesRecycler[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Recycler, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsRecycler (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesRecyclerCount) {
+        if (UnitGetType(target) == gvg_typesRecycler[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live Recycler_Basic unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanRecycler_Basic () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesRecycler_BasicCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesRecycler_Basic[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Recycler_Basic, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsRecycler_Basic (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesRecycler_BasicCount) {
+        if (UnitGetType(target) == gvg_typesRecycler_Basic[i]) {
             return true;
         }
         i = i + 1;
@@ -985,9 +1149,12 @@ void Devices_Init () {
 // clearing pays out.
 //--------------------------------------------------------------------------------------------------
 
-// Credit banked into the ore pile when a piece of debris is finished off. The
-// pile is the inner-room stockpile; converting it into spendable resources is
-// the miners' job, in 30_economy.galaxy.
+// Credit banked into the ore pile when a piece of debris is finished off.
+//
+// The pile is a real harvestable node, so this is the only place the number
+// exists: from here on the engine owns it, and turning it into spendable
+// resources is miners walking to it and carrying it back. Nothing converts it
+// on their behalf.
 // Sized against how long the pile then takes to drain, not against how much a
 // piece of debris "should" be worth. At 25 the two starting miners ate a whole
 // debris in five seconds, so the pile was empty essentially always -- which
@@ -997,7 +1164,6 @@ void Devices_Init () {
 // soon as the workers help, and more miners start being worth something.
 const int c_oreCreditPerDebris = 120;
 
-int gv_orePile;
 int gv_debrisCleared;
 
 trigger gt_debrisDied;
@@ -1008,6 +1174,8 @@ trigger gt_debrisDied;
 // spawned at runtime for free -- which is where debris is headed.
 //--------------------------------------------------------------------------------------------------
 bool Clearing_DebrisDied_Func (bool testConds, bool runActions) {
+    unit pile;
+
     if (!runActions) {
         return true;
     }
@@ -1015,13 +1183,20 @@ bool Clearing_DebrisDied_Func (bool testConds, bool runActions) {
         return true;
     }
 
-    gv_orePile = gv_orePile + c_oreCreditPerDebris;
+    // Nearest pile, not "the" pile. With one sector that is the same thing;
+    // with several it is the only reading that does not quietly pay a sector
+    // for work done on the far side of the ship.
+    pile = UnitGroupClosestToPoint(ObjectsGen_ScanPile(), UnitGetPosition(EventUnit()));
+    if (pile != null) {
+        UnitSetPropertyInt(pile, c_unitPropResources,
+                           UnitGetPropertyInt(pile, c_unitPropResources, true)
+                           + c_oreCreditPerDebris);
+    }
     gv_debrisCleared = gv_debrisCleared + 1;
     return true;
 }
 
 void Clearing_Init () {
-    gv_orePile = 0;
     gv_debrisCleared = 0;
 
     gt_debrisDied = TriggerCreate("Clearing_DebrisDied_Func");
@@ -1114,42 +1289,93 @@ void Workers_Init () {
 //--------------------------------------------------------------------------------------------------
 // The second stage of the resource chain: ore pile -> spendable resources.
 //
+// There is no conversion step here any more, because there is nothing to
+// convert. The pile is a harvestable node and the recycler is a drop-off, so
+// miners walk over, carry, and walk back, and the engine credits the player.
+// That was the point of the change: the old version moved numbers from a script
+// variable into the player's account while the miners stood there, which is a
+// claim about work that never happened.
+//
+// What is left is dispatch -- pointing idle miners at the pile -- and the
+// greybox readout. Throughput is now the engine's saturation curve against the
+// haul distance, which is a better answer than the rate constant it replaces:
+// it makes where the pile sits matter, and it makes the miner count matter
+// without anybody choosing a number for how much.
+//
 // Fully automatic and independent of power, per the design baseline. The player
 // never touches this; their only job is to keep the pile stocked, which is what
 // makes clearing feel like it feeds something rather than paying out directly.
-//
-// Throughput scales with the miner headcount, so miners are a real investment
-// and losing them is a real setback -- without ever letting a teammate's
-// mistake touch this rate. See docs/design/gameplay-baseline.md section 1.
 //--------------------------------------------------------------------------------------------------
 
-const fixed c_minePeriod = 2.0;
-const int c_minePerMinerPerTick = 5;
-
+const fixed c_minerAssignPeriod = 2.0;
 const fixed c_statusPeriod = 5.0;
 
-trigger gt_mineTick;
+trigger gt_minerAssign;
 trigger gt_status;
 
-bool Economy_MineTick_Func (bool testConds, bool runActions) {
-    int miners;
-    int moved;
+//--------------------------------------------------------------------------------------------------
+// How much is sitting in the pile, across every pile there is.
+//--------------------------------------------------------------------------------------------------
+int Economy_PileContents () {
+    unitgroup piles;
+    unit pile;
+    int total;
+    int count;
+    int i;
+
+    piles = ObjectsGen_ScanPile();
+    count = UnitGroupCount(piles, c_unitCountAlive);
+    total = 0;
+
+    i = 1;
+    while (i <= count) {
+        pile = UnitGroupUnit(piles, i);
+        if (pile != null) {
+            total = total + UnitGetPropertyInt(pile, c_unitPropResources, true);
+        }
+        i = i + 1;
+    }
+    return total;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Idle miners get sent to the nearest stocked pile. Only idle ones: a miner
+// already hauling has a multi-step order queue that reissuing would reset, and
+// it would never finish a trip.
+//
+// Skipping empty piles matters more than it looks. Without the check, miners
+// ordered onto a dry pile go idle on arrival and get reordered every couple of
+// seconds, which reads as a bug rather than as an economy waiting on the player.
+//--------------------------------------------------------------------------------------------------
+bool Economy_MinerAssign_Func (bool testConds, bool runActions) {
+    unitgroup miners;
+    unit miner;
+    unit pile;
+    int count;
+    int i;
 
     if (!runActions) {
         return true;
     }
 
-    miners = UnitGroupCount(ObjectsGen_ScanSCV_Miner(), c_unitCountAlive);
-    moved = miners * c_minePerMinerPerTick;
-    if (moved > gv_orePile) {
-        moved = gv_orePile;
-    }
-    if (moved <= 0) {
-        return true;
-    }
+    miners = ObjectsGen_ScanSCV_Miner();
+    count = UnitGroupCount(miners, c_unitCountAlive);
 
-    gv_orePile = gv_orePile - moved;
-    PlayerModifyPropertyInt(c_p0Player, c_playerPropMinerals, c_playerPropOperAdd, moved);
+    i = 1;
+    while (i <= count) {
+        miner = UnitGroupUnit(miners, i);
+        if (miner != null && UnitIsAlive(miner) && UnitOrderCount(miner) == 0) {
+            pile = UnitGroupClosestToPoint(ObjectsGen_ScanPile(), UnitGetPosition(miner));
+            if (pile != null && UnitGetPropertyInt(pile, c_unitPropResources, true) > 0) {
+                UnitIssueOrder(
+                    miner,
+                    OrderTargetingUnit(AbilityCommand("SCVHarvest", 0), pile),
+                    c_orderQueueReplace
+                );
+            }
+        }
+        i = i + 1;
+    }
     return true;
 }
 
@@ -1169,7 +1395,7 @@ bool Economy_Status_Func (bool testConds, bool runActions) {
         StringToText(
             "debris left=" + IntToString(UnitGroupCount(ObjectsGen_ScanDebris(), c_unitCountAlive))
             + "  cleared=" + IntToString(gv_debrisCleared)
-            + "  pile=" + IntToString(gv_orePile)
+            + "  pile=" + IntToString(Economy_PileContents())
             + "  power=" + IntToString(PlayerGetPropertyInt(c_p0Player, c_playerPropSuppliesUsed))
             + "/" + IntToString(PlayerGetPropertyInt(c_p0Player, c_playerPropSuppliesMade))
             + " (" + IntToString(gv_devicesOnline) + "/" + IntToString(gv_devicesTotal)
@@ -1182,8 +1408,8 @@ bool Economy_Status_Func (bool testConds, bool runActions) {
 }
 
 void Economy_Init () {
-    gt_mineTick = TriggerCreate("Economy_MineTick_Func");
-    TriggerAddEventTimePeriodic(gt_mineTick, c_minePeriod, c_timeGame);
+    gt_minerAssign = TriggerCreate("Economy_MinerAssign_Func");
+    TriggerAddEventTimePeriodic(gt_minerAssign, c_minerAssignPeriod, c_timeGame);
 
     gt_status = TriggerCreate("Economy_Status_Func");
     TriggerAddEventTimePeriodic(gt_status, c_statusPeriod, c_timeGame);

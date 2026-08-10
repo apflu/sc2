@@ -42,6 +42,8 @@ EXPECTED_CATEGORIES = [
     "DeviceDown",
     "Hero",
     "Marker",
+    "Pile",
+    "Recycler",
     "SCV",
     "SCV_Miner",
     "SCV_Worker",

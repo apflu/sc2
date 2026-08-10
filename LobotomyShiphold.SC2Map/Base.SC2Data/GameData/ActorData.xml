@@ -68,6 +68,29 @@
             <Image value="Assets\Textures\Wireframe-Terran-EngineeringBay.dds"/>
         </Wireframe>
     </CActorUnit>
+    <CActorUnit id="Lob_Pile_Ore" parent="MineralBase" unitName="Lob_Pile_Ore">
+        <Model value="MineralField"/>
+        <BuildModel value="MineralField"/>
+        <PlacementModel value="MineralField"/>
+    </CActorUnit>
+    <CActorUnit id="Lob_Recycler_Basic" parent="TerranBuildingEx" unitName="Lob_Recycler_Basic">
+        <Aliases value="_UnitHuge"/>
+        <Model value="Refinery"/>
+        <BuildModel value="Refinery"/>
+        <PlacementModel value="RefineryPlacement"/>
+        <PortraitModel value="RefineryPortrait"/>
+        <DeathArray index="Normal" ModelLink="RefineryDeath"/>
+        <BarOffset value="110"/>
+        <BarWidth value="135"/>
+        <GroupIcon>
+            <Image value="Assets\Textures\Wireframe-Terran-Refinery.dds"/>
+        </GroupIcon>
+        <UnitIcon value="Assets\Textures\btn-building-terran-refinery.dds"/>
+        <HeroIcon value="Assets\Textures\btn-building-terran-refinery.dds"/>
+        <Wireframe>
+            <Image value="Assets\Textures\Wireframe-Terran-Refinery.dds"/>
+        </Wireframe>
+    </CActorUnit>
     <CActorUnit id="Lob_Debris_4x4" parent="DestructibleUnitStandard" unitName="Lob_Debris_Normal">
         <Model value="DestructibleDebris4x4"/>
         <BuildModel value="DestructibleDebris4x4"/>

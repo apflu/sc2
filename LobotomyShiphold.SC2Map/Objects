@@ -7,6 +7,8 @@
     <ObjectUnit Id="982629277" Position="41,91,0" Rotation="1.5703" Scale="1,1,1" UnitType="Lob_Debris_Normal"/>
     <ObjectUnit Id="1441002001" Position="45,84,0" Rotation="0" Scale="1,1,1" UnitType="Lob_Device_Basic" Player="1"/>
     <ObjectUnit Id="1441002002" Position="45,96,0" Rotation="0" Scale="1,1,1" UnitType="Lob_Marker_Spawn"/>
+    <ObjectUnit Id="1441002005" Position="45,80,0" Rotation="0" Scale="1,1,1" UnitType="Lob_Recycler_Basic" Player="1"/>
+    <ObjectUnit Id="1441002006" Position="48.5,80,0" Rotation="0" Scale="1,1,1" UnitType="Lob_Pile_Ore"/>
     <ObjectUnit Id="1441002003" Position="45,87,0" Rotation="1.5703" Scale="1,1,1" UnitType="Lob_Hero_Agent" Player="1"/>
     <Group Type="ObjectUnit" Name="debris
 " Id="1">

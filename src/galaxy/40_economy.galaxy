@@ -1,42 +1,93 @@
 //--------------------------------------------------------------------------------------------------
 // The second stage of the resource chain: ore pile -> spendable resources.
 //
+// There is no conversion step here any more, because there is nothing to
+// convert. The pile is a harvestable node and the recycler is a drop-off, so
+// miners walk over, carry, and walk back, and the engine credits the player.
+// That was the point of the change: the old version moved numbers from a script
+// variable into the player's account while the miners stood there, which is a
+// claim about work that never happened.
+//
+// What is left is dispatch -- pointing idle miners at the pile -- and the
+// greybox readout. Throughput is now the engine's saturation curve against the
+// haul distance, which is a better answer than the rate constant it replaces:
+// it makes where the pile sits matter, and it makes the miner count matter
+// without anybody choosing a number for how much.
+//
 // Fully automatic and independent of power, per the design baseline. The player
 // never touches this; their only job is to keep the pile stocked, which is what
 // makes clearing feel like it feeds something rather than paying out directly.
-//
-// Throughput scales with the miner headcount, so miners are a real investment
-// and losing them is a real setback -- without ever letting a teammate's
-// mistake touch this rate. See docs/design/gameplay-baseline.md section 1.
 //--------------------------------------------------------------------------------------------------
 
-const fixed c_minePeriod = 2.0;
-const int c_minePerMinerPerTick = 5;
-
+const fixed c_minerAssignPeriod = 2.0;
 const fixed c_statusPeriod = 5.0;
 
-trigger gt_mineTick;
+trigger gt_minerAssign;
 trigger gt_status;
 
-bool Economy_MineTick_Func (bool testConds, bool runActions) {
-    int miners;
-    int moved;
+//--------------------------------------------------------------------------------------------------
+// How much is sitting in the pile, across every pile there is.
+//--------------------------------------------------------------------------------------------------
+int Economy_PileContents () {
+    unitgroup piles;
+    unit pile;
+    int total;
+    int count;
+    int i;
+
+    piles = ObjectsGen_ScanPile();
+    count = UnitGroupCount(piles, c_unitCountAlive);
+    total = 0;
+
+    i = 1;
+    while (i <= count) {
+        pile = UnitGroupUnit(piles, i);
+        if (pile != null) {
+            total = total + UnitGetPropertyInt(pile, c_unitPropResources, true);
+        }
+        i = i + 1;
+    }
+    return total;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Idle miners get sent to the nearest stocked pile. Only idle ones: a miner
+// already hauling has a multi-step order queue that reissuing would reset, and
+// it would never finish a trip.
+//
+// Skipping empty piles matters more than it looks. Without the check, miners
+// ordered onto a dry pile go idle on arrival and get reordered every couple of
+// seconds, which reads as a bug rather than as an economy waiting on the player.
+//--------------------------------------------------------------------------------------------------
+bool Economy_MinerAssign_Func (bool testConds, bool runActions) {
+    unitgroup miners;
+    unit miner;
+    unit pile;
+    int count;
+    int i;
 
     if (!runActions) {
         return true;
     }
 
-    miners = UnitGroupCount(ObjectsGen_ScanSCV_Miner(), c_unitCountAlive);
-    moved = miners * c_minePerMinerPerTick;
-    if (moved > gv_orePile) {
-        moved = gv_orePile;
-    }
-    if (moved <= 0) {
-        return true;
-    }
+    miners = ObjectsGen_ScanSCV_Miner();
+    count = UnitGroupCount(miners, c_unitCountAlive);
 
-    gv_orePile = gv_orePile - moved;
-    PlayerModifyPropertyInt(c_p0Player, c_playerPropMinerals, c_playerPropOperAdd, moved);
+    i = 1;
+    while (i <= count) {
+        miner = UnitGroupUnit(miners, i);
+        if (miner != null && UnitIsAlive(miner) && UnitOrderCount(miner) == 0) {
+            pile = UnitGroupClosestToPoint(ObjectsGen_ScanPile(), UnitGetPosition(miner));
+            if (pile != null && UnitGetPropertyInt(pile, c_unitPropResources, true) > 0) {
+                UnitIssueOrder(
+                    miner,
+                    OrderTargetingUnit(AbilityCommand("SCVHarvest", 0), pile),
+                    c_orderQueueReplace
+                );
+            }
+        }
+        i = i + 1;
+    }
     return true;
 }
 
@@ -56,7 +107,7 @@ bool Economy_Status_Func (bool testConds, bool runActions) {
         StringToText(
             "debris left=" + IntToString(UnitGroupCount(ObjectsGen_ScanDebris(), c_unitCountAlive))
             + "  cleared=" + IntToString(gv_debrisCleared)
-            + "  pile=" + IntToString(gv_orePile)
+            + "  pile=" + IntToString(Economy_PileContents())
             + "  power=" + IntToString(PlayerGetPropertyInt(c_p0Player, c_playerPropSuppliesUsed))
             + "/" + IntToString(PlayerGetPropertyInt(c_p0Player, c_playerPropSuppliesMade))
             + " (" + IntToString(gv_devicesOnline) + "/" + IntToString(gv_devicesTotal)
@@ -69,8 +120,8 @@ bool Economy_Status_Func (bool testConds, bool runActions) {
 }
 
 void Economy_Init () {
-    gt_mineTick = TriggerCreate("Economy_MineTick_Func");
-    TriggerAddEventTimePeriodic(gt_mineTick, c_minePeriod, c_timeGame);
+    gt_minerAssign = TriggerCreate("Economy_MinerAssign_Func");
+    TriggerAddEventTimePeriodic(gt_minerAssign, c_minerAssignPeriod, c_timeGame);
 
     gt_status = TriggerCreate("Economy_Status_Func");
     TriggerAddEventTimePeriodic(gt_status, c_statusPeriod, c_timeGame);

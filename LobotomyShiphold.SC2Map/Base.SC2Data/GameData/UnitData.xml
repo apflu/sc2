@@ -104,6 +104,21 @@
         <LifeStart value="1"/>
         <EditorCategories value="ObjectType:Structure,ObjectFamily:Campaign"/>
     </CUnit>
+    <!-- The stockpile the baseline's resource chain runs through, expressed as
+         a mineral node so the second stage is performed rather than asserted:
+         miners walk to it, carry, and walk back. Nothing scripts the payout. -->
+    <CUnit id="Lob_Pile_Ore" parent="MineralFieldDefault">
+        <BehaviorArray index="0" Link="Lob_Pile_Ore"/>
+        <EditorCategories value="ObjectType:Resource,ObjectFamily:Campaign"/>
+    </CUnit>
+    <!-- Where miners take it. Native harvest needs a drop-off or it has nowhere
+         to carry to; this is the recycler in baseline 4.4, and putting it in the
+         inner room is what gives the haul a length worth caring about. -->
+    <CUnit id="Lob_Recycler_Basic" parent="Lob_Device_Basic">
+        <Food value="0"/>
+        <ResourceDropOff index="Minerals" value="1"/>
+        <EditorCategories value="ObjectType:Structure,ObjectFamily:Campaign"/>
+    </CUnit>
     <CUnit id="Lob_Debris_Normal">
         <DeathRevealRadius value="3"/>
         <FlagArray index="CreateVisible" value="1"/>

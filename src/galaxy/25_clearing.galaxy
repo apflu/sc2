@@ -12,9 +12,12 @@
 // clearing pays out.
 //--------------------------------------------------------------------------------------------------
 
-// Credit banked into the ore pile when a piece of debris is finished off. The
-// pile is the inner-room stockpile; converting it into spendable resources is
-// the miners' job, in 30_economy.galaxy.
+// Credit banked into the ore pile when a piece of debris is finished off.
+//
+// The pile is a real harvestable node, so this is the only place the number
+// exists: from here on the engine owns it, and turning it into spendable
+// resources is miners walking to it and carrying it back. Nothing converts it
+// on their behalf.
 // Sized against how long the pile then takes to drain, not against how much a
 // piece of debris "should" be worth. At 25 the two starting miners ate a whole
 // debris in five seconds, so the pile was empty essentially always -- which
@@ -24,7 +27,6 @@
 // soon as the workers help, and more miners start being worth something.
 const int c_oreCreditPerDebris = 120;
 
-int gv_orePile;
 int gv_debrisCleared;
 
 trigger gt_debrisDied;
@@ -35,6 +37,8 @@ trigger gt_debrisDied;
 // spawned at runtime for free -- which is where debris is headed.
 //--------------------------------------------------------------------------------------------------
 bool Clearing_DebrisDied_Func (bool testConds, bool runActions) {
+    unit pile;
+
     if (!runActions) {
         return true;
     }
@@ -42,13 +46,20 @@ bool Clearing_DebrisDied_Func (bool testConds, bool runActions) {
         return true;
     }
 
-    gv_orePile = gv_orePile + c_oreCreditPerDebris;
+    // Nearest pile, not "the" pile. With one sector that is the same thing;
+    // with several it is the only reading that does not quietly pay a sector
+    // for work done on the far side of the ship.
+    pile = UnitGroupClosestToPoint(ObjectsGen_ScanPile(), UnitGetPosition(EventUnit()));
+    if (pile != null) {
+        UnitSetPropertyInt(pile, c_unitPropResources,
+                           UnitGetPropertyInt(pile, c_unitPropResources, true)
+                           + c_oreCreditPerDebris);
+    }
     gv_debrisCleared = gv_debrisCleared + 1;
     return true;
 }
 
 void Clearing_Init () {
-    gv_orePile = 0;
     gv_debrisCleared = 0;
 
     gt_debrisDied = TriggerCreate("Clearing_DebrisDied_Func");

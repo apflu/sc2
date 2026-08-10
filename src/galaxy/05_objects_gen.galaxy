@@ -26,6 +26,14 @@ const int c_typesMarkerCount = 1;
 string[1] gvg_typesMarker;
 const int c_typesMarker_SpawnCount = 1;
 string[1] gvg_typesMarker_Spawn;
+const int c_typesPileCount = 1;
+string[1] gvg_typesPile;
+const int c_typesPile_OreCount = 1;
+string[1] gvg_typesPile_Ore;
+const int c_typesRecyclerCount = 1;
+string[1] gvg_typesRecycler;
+const int c_typesRecycler_BasicCount = 1;
+string[1] gvg_typesRecycler_Basic;
 const int c_typesSCVCount = 3;
 string[3] gvg_typesSCV;
 const int c_typesSCV_MinerCount = 1;
@@ -54,6 +62,10 @@ void ObjectsGen_Init () {
     gvg_typesHero_Agent[0] = "Lob_Hero_Agent";
     gvg_typesMarker[0] = "Lob_Marker_Spawn";
     gvg_typesMarker_Spawn[0] = "Lob_Marker_Spawn";
+    gvg_typesPile[0] = "Lob_Pile_Ore";
+    gvg_typesPile_Ore[0] = "Lob_Pile_Ore";
+    gvg_typesRecycler[0] = "Lob_Recycler_Basic";
+    gvg_typesRecycler_Basic[0] = "Lob_Recycler_Basic";
     gvg_typesSCV[0] = "Lob_SCV_Miner";
     gvg_typesSCV[1] = "Lob_SCV_Unassigned";
     gvg_typesSCV[2] = "Lob_SCV_Worker";
@@ -440,6 +452,158 @@ bool ObjectsGen_IsMarker_Spawn (unit target) {
     i = 0;
     while (i < c_typesMarker_SpawnCount) {
         if (UnitGetType(target) == gvg_typesMarker_Spawn[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live Pile unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanPile () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesPileCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesPile[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Pile, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsPile (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesPileCount) {
+        if (UnitGetType(target) == gvg_typesPile[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live Pile_Ore unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanPile_Ore () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesPile_OreCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesPile_Ore[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Pile_Ore, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsPile_Ore (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesPile_OreCount) {
+        if (UnitGetType(target) == gvg_typesPile_Ore[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live Recycler unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanRecycler () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesRecyclerCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesRecycler[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Recycler, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsRecycler (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesRecyclerCount) {
+        if (UnitGetType(target) == gvg_typesRecycler[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live Recycler_Basic unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanRecycler_Basic () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesRecycler_BasicCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesRecycler_Basic[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Recycler_Basic, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsRecycler_Basic (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesRecycler_BasicCount) {
+        if (UnitGetType(target) == gvg_typesRecycler_Basic[i]) {
             return true;
         }
         i = i + 1;
