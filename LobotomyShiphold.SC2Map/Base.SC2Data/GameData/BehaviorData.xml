@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Catalog>
+    <!-- Debug only. Deliberately a buff rather than a change to the weapon:
+         the player-DPS to worker-DPS ratio is the single number P0 exists to
+         measure, so retuning the weapon to make testing comfortable would
+         quietly destroy the thing being tested. This leaves the real numbers
+         alone and can be switched on when the loop needs to be driven fast.
+
+         Expires on its own, and carries an icon on the unit while it is up, so
+         a session cannot be measured with it accidentally left running. -->
+    <CBehaviorBuff id="Lob_Debug_Haste">
+        <Alignment value="Positive"/>
+        <InfoIcon value="Assets\Textures\btn-ability-terran-stimpack.dds"/>
+        <Duration value="600"/>
+        <Modification MoveSpeedMultiplier="2" AttackSpeedMultiplier="10"/>
+    </CBehaviorBuff>
+</Catalog>

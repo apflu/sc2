@@ -165,9 +165,11 @@
         <Speed value="3"/>
         <Food value="0"/>
         <AbilArray index="3" Link="Repair"/>
+        <AbilArray index="4" Link="Lob_Debug_Haste"/>
         <WeaponArray index="0" Link="Lob_Hero_Rifle"/>
         <CardLayouts>
             <LayoutButtons index="5" Face="Repair" Type="AbilCmd" AbilCmd="Repair,Execute" Row="1" Column="0"/>
+            <LayoutButtons index="6" Face="Lob_Debug_Haste" Type="AbilCmd" AbilCmd="Lob_Debug_Haste,Execute" Row="2" Column="4"/>
         </CardLayouts>
         <EditorCategories value="ObjectType:Hero,ObjectFamily:Campaign"/>
     </CUnit>

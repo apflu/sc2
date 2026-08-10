@@ -8,4 +8,8 @@
         <Kind value="Ranged"/>
         <Amount value="20"/>
     </CEffectDamage>
+
+    <CEffectApplyBehavior id="Lob_Debug_Haste">
+        <Behavior value="Lob_Debug_Haste"/>
+    </CEffectApplyBehavior>
 </Catalog>

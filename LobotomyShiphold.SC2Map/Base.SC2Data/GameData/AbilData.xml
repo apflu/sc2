@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Catalog>
+    <!-- Debug only. No cost, no cooldown, recastable to refresh. -->
+    <CAbilEffectInstant id="Lob_Debug_Haste">
+        <Flags index="Transient" value="1"/>
+        <Effect value="Lob_Debug_Haste"/>
+        <CmdButtonArray index="Execute" DefaultButtonFace="Lob_Debug_Haste">
+            <Flags index="ToSelection" value="1"/>
+        </CmdButtonArray>
+    </CAbilEffectInstant>
+</Catalog>
