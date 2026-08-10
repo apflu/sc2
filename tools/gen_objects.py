@@ -39,6 +39,7 @@ INT32_MAX = 2**31 - 1
 EXPECTED_CATEGORIES = [
     "Debris",
     "Device",
+    "DeviceDown",
     "Hero",
     "Marker",
     "SCV",

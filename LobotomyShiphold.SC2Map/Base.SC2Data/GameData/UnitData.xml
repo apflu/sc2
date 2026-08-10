@@ -15,7 +15,13 @@
         <LeaderAlias value=""/>
         <HotkeyAlias value=""/>
     </CUnit>
+    <!-- Power comes from this field and nowhere else. The engine derives
+         supplies-made from living units that carry Food, so a device that is
+         standing and online is counted automatically, per owning player, with
+         no script involved. Disablement is a different unit type (below) that
+         carries no Food, which is what makes the whole thing need no bookkeeping. -->
     <CUnit id="Lob_Device_Basic">
+        <Food value="3"/>
         <DeathRevealRadius value="3"/>
         <Facing value="315"/>
         <Race value="Terr"/>
@@ -81,6 +87,22 @@
         <EditorCategories value="ObjectType:Structure,ObjectFamily:Melee"/>
         <GlossaryPriority value="256"/>
         <HotkeyCategory value="Unit/Category/TerranUnits"/>
+    </CUnit>
+    <!-- A disabled device.
+
+         Invulnerable does both halves of the job at once, and neither needed
+         inventing: the zergling weapon's target filters exclude Invulnerable,
+         so nothing keeps chewing on a device that is already down, while the
+         Repair ability's filters do not, so an SCV or the player can still
+         work on it. Starts at 1 life so repair has the full bar to climb.
+
+         Food is absent, so the engine drops this device from the grid the
+         instant it morphs. That is the entire disable mechanic. -->
+    <CUnit id="Lob_DeviceDown_Basic" parent="Lob_Device_Basic">
+        <Food value="0"/>
+        <FlagArray index="Invulnerable" value="1"/>
+        <LifeStart value="1"/>
+        <EditorCategories value="ObjectType:Structure,ObjectFamily:Campaign"/>
     </CUnit>
     <CUnit id="Lob_Debris_Normal">
         <DeathRevealRadius value="3"/>

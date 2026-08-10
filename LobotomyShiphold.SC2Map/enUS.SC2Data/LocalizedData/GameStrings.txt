@@ -1,5 +1,6 @@
 ﻿Button/Tooltip/Lob_Hero_Agent=Your character. Clears debris, repairs devices, and holds the line -- one pair of hands for all three.
 Button/Tooltip/Lob_Debris_Normal=Barrier that can be destroyed to allow access to new areas.
+Button/Tooltip/Lob_DeviceDown_Basic=Offline. Off the power grid until repaired. Cannot be attacked while down.
 Button/Tooltip/Lob_Device_Basic=Contains upgrades for Terran infantry and structures. <n/><n/><c val="ffff8a">Enables:</c><n/>- Missile Turrets from SCVs<n/>- Sensor Towers from SCVs<n/>- Planetary Fortresses from Command Centers
 Button/Tooltip/Lob_SCV_Miner=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
 Button/Tooltip/Lob_SCV_Unassigned=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
@@ -15,6 +16,7 @@ Unit/Name/Lob_SCV_Worker=Lob_SCV_Worker
 Unit/Name/Lob_Debris_4x4HighlightTooltip=Attack this to destroy it
 Unit/Name/Lob_Debris_Normal=Lob_Debris_Normal
 Unit/Name/Lob_Device_Basic=Lob_Device_Basic
+Unit/Name/Lob_DeviceDown_Basic=Lob_DeviceDown_Basic (offline)
 Unit/Name/Lob_Marker_Spawn=Lob_Marker_Spawn
 Unit/Name/Lob_SCV_Miner=Lob_SCV_Miner
 Unit/Name/Lob_SCV_Unassigned=Lob_SCV_Unassigned

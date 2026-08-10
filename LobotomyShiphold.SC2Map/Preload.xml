@@ -5,6 +5,7 @@
 <Unit id="Lob_Hero_Agent"/>
 <Unit id="Lob_Marker_Spawn"/>
 <Unit id="Lob_Device_Basic"/>
+<Unit id="Lob_DeviceDown_Basic"/>
 <Unit id="Lob_Debris_Normal"/>
 <Unit id="Lob_SCV_Miner"/>
 <Unit id="Lob_SCV_Worker"/>

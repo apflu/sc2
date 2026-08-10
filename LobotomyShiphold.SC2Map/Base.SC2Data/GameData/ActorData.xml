@@ -46,6 +46,28 @@
             <Image value="Assets\Textures\Wireframe-Terran-EngineeringBay.dds"/>
         </Wireframe>
     </CActorUnit>
+    <CActorUnit id="Lob_DeviceDown_Basic" parent="TerranBuildingEx" unitName="Lob_DeviceDown_Basic">
+        <!-- Same building, lights off. Abstract parent, not Lob_Device_Basic:
+             actor subscriptions are baked to the parent's unit name and do not
+             follow unitName on a child. See docs/dev/authoring-contract.md. -->
+        <On Terms="UnitBirth.Lob_DeviceDown_Basic" Send="SetTintColor 70,70,80"/>
+        <Aliases value="_UnitHuge"/>
+        <Model value="EngineeringBay"/>
+        <BuildModel value="EngineeringBay"/>
+        <PlacementModel value="EngineeringBayPlacement"/>
+        <PortraitModel value="EngineeringBayPortrait"/>
+        <DeathArray index="Normal" ModelLink="EngineeringBayDeath"/>
+        <BarOffset value="110"/>
+        <BarWidth value="135"/>
+        <GroupIcon>
+            <Image value="Assets\Textures\Wireframe-Terran-EngineeringBay.dds"/>
+        </GroupIcon>
+        <UnitIcon value="Assets\Textures\btn-building-terran-engineeringbay.dds"/>
+        <HeroIcon value="Assets\Textures\btn-building-terran-engineeringbay.dds"/>
+        <Wireframe>
+            <Image value="Assets\Textures\Wireframe-Terran-EngineeringBay.dds"/>
+        </Wireframe>
+    </CActorUnit>
     <CActorUnit id="Lob_Debris_4x4" parent="DestructibleUnitStandard" unitName="Lob_Debris_Normal">
         <Model value="DestructibleDebris4x4"/>
         <BuildModel value="DestructibleDebris4x4"/>

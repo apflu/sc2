@@ -2,51 +2,38 @@
 // Resource devices.
 //
 // Devices hold up the power grid while intact, and lethal damage disables them
-// instead of destroying them, per the design baseline. Disabling is not a
-// separate state flag: a device is online when its health is above a threshold,
-// and fatal damage is intercepted and clamped to near zero. Repair is then just
-// the native SCV repair ability putting health back, and the device comes back
-// online on its own.
+// instead of destroying them, per the design baseline.
 //
-// Power is the engine's supply meter. That is not a shortcut, it is the right
-// model: supply is a capacity rather than a bank, it is per-player natively
-// (which is what the baseline's independent grids need, for free), it comes
-// with an always-visible readout that turns red on its own, and device output
-// stays a data field rather than a script constant.
+// Both halves of that live in data rather than here:
 //
-// A disabled device has to stop counting, and Food on the unit cannot express
-// that -- it is static, and the engine derives supplies-made from whichever
-// units are alive. So devices carry no Food and this module writes the total
-// each tick instead. Whether the engine leaves that write alone is the one
-// thing about this that is unproven; see the read-back below.
+//   Power is the engine's supply meter. An online device carries Food, so the
+//   engine counts it into supplies-made by itself, per owning player, which is
+//   exactly the independent grid the baseline asks for and costs nothing. The
+//   readout is free and turns red on its own. Nothing in this file writes it.
 //
-// Modelling it that way means the health bar already shows the disabled state,
-// repair needs no bespoke mechanic, and there is no flag that can drift out of
-// sync with the unit it describes.
+//   Disablement is a unit type. A device that takes a killing blow is replaced
+//   by Lob_DeviceDown_Basic, which carries no Food and so leaves the grid the
+//   moment it appears, and which is Invulnerable -- and Invulnerable happens to
+//   mean exactly the two things wanted here, because the zergling weapon's
+//   target filters exclude it while the Repair ability's filters do not. So
+//   nothing keeps chewing on a device that is already down, and an SCV or the
+//   player can still work on it.
+//
+// This module is therefore only the two morphs and a count for the readout.
+// There is no "is it disabled" flag, no health threshold standing in for one,
+// and no supply bookkeeping -- asking which units exist answers all of it.
 //--------------------------------------------------------------------------------------------------
 
-// Fast, because this is what makes a device being chewed on legible: capacity
-// has to fall while the player is still deciding whether to go over there.
 const fixed c_devicePeriod = 1.0;
 
-// Capacity each online device contributes. Not an income rate -- power is the
-// supply meter now, so this is a ceiling that exists while the device does.
-const int c_powerPerDevice = 3;
+// Type-name prefixes. A device and its downed form differ only in this segment,
+// so one is derived from the other rather than tabulated; adding a variant
+// means authoring the pair in the editor and nothing here.
+const string c_deviceUpPrefix = "Lob_Device_";
+const string c_deviceDownPrefix = "Lob_DeviceDown_";
 
-// Above this share of max health the device runs; below it, it is disabled.
-const fixed c_deviceOnlineLifePercent = 50.0;
-
-// What a device is left on after lethal damage. Not zero -- zero is death.
-const fixed c_deviceDisabledLife = 1.0;
-
-// Read back from the engine after we write it, rather than trusted from what we
-// wrote. Supply-made is normally derived from units that carry a Food value, so
-// there is a real chance the engine recomputes it out from under us on the next
-// unit birth or death. Reading it back means the greybox readout shows what the
-// player's UI actually shows, and a mismatch is visible instead of silent.
-int gv_powerMade;
-int gv_powerUsed;
-
+// Devices online on the last tick, and devices in total. Only the greybox
+// readout needs these; the grid itself is the engine's business.
 int gv_devicesOnline;
 int gv_devicesTotal;
 
@@ -54,32 +41,63 @@ trigger gt_deviceFatal;
 trigger gt_deviceTick;
 
 //--------------------------------------------------------------------------------------------------
-// Devices that have taken any damage, for the workers to prioritise.
+// Swaps one type prefix for the other, keeping the variant segment.
+//--------------------------------------------------------------------------------------------------
+string Devices_Retype (string from, string fromPrefix, string toPrefix) {
+    return toPrefix + StringSub(from, StringLength(fromPrefix) + 1, StringLength(from));
+}
+
+//--------------------------------------------------------------------------------------------------
+// Replaces a device with its counterpart in the other state, in place.
+//--------------------------------------------------------------------------------------------------
+void Devices_Morph (unit which, string toType, fixed life) {
+    point where;
+    fixed facing;
+    int owner;
+
+    where = UnitGetPosition(which);
+    facing = UnitGetFacing(which);
+    owner = UnitGetOwner(which);
+
+    // Remove rather than kill: killing would fire the death handlers, and a
+    // device going offline is not a death in any sense the rest of the code
+    // means. Removing also takes the footprint away before the replacement
+    // needs it, though placement is ignored anyway for good measure.
+    UnitRemove(which);
+
+    UnitCreate(1, toType, c_unitCreateIgnorePlacement, owner, where, facing);
+    UnitSetPropertyFixed(UnitLastCreated(), c_unitPropLife, life);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Devices worth sending a worker to: anything down, plus anything still online
+// but chipped. Down comes first because a downed device is off the grid, while
+// a chipped one is still paying out.
 //--------------------------------------------------------------------------------------------------
 unitgroup Devices_Damaged () {
-    unitgroup all;
-    unitgroup damaged;
+    unitgroup found;
+    unitgroup online;
     unit device;
     int count;
     int i;
 
-    all = ObjectsGen_ScanDevice();
-    damaged = UnitGroupEmpty();
-    count = UnitGroupCount(all, c_unitCountAlive);
+    found = ObjectsGen_ScanDeviceDown();
 
+    online = ObjectsGen_ScanDevice();
+    count = UnitGroupCount(online, c_unitCountAlive);
     i = 1;
     while (i <= count) {
-        device = UnitGroupUnit(all, i);
+        device = UnitGroupUnit(online, i);
         if (device != null && UnitGetPropertyFixed(device, c_unitPropLifePercent, true) < 99.0) {
-            UnitGroupAdd(damaged, device);
+            UnitGroupAdd(found, device);
         }
         i = i + 1;
     }
-    return damaged;
+    return found;
 }
 
 //--------------------------------------------------------------------------------------------------
-// Intercepts the killing blow and leaves the device standing at minimum health.
+// Intercepts the killing blow and puts the downed device in its place.
 //--------------------------------------------------------------------------------------------------
 bool Devices_Fatal_Func (bool testConds, bool runActions) {
     unit victim;
@@ -93,12 +111,21 @@ bool Devices_Fatal_Func (bool testConds, bool runActions) {
         return true;
     }
 
-    UnitSetPropertyFixed(victim, c_unitPropLife, c_deviceDisabledLife);
+    // Clamp first so the unit cannot die between here and the morph.
+    UnitSetPropertyFixed(victim, c_unitPropLife, 1.0);
+    Devices_Morph(
+        victim,
+        Devices_Retype(UnitGetType(victim), c_deviceUpPrefix, c_deviceDownPrefix),
+        1.0
+    );
     return true;
 }
 
+//--------------------------------------------------------------------------------------------------
+// Brings repaired devices back onto the grid, and counts for the readout.
+//--------------------------------------------------------------------------------------------------
 bool Devices_Tick_Func (bool testConds, bool runActions) {
-    unitgroup devices;
+    unitgroup down;
     unit device;
     int count;
     int i;
@@ -107,33 +134,31 @@ bool Devices_Tick_Func (bool testConds, bool runActions) {
         return true;
     }
 
-    devices = ObjectsGen_ScanDevice();
-    count = UnitGroupCount(devices, c_unitCountAlive);
-
-    gv_devicesTotal = count;
-    gv_devicesOnline = 0;
-
-    i = 1;
-    while (i <= count) {
-        device = UnitGroupUnit(devices, i);
-        if (device != null
-            && UnitGetPropertyFixed(device, c_unitPropLifePercent, true) >= c_deviceOnlineLifePercent) {
-            gv_devicesOnline = gv_devicesOnline + 1;
+    // Counting down, not up: morphing removes the unit, and a unit group drops
+    // units that stop existing, so walking forwards would renumber the tail and
+    // skip every second device that finished repairing on the same tick.
+    down = ObjectsGen_ScanDeviceDown();
+    count = UnitGroupCount(down, c_unitCountAlive);
+    i = count;
+    while (i >= 1) {
+        device = UnitGroupUnit(down, i);
+        if (device != null && UnitGetPropertyFixed(device, c_unitPropLifePercent, true) >= 99.0) {
+            Devices_Morph(
+                device,
+                Devices_Retype(UnitGetType(device), c_deviceDownPrefix, c_deviceUpPrefix),
+                UnitGetPropertyFixed(device, c_unitPropLifeMax, true)
+            );
         }
-        i = i + 1;
+        i = i - 1;
     }
 
-    PlayerModifyPropertyInt(c_p0Player, c_playerPropSuppliesMade,
-                            c_playerPropOperSetTo,
-                            gv_devicesOnline * c_powerPerDevice);
-    gv_powerMade = PlayerGetPropertyInt(c_p0Player, c_playerPropSuppliesMade);
-    gv_powerUsed = PlayerGetPropertyInt(c_p0Player, c_playerPropSuppliesUsed);
+    gv_devicesOnline = UnitGroupCount(ObjectsGen_ScanDevice(), c_unitCountAlive);
+    gv_devicesTotal = gv_devicesOnline
+                      + UnitGroupCount(ObjectsGen_ScanDeviceDown(), c_unitCountAlive);
     return true;
 }
 
 void Devices_Init () {
-    gv_powerMade = 0;
-    gv_powerUsed = 0;
     gv_devicesOnline = 0;
     gv_devicesTotal = 0;
 
