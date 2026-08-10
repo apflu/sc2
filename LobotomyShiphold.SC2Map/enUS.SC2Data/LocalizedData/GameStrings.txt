@@ -1,5 +1,8 @@
 ﻿Button/Tooltip/Lob_Debris_Normal=Barrier that can be destroyed to allow access to new areas.
-Button/Tooltip/Lob_SCV=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
+Button/Tooltip/Lob_Device_Basic=Contains upgrades for Terran infantry and structures. <n/><n/><c val="ffff8a">Enables:</c><n/>- Missile Turrets from SCVs<n/>- Sensor Towers from SCVs<n/>- Planetary Fortresses from Command Centers
+Button/Tooltip/Lob_SCV_Miner=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
+Button/Tooltip/Lob_SCV_Unassigned=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
+Button/Tooltip/Lob_SCV_Unassigned2=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
 DocInfo/DescLong=Completely devoid of any description whatsoever.
 DocInfo/DescShort=Any
 DocInfo/Name=Just Another StarCraft II Map
@@ -8,4 +11,8 @@ MapInfo/Player01/Name=Player 1
 MapInfo/Player02/Name=Hostile
 Unit/Name/Lob_Debris_4x4HighlightTooltip=Attack this to destroy it
 Unit/Name/Lob_Debris_Normal=Lob_Debris_Normal
-Unit/Name/Lob_SCV=Lob_SCV
+Unit/Name/Lob_Device_Basic=Lob_Device_Basic
+Unit/Name/Lob_Marker_Spawn=Lob_Marker_Spawn
+Unit/Name/Lob_SCV_Miner=Lob_SCV_Miner
+Unit/Name/Lob_SCV_Unassigned=Lob_SCV_Unassigned
+Unit/Name/Lob_SCV_Unassigned2=Lob_SCV_Worker

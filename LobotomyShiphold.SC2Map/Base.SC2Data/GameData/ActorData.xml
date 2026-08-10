@@ -1,5 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Catalog>
+    <CActorUnit id="Lob_Marker_Spawn" parent="GenericUnitStandardNoAutoSoundLinks" unitName="Lob_Marker_Spawn">
+        <Model value="Beacon_Terran"/>
+        <BuildModel value="Beacon_Terran"/>
+        <DeathArray index="Normal" ModelLink="Beacon_Terran"/>
+        <PlacementModel value="Beacon_Terran"/>
+        <WalkAnimMoveSpeed value="0"/>
+        <GroupIcon>
+            <Image value="Assets\Textures\wireframe-general-circleofpower-terran.dds"/>
+        </GroupIcon>
+        <StatusBarFlags index="Shields" value="0"/>
+        <StatusBarFlags index="Life" value="0"/>
+        <StatusBarFlags index="Energy" value="0"/>
+        <StatusBarFlags index="Cargo" value="0"/>
+        <StatusBarFlags index="Progress" value="0"/>
+        <StatusBarFlags index="Duration" value="0"/>
+        <StatusBarFlags index="Magazine" value="0"/>
+        <UnitFlags index="ShowBlobShadow" value="0"/>
+        <Wireframe>
+            <Image value="Assets\Textures\wireframe-general-circleofpower-terran.dds"/>
+        </Wireframe>
+    </CActorUnit>
+    <CActorUnit id="Lob_Device_Basic" parent="TerranBuildingEx" unitName="Lob_Device_Basic">
+        <Aliases value="_UnitHuge"/>
+        <Macros value="QueueAnim"/>
+        <On Terms="Behavior.ColonyInfestation.On" Send="Create InfestationEngineeringBay"/>
+        <Model value="EngineeringBay"/>
+        <CreepHeightClass value="Medium"/>
+        <BuildModel value="EngineeringBay"/>
+        <DeathArray index="Normal" ModelLink="EngineeringBayDeath"/>
+        <DeathArray index="UnderConstruction" ModelLink="TerranBuildingDeath" SoundLink="EngineeringBay_Explode"/>
+        <PlacementModel value="EngineeringBayPlacement"/>
+        <PortraitModel value="EngineeringBayPortrait"/>
+        <BarOffset value="110"/>
+        <BarWidth value="135"/>
+        <GroupIcon>
+            <Image value="Assets\Textures\Wireframe-Terran-EngineeringBay.dds"/>
+        </GroupIcon>
+        <HeroIcon value="Assets\Textures\btn-building-terran-engineeringbay.dds"/>
+        <NameOffset value="110"/>
+        <SoundArray index="Ready" value="EngineeringBay_Ready"/>
+        <SoundArray index="What" value="EngineeringBay_What"/>
+        <UnitIcon value="Assets\Textures\btn-building-terran-engineeringbay.dds"/>
+        <Wireframe>
+            <Image value="Assets\Textures\Wireframe-Terran-EngineeringBay.dds"/>
+        </Wireframe>
+    </CActorUnit>
     <CActorUnit id="Lob_Debris_4x4" parent="DestructibleUnitStandard" unitName="Lob_Debris_Normal">
         <Model value="DestructibleDebris4x4"/>
         <BuildModel value="DestructibleDebris4x4"/>
@@ -18,7 +64,7 @@
             <Image value="Assets\Textures\Wireframe-General-DestructibleDebris-4x4.dds"/>
         </Wireframe>
     </CActorUnit>
-    <CActorUnit id="Lob_SCV" parent="GenericUnitStandard" unitName="Lob_SCV">
+    <CActorUnit id="Lob_SCV_Unassigned" parent="GenericUnitStandard" unitName="Lob_SCV_Unassigned">
         <Aliases value="_UnitSmall"/>
         <Macros value="CarryAnim"/>
         <Macros value="UnloadDropAnim"/>
