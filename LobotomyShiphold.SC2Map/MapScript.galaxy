@@ -9,6 +9,20 @@
 include "TriggerLibs/NativeLib"
 
 //--------------------------------------------------------------------------------------------------
+// src/galaxy/00_config.galaxy
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// Shared constants.
+//
+// Lives in the lowest-numbered module because Galaxy needs a declaration before
+// its use and modules are concatenated in filename order.
+//--------------------------------------------------------------------------------------------------
+
+// P0 is single player. The map's default slots are 1 = the player, 2 = Hostile.
+const int c_p0Player = 1;
+const int c_p0Zerg = 2;
+
+//--------------------------------------------------------------------------------------------------
 // src/galaxy/05_objects_gen.galaxy
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
@@ -545,7 +559,118 @@ void Registry_Init () {
 }
 
 //--------------------------------------------------------------------------------------------------
-// src/galaxy/20_clearing.galaxy
+// src/galaxy/20_devices.galaxy
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// Resource devices.
+//
+// Devices produce power on a tick while intact, and lethal damage disables them
+// instead of destroying them, per the design baseline. Disabling is not a
+// separate state flag: a device is online when its health is above a threshold,
+// and fatal damage is intercepted and clamped to near zero. Repair is then just
+// the native SCV repair ability putting health back, and the device comes back
+// online on its own.
+//
+// Modelling it that way means the health bar already shows the disabled state,
+// repair needs no bespoke mechanic, and there is no flag that can drift out of
+// sync with the unit it describes.
+//--------------------------------------------------------------------------------------------------
+
+const fixed c_devicePeriod = 3.0;
+const int c_powerPerDevicePerTick = 3;
+
+// Above this share of max health the device runs; below it, it is disabled.
+const fixed c_deviceOnlineLifePercent = 50.0;
+
+// What a device is left on after lethal damage. Not zero -- zero is death.
+const fixed c_deviceDisabledLife = 1.0;
+
+int gv_power;
+
+trigger gt_deviceFatal;
+trigger gt_deviceTick;
+
+//--------------------------------------------------------------------------------------------------
+// Devices that have taken any damage, for the workers to prioritise.
+//--------------------------------------------------------------------------------------------------
+unitgroup Devices_Damaged () {
+    unitgroup all;
+    unitgroup damaged;
+    unit device;
+    int count;
+    int i;
+
+    all = ObjectsGen_ScanDevice();
+    damaged = UnitGroupEmpty();
+    count = UnitGroupCount(all, c_unitCountAlive);
+
+    i = 1;
+    while (i <= count) {
+        device = UnitGroupUnit(all, i);
+        if (device != null && UnitGetPropertyFixed(device, c_unitPropLifePercent, true) < 99.0) {
+            UnitGroupAdd(damaged, device);
+        }
+        i = i + 1;
+    }
+    return damaged;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Intercepts the killing blow and leaves the device standing at minimum health.
+//--------------------------------------------------------------------------------------------------
+bool Devices_Fatal_Func (bool testConds, bool runActions) {
+    unit victim;
+
+    if (!runActions) {
+        return true;
+    }
+
+    victim = EventUnit();
+    if (!ObjectsGen_IsDevice(victim)) {
+        return true;
+    }
+
+    UnitSetPropertyFixed(victim, c_unitPropLife, c_deviceDisabledLife);
+    return true;
+}
+
+bool Devices_Tick_Func (bool testConds, bool runActions) {
+    unitgroup devices;
+    unit device;
+    int count;
+    int i;
+
+    if (!runActions) {
+        return true;
+    }
+
+    devices = ObjectsGen_ScanDevice();
+    count = UnitGroupCount(devices, c_unitCountAlive);
+
+    i = 1;
+    while (i <= count) {
+        device = UnitGroupUnit(devices, i);
+        if (device != null
+            && UnitGetPropertyFixed(device, c_unitPropLifePercent, true) >= c_deviceOnlineLifePercent) {
+            gv_power = gv_power + c_powerPerDevicePerTick;
+        }
+        i = i + 1;
+    }
+    return true;
+}
+
+void Devices_Init () {
+    gv_power = 0;
+
+    gt_deviceFatal = TriggerCreate("Devices_Fatal_Func");
+    TriggerAddEventUnitDamaged(gt_deviceFatal, null, c_unitDamageTypeAny, c_unitDamageFatal, null);
+
+    gt_deviceTick = TriggerCreate("Devices_Tick_Func");
+    TriggerAddEventTimePeriodic(gt_deviceTick, c_devicePeriod, c_timeGame);
+}
+
+//--------------------------------------------------------------------------------------------------
+// src/galaxy/25_clearing.galaxy
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
 // Debris clearing.
@@ -557,24 +682,19 @@ void Registry_Init () {
 // weapon-damage question that lives in data where it can be tuned, rather than
 // in two hand-written rate constants here.
 //
-// Workers auto-assign to the nearest debris. The work-order marking UI is
-// deliberately NOT in P0 -- see docs/design/p0-scope.md.
+// Worker assignment lives in 30_workers.galaxy; this module only owns what
+// clearing pays out.
 //--------------------------------------------------------------------------------------------------
-
-const int c_p0Player = 1;
 
 // Credit banked into the ore pile when a piece of debris is finished off. The
 // pile is the inner-room stockpile; converting it into spendable resources is
 // the miners' job, in 30_economy.galaxy.
 const int c_oreCreditPerDebris = 25;
 
-const fixed c_workerAssignPeriod = 1.0;
-
 int gv_orePile;
 int gv_debrisCleared;
 
 trigger gt_debrisDied;
-trigger gt_workerAssign;
 
 //--------------------------------------------------------------------------------------------------
 // Any unit death, filtered down to debris. Cheaper and far less bookkeeping
@@ -594,17 +714,43 @@ bool Clearing_DebrisDied_Func (bool testConds, bool runActions) {
     return true;
 }
 
+void Clearing_Init () {
+    gv_orePile = 0;
+    gv_debrisCleared = 0;
+
+    gt_debrisDied = TriggerCreate("Clearing_DebrisDied_Func");
+    TriggerAddEventUnitDied(gt_debrisDied, null);
+}
+
 //--------------------------------------------------------------------------------------------------
-// Points idle workers at the nearest remaining debris.
+// src/galaxy/30_workers.galaxy
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// Worker assignment.
 //
-// Only idle ones: reissuing every tick would reset the attack of a worker that
-// is already chewing on something, and nothing would ever get cleared.
+// Workers pick their own job, repair before clearing. That ordering is the NPC
+// side of the same tension P0 is testing on the player: a damaged device pulls
+// a worker off the debris it was chewing on, so losing devices costs clearing
+// throughput as well as power.
+//
+// Only idle workers get an order. Reissuing every tick would reset the attack
+// of a worker already mid-swing and nothing would ever finish.
+//
+// The work-order marking UI is deliberately not in P0 -- see
+// docs/design/p0-scope.md. Until then this stands in for it.
 //--------------------------------------------------------------------------------------------------
-bool Clearing_WorkerAssign_Func (bool testConds, bool runActions) {
-    unitgroup debris;
+
+const fixed c_workerAssignPeriod = 1.0;
+
+trigger gt_workerAssign;
+
+bool Workers_Assign_Func (bool testConds, bool runActions) {
     unitgroup workers;
+    unitgroup damaged;
+    unitgroup debris;
     unit worker;
     unit target;
+    point where;
     int count;
     int i;
 
@@ -612,24 +758,38 @@ bool Clearing_WorkerAssign_Func (bool testConds, bool runActions) {
         return true;
     }
 
-    debris = ObjectsGen_ScanDebris();
-    if (UnitGroupCount(debris, c_unitCountAlive) == 0) {
+    workers = ObjectsGen_ScanSCV_Worker();
+    count = UnitGroupCount(workers, c_unitCountAlive);
+    if (count == 0) {
         return true;
     }
 
-    workers = ObjectsGen_ScanSCV_Worker();
-    count = UnitGroupCount(workers, c_unitCountAlive);
+    damaged = Devices_Damaged();
+    debris = ObjectsGen_ScanDebris();
+
     i = 1;
     while (i <= count) {
         worker = UnitGroupUnit(workers, i);
         if (worker != null && UnitIsAlive(worker) && UnitOrderCount(worker) == 0) {
-            target = UnitGroupClosestToPoint(debris, UnitGetPosition(worker));
+            where = UnitGetPosition(worker);
+
+            target = UnitGroupClosestToPoint(damaged, where);
             if (target != null) {
                 UnitIssueOrder(
                     worker,
-                    OrderTargetingUnit(AbilityCommand("attack", 0), target),
+                    OrderTargetingUnit(AbilityCommand("Repair", 0), target),
                     c_orderQueueReplace
                 );
+            }
+            else {
+                target = UnitGroupClosestToPoint(debris, where);
+                if (target != null) {
+                    UnitIssueOrder(
+                        worker,
+                        OrderTargetingUnit(AbilityCommand("attack", 0), target),
+                        c_orderQueueReplace
+                    );
+                }
             }
         }
         i = i + 1;
@@ -637,19 +797,13 @@ bool Clearing_WorkerAssign_Func (bool testConds, bool runActions) {
     return true;
 }
 
-void Clearing_Init () {
-    gv_orePile = 0;
-    gv_debrisCleared = 0;
-
-    gt_debrisDied = TriggerCreate("Clearing_DebrisDied_Func");
-    TriggerAddEventUnitDied(gt_debrisDied, null);
-
-    gt_workerAssign = TriggerCreate("Clearing_WorkerAssign_Func");
+void Workers_Init () {
+    gt_workerAssign = TriggerCreate("Workers_Assign_Func");
     TriggerAddEventTimePeriodic(gt_workerAssign, c_workerAssignPeriod, c_timeGame);
 }
 
 //--------------------------------------------------------------------------------------------------
-// src/galaxy/30_economy.galaxy
+// src/galaxy/40_economy.galaxy
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
 // The second stage of the resource chain: ore pile -> spendable resources.
@@ -710,6 +864,7 @@ bool Economy_Status_Func (bool testConds, bool runActions) {
             "debris left=" + IntToString(UnitGroupCount(ObjectsGen_ScanDebris(), c_unitCountAlive))
             + "  cleared=" + IntToString(gv_debrisCleared)
             + "  pile=" + IntToString(gv_orePile)
+            + "  power=" + IntToString(gv_power)
             + "  workers=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Worker(), c_unitCountAlive))
             + "  miners=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Miner(), c_unitCountAlive))
         )
@@ -726,12 +881,109 @@ void Economy_Init () {
 }
 
 //--------------------------------------------------------------------------------------------------
+// src/galaxy/50_waves.galaxy
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// Zerg waves.
+//
+// One wave per spawn marker on a fixed interval, walking in on attack-move.
+// Wave size grows by one per wave -- a placeholder ramp, not a difficulty
+// curve. The baseline deliberately defers that until the mechanics it would be
+// balancing against exist.
+//
+// Waves aim at the nearest device rather than at the player, so that "leave the
+// fight to go repair" and "leave the repair to go fight" are the same decision
+// seen from two sides. Falling back to the nearest worker keeps them walking
+// somewhere meaningful before any device is placed.
+//--------------------------------------------------------------------------------------------------
+
+const fixed c_waveInterval = 45.0;
+const int c_waveBaseSize = 3;
+const string c_waveUnitType = "Zergling";
+
+int gv_waveNumber;
+
+trigger gt_wave;
+
+//--------------------------------------------------------------------------------------------------
+// What a wave spawning at `from` should walk towards.
+//--------------------------------------------------------------------------------------------------
+point Waves_TargetFrom (point from) {
+    unit target;
+
+    target = UnitGroupClosestToPoint(ObjectsGen_ScanDevice(), from);
+    if (target == null) {
+        target = UnitGroupClosestToPoint(ObjectsGen_ScanSCV(), from);
+    }
+    if (target == null) {
+        return from;
+    }
+    return UnitGetPosition(target);
+}
+
+bool Waves_Spawn_Func (bool testConds, bool runActions) {
+    unitgroup markers;
+    unitgroup spawned;
+    point where;
+    int markerCount;
+    int i;
+
+    if (!runActions) {
+        return true;
+    }
+
+    markers = ObjectsGen_ScanMarker_Spawn();
+    markerCount = UnitGroupCount(markers, c_unitCountAlive);
+    if (markerCount == 0) {
+        return true;
+    }
+
+    gv_waveNumber = gv_waveNumber + 1;
+
+    i = 1;
+    while (i <= markerCount) {
+        where = UnitGetPosition(UnitGroupUnit(markers, i));
+        spawned = UnitCreate(
+            c_waveBaseSize + gv_waveNumber,
+            c_waveUnitType,
+            0,
+            c_p0Zerg,
+            where,
+            270.0
+        );
+        UnitGroupIssueOrder(
+            spawned,
+            OrderTargetingPoint(AbilityCommand("attack", 0), Waves_TargetFrom(where)),
+            c_orderQueueReplace
+        );
+        i = i + 1;
+    }
+
+    UIDisplayMessage(
+        PlayerGroupAll(),
+        c_messageAreaSubtitle,
+        StringToText("wave " + IntToString(gv_waveNumber) + " incoming")
+    );
+    return true;
+}
+
+void Waves_Init () {
+    gv_waveNumber = 0;
+
+    gt_wave = TriggerCreate("Waves_Spawn_Func");
+    TriggerAddEventTimePeriodic(gt_wave, c_waveInterval, c_timeGame);
+}
+
+//--------------------------------------------------------------------------------------------------
 // Map Initialization
 //--------------------------------------------------------------------------------------------------
 void InitMap () {
     libNtve_InitLib();
     ObjectsGen_Init();
     Registry_Init();
+    Devices_Init();
     Clearing_Init();
+    Workers_Init();
     Economy_Init();
+    Waves_Init();
 }

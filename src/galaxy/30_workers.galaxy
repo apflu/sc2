@@ -1,0 +1,76 @@
+//--------------------------------------------------------------------------------------------------
+// Worker assignment.
+//
+// Workers pick their own job, repair before clearing. That ordering is the NPC
+// side of the same tension P0 is testing on the player: a damaged device pulls
+// a worker off the debris it was chewing on, so losing devices costs clearing
+// throughput as well as power.
+//
+// Only idle workers get an order. Reissuing every tick would reset the attack
+// of a worker already mid-swing and nothing would ever finish.
+//
+// The work-order marking UI is deliberately not in P0 -- see
+// docs/design/p0-scope.md. Until then this stands in for it.
+//--------------------------------------------------------------------------------------------------
+
+const fixed c_workerAssignPeriod = 1.0;
+
+trigger gt_workerAssign;
+
+bool Workers_Assign_Func (bool testConds, bool runActions) {
+    unitgroup workers;
+    unitgroup damaged;
+    unitgroup debris;
+    unit worker;
+    unit target;
+    point where;
+    int count;
+    int i;
+
+    if (!runActions) {
+        return true;
+    }
+
+    workers = ObjectsGen_ScanSCV_Worker();
+    count = UnitGroupCount(workers, c_unitCountAlive);
+    if (count == 0) {
+        return true;
+    }
+
+    damaged = Devices_Damaged();
+    debris = ObjectsGen_ScanDebris();
+
+    i = 1;
+    while (i <= count) {
+        worker = UnitGroupUnit(workers, i);
+        if (worker != null && UnitIsAlive(worker) && UnitOrderCount(worker) == 0) {
+            where = UnitGetPosition(worker);
+
+            target = UnitGroupClosestToPoint(damaged, where);
+            if (target != null) {
+                UnitIssueOrder(
+                    worker,
+                    OrderTargetingUnit(AbilityCommand("Repair", 0), target),
+                    c_orderQueueReplace
+                );
+            }
+            else {
+                target = UnitGroupClosestToPoint(debris, where);
+                if (target != null) {
+                    UnitIssueOrder(
+                        worker,
+                        OrderTargetingUnit(AbilityCommand("attack", 0), target),
+                        c_orderQueueReplace
+                    );
+                }
+            }
+        }
+        i = i + 1;
+    }
+    return true;
+}
+
+void Workers_Init () {
+    gt_workerAssign = TriggerCreate("Workers_Assign_Func");
+    TriggerAddEventTimePeriodic(gt_workerAssign, c_workerAssignPeriod, c_timeGame);
+}

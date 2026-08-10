@@ -1,0 +1,90 @@
+//--------------------------------------------------------------------------------------------------
+// Zerg waves.
+//
+// One wave per spawn marker on a fixed interval, walking in on attack-move.
+// Wave size grows by one per wave -- a placeholder ramp, not a difficulty
+// curve. The baseline deliberately defers that until the mechanics it would be
+// balancing against exist.
+//
+// Waves aim at the nearest device rather than at the player, so that "leave the
+// fight to go repair" and "leave the repair to go fight" are the same decision
+// seen from two sides. Falling back to the nearest worker keeps them walking
+// somewhere meaningful before any device is placed.
+//--------------------------------------------------------------------------------------------------
+
+const fixed c_waveInterval = 45.0;
+const int c_waveBaseSize = 3;
+const string c_waveUnitType = "Zergling";
+
+int gv_waveNumber;
+
+trigger gt_wave;
+
+//--------------------------------------------------------------------------------------------------
+// What a wave spawning at `from` should walk towards.
+//--------------------------------------------------------------------------------------------------
+point Waves_TargetFrom (point from) {
+    unit target;
+
+    target = UnitGroupClosestToPoint(ObjectsGen_ScanDevice(), from);
+    if (target == null) {
+        target = UnitGroupClosestToPoint(ObjectsGen_ScanSCV(), from);
+    }
+    if (target == null) {
+        return from;
+    }
+    return UnitGetPosition(target);
+}
+
+bool Waves_Spawn_Func (bool testConds, bool runActions) {
+    unitgroup markers;
+    unitgroup spawned;
+    point where;
+    int markerCount;
+    int i;
+
+    if (!runActions) {
+        return true;
+    }
+
+    markers = ObjectsGen_ScanMarker_Spawn();
+    markerCount = UnitGroupCount(markers, c_unitCountAlive);
+    if (markerCount == 0) {
+        return true;
+    }
+
+    gv_waveNumber = gv_waveNumber + 1;
+
+    i = 1;
+    while (i <= markerCount) {
+        where = UnitGetPosition(UnitGroupUnit(markers, i));
+        spawned = UnitCreate(
+            c_waveBaseSize + gv_waveNumber,
+            c_waveUnitType,
+            0,
+            c_p0Zerg,
+            where,
+            270.0
+        );
+        UnitGroupIssueOrder(
+            spawned,
+            OrderTargetingPoint(AbilityCommand("attack", 0), Waves_TargetFrom(where)),
+            c_orderQueueReplace
+        );
+        i = i + 1;
+    }
+
+    UIDisplayMessage(
+        PlayerGroupAll(),
+        c_messageAreaSubtitle,
+        StringToText("wave " + IntToString(gv_waveNumber) + " incoming")
+    );
+    return true;
+}
+
+void Waves_Init () {
+    gv_waveNumber = 0;
+
+    gt_wave = TriggerCreate("Waves_Spawn_Func");
+    TriggerAddEventTimePeriodic(gt_wave, c_waveInterval, c_timeGame);
+}

@@ -1,0 +1,10 @@
+//--------------------------------------------------------------------------------------------------
+// Shared constants.
+//
+// Lives in the lowest-numbered module because Galaxy needs a declaration before
+// its use and modules are concatenated in filename order.
+//--------------------------------------------------------------------------------------------------
+
+// P0 is single player. The map's default slots are 1 = the player, 2 = Hostile.
+const int c_p0Player = 1;
+const int c_p0Zerg = 2;

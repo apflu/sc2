@@ -1,0 +1,107 @@
+//--------------------------------------------------------------------------------------------------
+// Resource devices.
+//
+// Devices produce power on a tick while intact, and lethal damage disables them
+// instead of destroying them, per the design baseline. Disabling is not a
+// separate state flag: a device is online when its health is above a threshold,
+// and fatal damage is intercepted and clamped to near zero. Repair is then just
+// the native SCV repair ability putting health back, and the device comes back
+// online on its own.
+//
+// Modelling it that way means the health bar already shows the disabled state,
+// repair needs no bespoke mechanic, and there is no flag that can drift out of
+// sync with the unit it describes.
+//--------------------------------------------------------------------------------------------------
+
+const fixed c_devicePeriod = 3.0;
+const int c_powerPerDevicePerTick = 3;
+
+// Above this share of max health the device runs; below it, it is disabled.
+const fixed c_deviceOnlineLifePercent = 50.0;
+
+// What a device is left on after lethal damage. Not zero -- zero is death.
+const fixed c_deviceDisabledLife = 1.0;
+
+int gv_power;
+
+trigger gt_deviceFatal;
+trigger gt_deviceTick;
+
+//--------------------------------------------------------------------------------------------------
+// Devices that have taken any damage, for the workers to prioritise.
+//--------------------------------------------------------------------------------------------------
+unitgroup Devices_Damaged () {
+    unitgroup all;
+    unitgroup damaged;
+    unit device;
+    int count;
+    int i;
+
+    all = ObjectsGen_ScanDevice();
+    damaged = UnitGroupEmpty();
+    count = UnitGroupCount(all, c_unitCountAlive);
+
+    i = 1;
+    while (i <= count) {
+        device = UnitGroupUnit(all, i);
+        if (device != null && UnitGetPropertyFixed(device, c_unitPropLifePercent, true) < 99.0) {
+            UnitGroupAdd(damaged, device);
+        }
+        i = i + 1;
+    }
+    return damaged;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Intercepts the killing blow and leaves the device standing at minimum health.
+//--------------------------------------------------------------------------------------------------
+bool Devices_Fatal_Func (bool testConds, bool runActions) {
+    unit victim;
+
+    if (!runActions) {
+        return true;
+    }
+
+    victim = EventUnit();
+    if (!ObjectsGen_IsDevice(victim)) {
+        return true;
+    }
+
+    UnitSetPropertyFixed(victim, c_unitPropLife, c_deviceDisabledLife);
+    return true;
+}
+
+bool Devices_Tick_Func (bool testConds, bool runActions) {
+    unitgroup devices;
+    unit device;
+    int count;
+    int i;
+
+    if (!runActions) {
+        return true;
+    }
+
+    devices = ObjectsGen_ScanDevice();
+    count = UnitGroupCount(devices, c_unitCountAlive);
+
+    i = 1;
+    while (i <= count) {
+        device = UnitGroupUnit(devices, i);
+        if (device != null
+            && UnitGetPropertyFixed(device, c_unitPropLifePercent, true) >= c_deviceOnlineLifePercent) {
+            gv_power = gv_power + c_powerPerDevicePerTick;
+        }
+        i = i + 1;
+    }
+    return true;
+}
+
+void Devices_Init () {
+    gv_power = 0;
+
+    gt_deviceFatal = TriggerCreate("Devices_Fatal_Func");
+    TriggerAddEventUnitDamaged(gt_deviceFatal, null, c_unitDamageTypeAny, c_unitDamageFatal, null);
+
+    gt_deviceTick = TriggerCreate("Devices_Tick_Func");
+    TriggerAddEventTimePeriodic(gt_deviceTick, c_devicePeriod, c_timeGame);
+}
