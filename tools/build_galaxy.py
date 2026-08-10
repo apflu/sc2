@@ -16,6 +16,8 @@ import re
 import sys
 from pathlib import Path
 
+import gen_objects
+
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "src" / "galaxy"
 OUT = ROOT / "LobotomyShiphold.SC2Map" / "MapScript.galaxy"
@@ -39,6 +41,15 @@ def main() -> int:
     if not SRC.is_dir():
         print(f"error: no source directory at {SRC}", file=sys.stderr)
         return 1
+
+    # Regenerate the editor-derived tables first, so a rebuild always reflects
+    # whatever was last saved in the editor.
+    _, categories, groups = gen_objects.generate()
+    print("generated src/galaxy/05_objects_gen.galaxy")
+    for name, types in categories.items():
+        print(f"  {name}: {', '.join(types)}")
+    for name, ids in groups:
+        print(f"  group '{name}': {len(ids)} objects")
 
     modules = sorted(SRC.glob("*.galaxy"))
     if not modules:

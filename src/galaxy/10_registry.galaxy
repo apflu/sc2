@@ -1,58 +1,25 @@
 //--------------------------------------------------------------------------------------------------
 // Object registry.
 //
-// The bridge between the editor side and the code side. Editor-placed objects
-// are classified by WHICH PLAYER OWNS THEM, not by unit id and not by unit
-// type, so the code never has to track editor ids and you are free to use
-// whatever unit you like as a stand-in while greyboxing.
+// What the code side knows about the editor side. Objects are identified by
+// UNIT TYPE, resolved through the tables in 05_objects_gen.galaxy.
 //
-// See docs/dev/authoring-contract.md for the player slot table.
+// Type rather than placed id, because the editor assigns ids randomly and they
+// cannot be chosen by hand -- and more importantly because type is the one
+// channel that also covers units spawned at runtime, which is where debris is
+// eventually headed.
+//
+// Type rather than owning player, because ownership carries engine semantics we
+// do not control (alliance, default right-click, selection, minimap colour) and
+// there are only fifteen slots to spend on six players plus the swarm.
 //--------------------------------------------------------------------------------------------------
-
-// Marker player slots. Human players are 1..6.
-const int c_playerZerg    = 7;   // hostile; spawned at runtime, nothing preplaced
-const int c_playerDebris  = 8;   // one unit per clearable debris pile
-const int c_playerDevice  = 9;   // one unit per resource device
-const int c_playerSpawn   = 10;  // pure markers: zerg entry points, removed after init
-
-// Array length must be a literal here -- Galaxy is picky about constants in
-// array declarations, so c_maxSpawnPoints only guards the loop. Keep in sync.
-const int c_maxSpawnPoints = 16;
 
 unitgroup gv_debris;
-unitgroup gv_devices;
-point[16] gv_spawnPoints;
-int gv_spawnCount;
+unitgroup gv_scvs;
 
 //--------------------------------------------------------------------------------------------------
-// Reads the spawn markers' positions and removes the marker units themselves --
-// they exist only to carry a position from the editor into the script.
-//--------------------------------------------------------------------------------------------------
-void Registry_ConsumeSpawnMarkers () {
-    unitgroup markers;
-    unit marker;
-    int count;
-    int i;
-
-    markers = UnitGroup(null, c_playerSpawn, RegionEntireMap(), null, 0);
-    count = UnitGroupCount(markers, c_unitCountAll);
-    gv_spawnCount = 0;
-
-    i = 1;
-    while (i <= count) {
-        marker = UnitGroupUnit(markers, i);
-        if (gv_spawnCount < c_maxSpawnPoints) {
-            gv_spawnPoints[gv_spawnCount] = UnitGetPosition(marker);
-            gv_spawnCount = gv_spawnCount + 1;
-        }
-        UnitRemove(marker);
-        i = i + 1;
-    }
-}
-
-//--------------------------------------------------------------------------------------------------
-// Prints what the scan found. While greyboxing this is the fastest way to catch
-// "I forgot to set the Player field on that one" -- the count will be off.
+// Prints what the scan found. While greyboxing this is the fastest way to spot
+// a unit placed with the wrong type -- the count comes back short.
 //--------------------------------------------------------------------------------------------------
 void Registry_Report () {
     UIDisplayMessage(
@@ -60,15 +27,14 @@ void Registry_Report () {
         c_messageAreaSubtitle,
         StringToText(
             "registry: debris=" + IntToString(UnitGroupCount(gv_debris, c_unitCountAlive))
-            + " devices=" + IntToString(UnitGroupCount(gv_devices, c_unitCountAlive))
-            + " spawns=" + IntToString(gv_spawnCount)
+            + " scv=" + IntToString(UnitGroupCount(gv_scvs, c_unitCountAlive))
+            + " group(debris)=" + IntToString(UnitGroupCount(ObjectsGen_Group("debris"), c_unitCountAlive))
         )
     );
 }
 
 void Registry_Init () {
-    gv_debris = UnitGroup(null, c_playerDebris, RegionEntireMap(), null, 0);
-    gv_devices = UnitGroup(null, c_playerDevice, RegionEntireMap(), null, 0);
-    Registry_ConsumeSpawnMarkers();
+    gv_debris = ObjectsGen_ScanDebris();
+    gv_scvs = ObjectsGen_ScanSCV();
     Registry_Report();
 }

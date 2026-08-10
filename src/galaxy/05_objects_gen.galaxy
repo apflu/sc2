@@ -1,0 +1,91 @@
+//--------------------------------------------------------------------------------------------------
+// GENERATED FILE -- DO NOT EDIT.
+//
+// Built from the map's UnitData.xml and Objects by tools/gen_objects.py.
+// Place things in the editor, rebuild, and the tables below follow.
+//--------------------------------------------------------------------------------------------------
+
+// Unit types, by the category segment of their id.
+const int c_typesDebrisCount = 1;
+string[1] gvg_typesDebris;
+const int c_typesSCVCount = 1;
+string[1] gvg_typesSCV;
+
+// Editor object groups, flattened: names[i] owns the members
+// slice starting at groupFirst[i] and running groupSize[i] long.
+const int c_groupCount = 1;
+string[1] gvg_groupNames;
+int[1] gvg_groupFirst;
+int[1] gvg_groupSize;
+int[2] gvg_groupMembers;
+
+void ObjectsGen_Init () {
+    gvg_typesDebris[0] = "Lob_Debris_Normal";
+    gvg_typesSCV[0] = "Lob_SCV";
+    gvg_groupNames[0] = "debris";
+    gvg_groupFirst[0] = 0;
+    gvg_groupSize[0] = 2;
+    gvg_groupMembers[0] = 982629277;
+    gvg_groupMembers[1] = 1070187309;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live Debris unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanDebris () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesDebrisCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesDebris[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live SCV unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanSCV () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesSCVCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesSCV[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// The placed objects of a named editor group. Preplaced only -- runtime
+// spawns have no group. Returns empty for an unknown name.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_Group (string name) {
+    unitgroup found;
+    int i;
+    int m;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_groupCount) {
+        if (gvg_groupNames[i] == name) {
+            m = gvg_groupFirst[i];
+            while (m < gvg_groupFirst[i] + gvg_groupSize[i]) {
+                UnitGroupAdd(found, UnitFromId(gvg_groupMembers[m]));
+                m = m + 1;
+            }
+            return found;
+        }
+        i = i + 1;
+    }
+    return found;
+}
