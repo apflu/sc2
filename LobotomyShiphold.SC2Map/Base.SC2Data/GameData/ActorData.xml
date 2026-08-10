@@ -64,47 +64,16 @@
             <Image value="Assets\Textures\Wireframe-General-DestructibleDebris-4x4.dds"/>
         </Wireframe>
     </CActorUnit>
-    <CActorUnit id="Lob_Hero_Agent" parent="GenericUnitStandard" unitName="Lob_Hero_Agent">
-        <!-- Marine art standing in for a character that does not exist yet.
-             The attack bracket is subscribed on WeaponStart.* rather than on
-             the weapon by name, exactly as the stock Marine actor does, so the
-             animation follows the character's weapon whatever we rename it to
-             later. There is no muzzle flash: that comes from the stock weapon's
-             own launch actors, which our custom effect does not fire. -->
-        <On Terms="Abil.attack.ReadyStart" Send="AnimGroupApply Ready"/>
-        <On Terms="Abil.attack.ReadyStop" Send="AnimGroupRemove Ready"/>
-        <On Terms="WeaponStart.*.AttackStart" Send="AnimBracketStart Attack Attack"/>
-        <On Terms="WeaponStop.*.AttackStop" Send="AnimBracketStop Attack"/>
-        <!-- Greybox tell, same as the SCV tints below: at a glance in a fight,
-             the player's own unit has to be the one that is obviously not
-             a marine-coloured everything else. -->
-        <On Terms="UnitBirth.Lob_Hero_Agent" Send="SetTintColor 120,255,140"/>
-        <Aliases value="_UnitSmall"/>
-        <Macros value="UnloadDropAnim"/>
-        <Macros value="PhysicsDeathsSwarmGround"/>
+    <CActorUnit id="Lob_Hero_Agent" parent="Marine" unitName="Lob_Hero_Agent">
+        <!-- Model has to be restated even though everything else is inherited:
+             the stock Marine actor never declares one, it resolves by actor id
+             matching the model id. Inheriting an unset field means our actor
+             would go looking for a model called Lob_Hero_Agent and find none. -->
         <Model value="Marine"/>
-        <ModelFlags index="OutlineEmitter" value="1"/>
-        <BuildModel value="Marine"/>
-        <DeathArray index="Normal" ModelLink="MarineDeath"/>
-        <PlacementModel value="Marine"/>
-        <PortraitModel value="MarinePortrait"/>
-        <WalkAnimMoveSpeed value="2.25"/>
-        <BarOffset value="40"/>
-        <BarWidth value="36"/>
-        <GroupIcon>
-            <Image value="Assets\Textures\Wireframe-Terran-Marine.dds"/>
-        </GroupIcon>
-        <HeroIcon value="Assets\Textures\btn-unit-terran-marine.dds"/>
-        <LifeArmorIcon value="Assets\Textures\btn-upgrade-terran-infantryarmorlevel0.dds"/>
-        <SoundArray index="Ready" value="Marine_Ready"/>
-        <SoundArray index="What" value="Marine_What"/>
-        <SoundArray index="Yes" value="Marine_Yes"/>
-        <SoundArray index="Attack" value="Marine_Attack"/>
-        <SoundArray index="Pissed" value="Marine_Pissed"/>
-        <UnitIcon value="Assets\Textures\btn-unit-terran-marine.dds"/>
-        <Wireframe>
-            <Image value="Assets\Textures\Wireframe-Terran-Marine.dds"/>
-        </Wireframe>
+        <!-- Greybox tell, same idea as the SCV tints below: in a fight the
+             player's own unit has to be the one that obviously is not
+             everything else. -->
+        <On Terms="UnitBirth.Lob_Hero_Agent" Send="SetTintColor 120,255,140"/>
     </CActorUnit>
     <CActorUnit id="Lob_SCV" parent="GenericUnitStandard" unitName="None">
         <!-- One actor for every SCV role: the models are identical, so the roles

@@ -116,65 +116,38 @@
     </CUnit>
     <!-- The player character.
 
-         Deliberately not a worker: it cannot harvest and cannot build, so the
-         only things competing for it are the three P0 is testing, clear
-         debris, fight the wave, repair a device. Everything else a Terran
-         ground unit normally does is left off so that "the player is busy" has
-         exactly one explanation.
+         Parented rather than flattened: everything not listed here is a
+         Marine, so this entry reads as a diff against one. Marine's ability
+         list is stop/attack/move/Stimpack, so Repair swaps straight into
+         index 3 and its button into card slot 5, and the character ends up
+         with no harvest and no build. The only things that can want it are
+         the three P0 is testing, which is what makes "the player is busy"
+         have exactly one explanation.
 
-         No Food cost and no build cost: there is nothing that produces one.
-         Respawn is handled in src/galaxy/15_hero.galaxy, because death costing
-         only time is a design rule rather than a data one. -->
-    <CUnit id="Lob_Hero_Agent">
-        <DeathRevealRadius value="3"/>
-        <Race value="Terr"/>
-        <FlagArray index="UseLineOfSight" value="1"/>
-        <PlaneArray index="Ground" value="1"/>
-        <Collide index="Ground" value="1"/>
-        <Collide index="ForceField" value="1"/>
-        <Collide index="Small" value="1"/>
-        <DefaultAcquireLevel value="Offensive"/>
-        <Attributes index="Light" value="1"/>
-        <Attributes index="Biological" value="1"/>
+         Intended target is RaynorCommando, which is already almost this unit;
+         it needs a campaign dependency the map does not have yet. See
+         docs/dev/authoring-contract.md.
+
+         Death costs only time, handled in src/galaxy/15_hero.galaxy, because
+         that is a design rule rather than a data one. -->
+    <CUnit id="Lob_Hero_Agent" parent="Marine">
+        <FlagArray index="Hero" value="1"/>
         <LifeStart value="250"/>
         <LifeMax value="250"/>
         <LifeArmor value="1"/>
-        <LifeArmorName value="Unit/LifeArmorName/TerranInfantryArmor"/>
-        <!-- Slow constant regeneration. There is no healing in P0, and chip
-             damage that never comes back would quietly turn every wave into a
-             countdown to a death the player cannot prevent, which is the
+        <!-- Slow constant regeneration. Nothing in P0 heals, and chip damage
+             that never comes back would quietly turn every wave into a
+             countdown to a death the player cannot avoid, which is the
              opposite of "death costs only time". -->
         <LifeRegenRate value="1"/>
-        <Speed value="3.0"/>
-        <Acceleration value="2.5"/>
-        <LateralAcceleration value="46"/>
-        <StationaryTurningRate value="999.8437"/>
-        <TurningRate value="999.8437"/>
-        <Sight value="9"/>
+        <Speed value="3"/>
         <Food value="0"/>
-        <AttackTargetPriority value="20"/>
-        <AbilArray Link="stop"/>
-        <AbilArray Link="attack"/>
-        <AbilArray Link="move"/>
-        <AbilArray Link="Repair"/>
-        <WeaponArray Link="Lob_Hero_Rifle"/>
+        <AbilArray index="3" Link="Repair"/>
+        <WeaponArray index="0" Link="Lob_Hero_Rifle"/>
         <CardLayouts>
-            <LayoutButtons Face="Move" Type="AbilCmd" AbilCmd="move,Move" Row="0" Column="0"/>
-            <LayoutButtons Face="Stop" Type="AbilCmd" AbilCmd="stop,Stop" Row="0" Column="1"/>
-            <LayoutButtons Face="MoveHoldPosition" Type="AbilCmd" AbilCmd="move,HoldPos" Row="0" Column="2"/>
-            <LayoutButtons Face="MovePatrol" Type="AbilCmd" AbilCmd="move,Patrol" Row="0" Column="3"/>
-            <LayoutButtons Face="Attack" Type="AbilCmd" AbilCmd="attack,Execute" Row="0" Column="4"/>
-            <LayoutButtons Face="Repair" Type="AbilCmd" AbilCmd="Repair,Execute" Row="1" Column="0"/>
+            <LayoutButtons index="5" Face="Repair" Type="AbilCmd" AbilCmd="Repair,Execute" Row="1" Column="0"/>
         </CardLayouts>
-        <Radius value="0.5"/>
-        <SeparationRadius value="0.5"/>
-        <InnerRadius value="0.5"/>
-        <CargoSize value="1"/>
-        <SubgroupPriority value="10"/>
-        <MinimapRadius value="0.5"/>
-        <EditorCategories value="ObjectType:Unit,ObjectFamily:Melee"/>
-        <GlossaryCategory value="Unit/Category/TerranUnits"/>
-        <HotkeyCategory value="Unit/Category/TerranUnits"/>
+        <EditorCategories value="ObjectType:Hero,ObjectFamily:Campaign"/>
     </CUnit>
     <CUnit id="Lob_SCV_Unassigned">
         <DeathRevealRadius value="3"/>
