@@ -20,6 +20,15 @@
          standing and online is counted automatically, per owning player, with
          no script involved. Disablement is a different unit type (below) that
          carries no Food, which is what makes the whole thing need no bookkeeping. -->
+    <!-- No TerranBuildingBurnDown. It came along with the EngineeringBay this
+         was copied from, and it is a second, undesigned failure mechanic: below
+         a third of its life a Terran building takes 1 damage every 0.33s until
+         it dies. On the downed variant that was fatal outright, since that one
+         is born at 1 life and burned away in a third of a second. On this one
+         it is subtler and worse for P0, a device chipped below a third would
+         fail on its own with nothing attacking it, which is exactly the kind of
+         unattributable event a greybox test cannot afford. Decay-if-unrepaired
+         may be worth having later, as something chosen rather than inherited. -->
     <CUnit id="Lob_Device_Basic">
         <Food value="3"/>
         <DeathRevealRadius value="3"/>
@@ -59,7 +68,6 @@
         <AbilArray Link="BuildInProgress"/>
         <AbilArray Link="que5"/>
         <AbilArray Link="EngineeringBayResearch"/>
-        <BehaviorArray Link="TerranBuildingBurnDown"/>
         <CardLayouts>
             <LayoutButtons Face="TerranInfantryWeaponsLevel1" Type="AbilCmd" AbilCmd="EngineeringBayResearch,Research3" Row="0" Column="0"/>
             <LayoutButtons Face="TerranInfantryWeaponsLevel2" Type="AbilCmd" AbilCmd="EngineeringBayResearch,Research4" Row="0" Column="0"/>
