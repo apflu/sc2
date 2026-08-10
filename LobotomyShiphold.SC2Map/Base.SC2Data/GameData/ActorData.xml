@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Catalog>
+    <CActorUnit id="Lob_Debris_4x4" parent="DestructibleUnitStandard" unitName="Lob_Debris_Normal">
+        <Model value="DestructibleDebris4x4"/>
+        <BuildModel value="DestructibleDebris4x4"/>
+        <DeathArray index="Normal" ModelLink="DestructibleDebris4x4" SoundLink="DestructibleDebrisRampDiagonalHuge_Explosion"/>
+        <PlacementModel value="DestructibleDebris4x4"/>
+        <BarOffset value="22"/>
+        <BarWidth value="200"/>
+        <GroupIcon>
+            <Image value="Assets\Textures\Wireframe-General-DestructibleDebris-4x4.dds"/>
+        </GroupIcon>
+        <HighlightTooltip value="Unit/Name/Lob_Debris_4x4HighlightTooltip"/>
+        <LifeArmorIcon value="Assets\Textures\btn-upgrade-terran-buildingarmor.dds"/>
+        <MinimapIcon value="Assets\Textures\ui_minimap_icon_destructibledebris.dds"/>
+        <UnitFlags index="ShowBlobShadow" value="0"/>
+        <Wireframe>
+            <Image value="Assets\Textures\Wireframe-General-DestructibleDebris-4x4.dds"/>
+        </Wireframe>
+    </CActorUnit>
+    <CActorUnit id="Lob_SCV" parent="GenericUnitStandard" unitName="Lob_SCV">
+        <Aliases value="_UnitSmall"/>
+        <Macros value="CarryAnim"/>
+        <Macros value="UnloadDropAnim"/>
+        <Macros value="MacroWorkerHat"/>
+        <Macros value="PhysicsDeathsSwarmGround"/>
+        <Macros value="PhysicsDeathsVoidGround"/>
+        <On Terms="Abil.SCVHarvest.Start" Send="TimerSet 0.000000,0.300000 Gather"/>
+        <On Terms="Abil.SCVHarvest.Stop" Send="AnimClear Gather"/>
+        <On Terms="Abil.SCVHarvest.Stop" Send="TimerKill Gather"/>
+        <On Terms="AnimDone.*.Complete; AnimName Gather" Send="TimerSet 0.000000,0.300000 Gather"/>
+        <On Terms="TimerExpired; TimerName Gather" Send="AnimPlay Gather Work NonLooping"/>
+        <On Terms="TimerExpired; TimerName Gather" Send="Create SCVGatherSound"/>
+        <On Terms="Abil.Repair.SourceChannelStart" Send="TimerSet 0.000000,0.300000 Repair"/>
+        <On Terms="Abil.Repair.SourceChannelStop" Send="TimerKill Repair"/>
+        <On Terms="Abil.Repair.SourceChannelStop" Send="AnimClear Repair"/>
+        <On Terms="AnimDone.*.Complete; AnimName Repair" Send="TimerSet 0.000000,0.300000 Repair"/>
+        <On Terms="TimerExpired; TimerName Repair" Send="AnimPlay Repair Work NonLooping"/>
+        <On Terms="TimerExpired; TimerName Repair" Send="Create SCVRepairSound"/>
+        <On Terms="Abil.*.WorkerStart" Send="TimerSet 0.000000,0.300000 Build"/>
+        <On Terms="Abil.*.WorkerStop" Send="TimerKill Build"/>
+        <On Terms="Abil.*.WorkerStop" Send="AnimClear Build"/>
+        <On Terms="Abil.*.WorkerCancel" Send="TimerKill Build"/>
+        <On Terms="Abil.*.WorkerCancel" Send="AnimClear Build"/>
+        <On Terms="AnimDone.*.Complete; AnimName Build" Send="TimerSet 0.000000,0.300000 Build"/>
+        <On Terms="TimerExpired; TimerName Build" Send="AnimPlay Build Work NonLooping"/>
+        <On Terms="TimerExpired; TimerName Build" Send="Create SCVBuildSound"/>
+        <On Terms="Abil.SCVHarvest.Start" Send="StatusSet CloakSound 1"/>
+        <On Terms="Behavior.CarryHarvestableVespeneGeyserGas.Create" Send="StatusSet CloakSound 1"/>
+        <On Terms="Confirmation.SCV.Start" Send="StatusSet CloakSound 0"/>
+        <On Terms="Behavior.CloakFieldEffect.Create; IsStatus CloakSound 0" Send="Create Worker_CloakFieldOn"/>
+        <On Terms="Behavior.CloakFieldEffect.Destroy; IsStatus CloakSound 0" Send="Create Worker_CloakFieldOff"/>
+        <On Terms="Behavior.OracleCloakFieldEffect.Create; IsStatus CloakSound 0" Send="Create Worker_CloakFieldOn"/>
+        <On Terms="Behavior.OracleCloakFieldEffect.Destroy; IsStatus CloakSound 0" Send="Create Worker_CloakFieldOff"/>
+        <On Terms="UnitHeightUpdate.*.Land" Send="Create SCV_Land"/>
+        <Model value="SCV"/>
+        <AnimBlendTime value="0.500000"/>
+        <ModelFlags index="OutlineEmitter" value="1"/>
+        <BuildModel value="SCV"/>
+        <DeathArray index="Normal" ModelLink="SCVDeath" SoundLink="SCV_Explode"/>
+        <DeathCustoms ModelLink="SCVDeathRagdoll" Name="RagdollBasic">
+            <BodySquibs Name="Basic" Model="TerranSquibDeathRagdoll"/>
+        </DeathCustoms>
+        <DeathCustoms Name="RagdollSiegeTank" InheritsFrom="RagdollBasic"/>
+        <DeathCustoms Name="RagdollNuke" InheritsFrom="RagdollBasic">
+            <BodySquibs Name="Fire"/>
+        </DeathCustoms>
+        <DeathCustoms Name="RagdollFire" InheritsFrom="RagdollBasic">
+            <BodySquibs Name="Fire"/>
+        </DeathCustoms>
+        <DeathCustoms Name="RagdollBaneling" InheritsFrom="RagdollBasic">
+            <BodySquibs Name="Acid"/>
+        </DeathCustoms>
+        <DeathCustoms Name="RagdollAcid" InheritsFrom="RagdollBasic">
+            <BodySquibs Name="Acid"/>
+        </DeathCustoms>
+        <DeathCustoms Name="RagdollUltraUnburrow" InheritsFrom="RagdollBasic"/>
+        <DeathCustoms ActorModel="SpineCrawlerHurlDeathRagdoll" ModelLink="SCVDeathRagdoll" Name="RagdollSpineCrawlerHurl">
+            <BodySquibs Name="Basic" Model="TerranSquibDeathRagdoll"/>
+        </DeathCustoms>
+        <DeathCustoms Name="RagdollOverkillDPRH" InheritsFrom="RagdollBasic"/>
+        <DeathCustoms Name="RagdollOverkillDOI" InheritsFrom="RagdollBasic"/>
+        <DeathCustoms Name="RagdollMidair" InheritsFrom="RagdollBasic"/>
+        <PlacementModel value="SCV"/>
+        <PortraitModel value="SCVPortrait"/>
+        <BarOffset value="40"/>
+        <BarWidth value="42"/>
+        <GroupIcon>
+            <Image value="Assets\Textures\Wireframe-Terran-SCV.dds"/>
+        </GroupIcon>
+        <HeroIcon value="Assets\Textures\btn-unit-terran-scv.dds"/>
+        <LifeArmorIcon value="Assets\Textures\btn-upgrade-terran-infantryarmorlevel0.dds"/>
+        <SoundArray index="Ready" value="SCV_Ready"/>
+        <SoundArray index="Help" value="Alert_TerranEconomyUnderAttack"/>
+        <SoundArray index="What" value="SCV_What"/>
+        <SoundArray index="Yes" value="SCV_Yes"/>
+        <SoundArray index="Attack" value="SCV_Attack"/>
+        <SoundArray index="Pissed" value="SCV_Pissed"/>
+        <UnitIcon value="Assets\Textures\btn-unit-terran-scv.dds"/>
+        <Wireframe>
+            <Image value="Assets\Textures\Wireframe-Terran-SCV.dds"/>
+        </Wireframe>
+    </CActorUnit>
+</Catalog>

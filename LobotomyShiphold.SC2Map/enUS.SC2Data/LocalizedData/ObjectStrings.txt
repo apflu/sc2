@@ -1,0 +1,3 @@
+﻿Actor/Name/Lob_Debris_4x4=Lob_Debris_4x4
+Actor/Name/Lob_SCV=Lob_SCV
+Unit/EditorSuffix/Lob_Debris_Normal=- 4x4
