@@ -64,7 +64,17 @@
             <Image value="Assets\Textures\Wireframe-General-DestructibleDebris-4x4.dds"/>
         </Wireframe>
     </CActorUnit>
-    <CActorUnit id="Lob_SCV_Unassigned" parent="GenericUnitStandard" unitName="Lob_SCV_Unassigned">
+    <CActorUnit id="Lob_SCV" parent="GenericUnitStandard" unitName="None">
+        <!-- One actor for every SCV role: the models are identical, so the roles
+             differ only in what the script lets them do. Listed explicitly rather
+             than via unitName so no role is privileged as "the" host. -->
+        <On Terms="UnitBirth.Lob_SCV_Unassigned" Send="Create"/>
+        <On Terms="UnitBirth.Lob_SCV_Miner" Send="Create"/>
+        <On Terms="UnitBirth.Lob_SCV_Worker" Send="Create"/>
+        <!-- Greybox tell: identical models are impossible to tell apart while
+             watching both roles work. Drop these once the roles get real art. -->
+        <On Terms="UnitBirth.Lob_SCV_Miner" Send="SetTintColor 80,160,255"/>
+        <On Terms="UnitBirth.Lob_SCV_Worker" Send="SetTintColor 255,180,60"/>
         <Aliases value="_UnitSmall"/>
         <Macros value="CarryAnim"/>
         <Macros value="UnloadDropAnim"/>

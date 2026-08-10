@@ -8,18 +8,26 @@
 // Unit types, by the category segment of their id.
 const int c_typesDebrisCount = 1;
 string[1] gvg_typesDebris;
-const int c_typesDeviceCount = 0;
+const int c_typesDebris_NormalCount = 1;
+string[1] gvg_typesDebris_Normal;
+const int c_typesDeviceCount = 1;
 string[1] gvg_typesDevice;
+const int c_typesDevice_BasicCount = 1;
+string[1] gvg_typesDevice_Basic;
 const int c_typesHeroCount = 0;
 string[1] gvg_typesHero;
-const int c_typesMarkerCount = 0;
+const int c_typesMarkerCount = 1;
 string[1] gvg_typesMarker;
-const int c_typesMinerCount = 0;
-string[1] gvg_typesMiner;
-const int c_typesSCVCount = 1;
-string[1] gvg_typesSCV;
-const int c_typesWorkerCount = 0;
-string[1] gvg_typesWorker;
+const int c_typesMarker_SpawnCount = 1;
+string[1] gvg_typesMarker_Spawn;
+const int c_typesSCVCount = 3;
+string[3] gvg_typesSCV;
+const int c_typesSCV_MinerCount = 1;
+string[1] gvg_typesSCV_Miner;
+const int c_typesSCV_UnassignedCount = 1;
+string[1] gvg_typesSCV_Unassigned;
+const int c_typesSCV_WorkerCount = 1;
+string[1] gvg_typesSCV_Worker;
 
 // Editor object groups, flattened: names[i] owns the members
 // slice starting at groupFirst[i] and running groupSize[i] long.
@@ -31,7 +39,17 @@ int[2] gvg_groupMembers;
 
 void ObjectsGen_Init () {
     gvg_typesDebris[0] = "Lob_Debris_Normal";
-    gvg_typesSCV[0] = "Lob_SCV";
+    gvg_typesDebris_Normal[0] = "Lob_Debris_Normal";
+    gvg_typesDevice[0] = "Lob_Device_Basic";
+    gvg_typesDevice_Basic[0] = "Lob_Device_Basic";
+    gvg_typesMarker[0] = "Lob_Marker_Spawn";
+    gvg_typesMarker_Spawn[0] = "Lob_Marker_Spawn";
+    gvg_typesSCV[0] = "Lob_SCV_Miner";
+    gvg_typesSCV[1] = "Lob_SCV_Unassigned";
+    gvg_typesSCV[2] = "Lob_SCV_Worker";
+    gvg_typesSCV_Miner[0] = "Lob_SCV_Miner";
+    gvg_typesSCV_Unassigned[0] = "Lob_SCV_Unassigned";
+    gvg_typesSCV_Worker[0] = "Lob_SCV_Worker";
     gvg_groupNames[0] = "debris";
     gvg_groupFirst[0] = 0;
     gvg_groupSize[0] = 2;
@@ -78,6 +96,44 @@ bool ObjectsGen_IsDebris (unit target) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// Every live Debris_Normal unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanDebris_Normal () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesDebris_NormalCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesDebris_Normal[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Debris_Normal, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsDebris_Normal (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesDebris_NormalCount) {
+        if (UnitGetType(target) == gvg_typesDebris_Normal[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
 // Every live Device unit on the map, whichever variant and whoever owns it.
 // Works for runtime-spawned units too, unlike anything keyed on placed ids.
 //--------------------------------------------------------------------------------------------------
@@ -108,6 +164,44 @@ bool ObjectsGen_IsDevice (unit target) {
     i = 0;
     while (i < c_typesDeviceCount) {
         if (UnitGetType(target) == gvg_typesDevice[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live Device_Basic unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanDevice_Basic () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesDevice_BasicCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesDevice_Basic[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Device_Basic, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsDevice_Basic (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesDevice_BasicCount) {
+        if (UnitGetType(target) == gvg_typesDevice_Basic[i]) {
             return true;
         }
         i = i + 1;
@@ -192,17 +286,17 @@ bool ObjectsGen_IsMarker (unit target) {
 }
 
 //--------------------------------------------------------------------------------------------------
-// Every live Miner unit on the map, whichever variant and whoever owns it.
+// Every live Marker_Spawn unit on the map, whichever variant and whoever owns it.
 // Works for runtime-spawned units too, unlike anything keyed on placed ids.
 //--------------------------------------------------------------------------------------------------
-unitgroup ObjectsGen_ScanMiner () {
+unitgroup ObjectsGen_ScanMarker_Spawn () {
     unitgroup found;
     int i;
 
     found = UnitGroupEmpty();
     i = 0;
-    while (i < c_typesMinerCount) {
-        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesMiner[i], c_playerAny,
+    while (i < c_typesMarker_SpawnCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesMarker_Spawn[i], c_playerAny,
                                                RegionEntireMap(), null, 0));
         i = i + 1;
     }
@@ -210,18 +304,18 @@ unitgroup ObjectsGen_ScanMiner () {
 }
 
 //--------------------------------------------------------------------------------------------------
-// Whether a unit is a Miner, whatever variant. False for an empty
+// Whether a unit is a Marker_Spawn, whatever variant. False for an empty
 // category, so code can be written ahead of the units existing.
 //--------------------------------------------------------------------------------------------------
-bool ObjectsGen_IsMiner (unit target) {
+bool ObjectsGen_IsMarker_Spawn (unit target) {
     int i;
 
     if (target == null) {
         return false;
     }
     i = 0;
-    while (i < c_typesMinerCount) {
-        if (UnitGetType(target) == gvg_typesMiner[i]) {
+    while (i < c_typesMarker_SpawnCount) {
+        if (UnitGetType(target) == gvg_typesMarker_Spawn[i]) {
             return true;
         }
         i = i + 1;
@@ -268,17 +362,17 @@ bool ObjectsGen_IsSCV (unit target) {
 }
 
 //--------------------------------------------------------------------------------------------------
-// Every live Worker unit on the map, whichever variant and whoever owns it.
+// Every live SCV_Miner unit on the map, whichever variant and whoever owns it.
 // Works for runtime-spawned units too, unlike anything keyed on placed ids.
 //--------------------------------------------------------------------------------------------------
-unitgroup ObjectsGen_ScanWorker () {
+unitgroup ObjectsGen_ScanSCV_Miner () {
     unitgroup found;
     int i;
 
     found = UnitGroupEmpty();
     i = 0;
-    while (i < c_typesWorkerCount) {
-        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesWorker[i], c_playerAny,
+    while (i < c_typesSCV_MinerCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesSCV_Miner[i], c_playerAny,
                                                RegionEntireMap(), null, 0));
         i = i + 1;
     }
@@ -286,18 +380,94 @@ unitgroup ObjectsGen_ScanWorker () {
 }
 
 //--------------------------------------------------------------------------------------------------
-// Whether a unit is a Worker, whatever variant. False for an empty
+// Whether a unit is a SCV_Miner, whatever variant. False for an empty
 // category, so code can be written ahead of the units existing.
 //--------------------------------------------------------------------------------------------------
-bool ObjectsGen_IsWorker (unit target) {
+bool ObjectsGen_IsSCV_Miner (unit target) {
     int i;
 
     if (target == null) {
         return false;
     }
     i = 0;
-    while (i < c_typesWorkerCount) {
-        if (UnitGetType(target) == gvg_typesWorker[i]) {
+    while (i < c_typesSCV_MinerCount) {
+        if (UnitGetType(target) == gvg_typesSCV_Miner[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live SCV_Unassigned unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanSCV_Unassigned () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesSCV_UnassignedCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesSCV_Unassigned[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a SCV_Unassigned, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsSCV_Unassigned (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesSCV_UnassignedCount) {
+        if (UnitGetType(target) == gvg_typesSCV_Unassigned[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live SCV_Worker unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanSCV_Worker () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesSCV_WorkerCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesSCV_Worker[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a SCV_Worker, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsSCV_Worker (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesSCV_WorkerCount) {
+        if (UnitGetType(target) == gvg_typesSCV_Worker[i]) {
             return true;
         }
         i = i + 1;

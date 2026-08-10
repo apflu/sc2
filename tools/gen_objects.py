@@ -36,7 +36,15 @@ INT32_MAX = 2**31 - 1
 # halves in the same order. A scan of an empty table returns an empty group and
 # the predicate returns false, so unwritten content stays inert rather than
 # breaking the build.
-EXPECTED_CATEGORIES = ["Debris", "Device", "Hero", "Marker", "Miner", "Worker"]
+EXPECTED_CATEGORIES = [
+    "Debris",
+    "Device",
+    "Hero",
+    "Marker",
+    "SCV",
+    "SCV_Miner",
+    "SCV_Worker",
+]
 
 HEADER = """//--------------------------------------------------------------------------------------------------
 // GENERATED FILE -- DO NOT EDIT.
@@ -49,7 +57,12 @@ HEADER = """//------------------------------------------------------------------
 
 
 def read_categories() -> dict[str, list[str]]:
-    """Bucket custom unit types by the category segment of their id."""
+    """Bucket custom unit types under every prefix of their id.
+
+    Lob_SCV_Miner registers under both SCV and SCV_Miner, so the script can ask
+    at whichever level it means -- every SCV, or specifically the miners -- and
+    a new variant slots under its existing prefixes without a code change.
+    """
     if not UNIT_DATA.is_file():
         return {c: [] for c in EXPECTED_CATEGORIES}
 
@@ -58,12 +71,9 @@ def read_categories() -> dict[str, list[str]]:
         uid = unit.get("id", "")
         if not uid.startswith(PREFIX):
             continue
-        parts = uid.split("_")
-        if len(parts) < 2:
-            continue
-        category = re.sub(r"\W", "", parts[1])
-        if category:
-            categories.setdefault(category, []).append(uid)
+        parts = [re.sub(r"\W", "", p) for p in uid.split("_")[1:] if p]
+        for depth in range(1, len(parts) + 1):
+            categories.setdefault("_".join(parts[:depth]), []).append(uid)
 
     return {k: sorted(v) for k, v in sorted(categories.items())}
 

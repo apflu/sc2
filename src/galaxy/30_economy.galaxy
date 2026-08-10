@@ -26,7 +26,7 @@ bool Economy_MineTick_Func (bool testConds, bool runActions) {
         return true;
     }
 
-    miners = UnitGroupCount(ObjectsGen_ScanMiner(), c_unitCountAlive);
+    miners = UnitGroupCount(ObjectsGen_ScanSCV_Miner(), c_unitCountAlive);
     moved = miners * c_minePerMinerPerTick;
     if (moved > gv_orePile) {
         moved = gv_orePile;
@@ -57,8 +57,8 @@ bool Economy_Status_Func (bool testConds, bool runActions) {
             "debris left=" + IntToString(UnitGroupCount(ObjectsGen_ScanDebris(), c_unitCountAlive))
             + "  cleared=" + IntToString(gv_debrisCleared)
             + "  pile=" + IntToString(gv_orePile)
-            + "  workers=" + IntToString(UnitGroupCount(ObjectsGen_ScanWorker(), c_unitCountAlive))
-            + "  miners=" + IntToString(UnitGroupCount(ObjectsGen_ScanMiner(), c_unitCountAlive))
+            + "  workers=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Worker(), c_unitCountAlive))
+            + "  miners=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Miner(), c_unitCountAlive))
         )
     );
     return true;

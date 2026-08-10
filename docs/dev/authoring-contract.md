@@ -30,20 +30,27 @@
 ## 命名约定
 
 ```
-Lob_<类别>_<变体>
+Lob_<段1>_<段2>_<段3>...
 ```
 
-- `Lob_Debris_Normal` → 类别 `Debris`
-- `Lob_SCV` → 类别 `SCV`（两段式也可以，类别取第二段）
+单位注册在**它 id 的每一级前缀**下：
 
-类别是**从命名自动推导**的。新增 `Lob_Debris_Heavy` 之后重新构建，它会自动进入 debris 类型表，随机生成器也自动能选到它——**代码一行都不用改**。
+| 单位 | 可查询的层级 |
+|------|------------|
+| `Lob_SCV_Miner` | `SCV`、`SCV_Miner` |
+| `Lob_Debris_Normal` | `Debris`、`Debris_Normal` |
 
-生成器为每个类别产出一个扫描函数：
+所以脚本可以按需要的粒度提问——"所有 SCV" 还是"仅矿工"——而新增变体会自动落进它已有的各级前缀，**代码一行都不用改**。加一个 `Lob_Debris_Heavy`，`Debris` 那一层立刻就包含它。
+
+生成器为每一级前缀产出：
 
 ```galaxy
-unitgroup ObjectsGen_ScanDebris ()   // 全图所有存活的 Debris，不分变体、不分归属
-unitgroup ObjectsGen_Group (string)  // 具名 group 的成员（仅预放）
+unitgroup ObjectsGen_Scan<前缀> ()      // 全图存活、不分归属
+bool      ObjectsGen_Is<前缀> (unit)    // 判定
+unitgroup ObjectsGen_Group (string)     // 具名 group 成员（仅预放）
 ```
+
+尚未建出单位的前缀会产出**空表**——扫描返回空、判定返回 false。所以代码可以先于单位写好，未完成的内容是惰性的而不是报错的，两台机器不必按同一顺序落地。预期前缀列在 `tools/gen_objects.py` 的 `EXPECTED_CATEGORIES`。
 
 ## 构建
 

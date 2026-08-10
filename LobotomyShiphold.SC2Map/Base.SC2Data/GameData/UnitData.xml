@@ -293,7 +293,7 @@
             <ChanceArray index="Turn" value="33"/>
         </Fidget>
     </CUnit>
-    <CUnit id="Lob_SCV_Unassigned2">
+    <CUnit id="Lob_SCV_Worker">
         <DeathRevealRadius value="3"/>
         <Race value="Terr"/>
         <Mob value="Multiplayer"/>
