@@ -22,9 +22,17 @@ python3 tools/build_galaxy.py
 ## 两条纪律
 
 1. **不要手改 `MapScript.galaxy`**。它每次构建都会被整体覆盖。
-2. **不要在编辑器的触发器模块里保存**。编辑器会用 `Triggers`（当前为空）重新生成 `MapScript.galaxy`，冲掉全部逻辑。真冲掉了也不要紧——重跑一次构建即可恢复，这正是设置构建步骤而非直接手写 `MapScript.galaxy` 的原因。
+2. **编辑器保存会重新生成 `MapScript.galaxy`**，冲掉全部逻辑。已经实测发生过一次。重跑一次构建即可恢复——这正是设置构建步骤而非直接手写 `MapScript.galaxy` 的原因。
+
+   注意它冲掉之后不只是"少了我们的代码"：编辑器会按它内存里的状态重建，**包括把已经删掉的 Melee Initialization 塞回来**（于是玩家会拿到对战初始资源和农民）。所以任何一次编辑器保存之后，都要重新构建，不是可选的。
 
 地形、doodad、单位摆放在编辑器里做是安全的，不碰这两个文件。
+
+## 编辑器生成的脚本（AI 模块）
+
+编辑器的 AI 模块会生成 `aiXXXXXXXX.galaxy`，并往 `MapScript.galaxy` 里塞 `include` 和 `InitCustomAI()`。本构建整个覆盖那个文件，因此**这些接线会被丢掉**——而且丢得无声无息，因为一个没被 include 的脚本只是个没人用的文件，不是编译错误。
+
+构建现在检测到 `ai*.galaxy` 会打警告。真要用编辑器 AI 的话，得让 `tools/build_galaxy.py` 负责发射 include 与 `InitCustomAI()`。
 
 ## 代码侧与编辑器侧的对接
 

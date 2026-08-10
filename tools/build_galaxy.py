@@ -51,6 +51,21 @@ def main() -> int:
     for name, ids in groups:
         print(f"  group '{name}': {len(ids)} objects")
 
+    # The editor wires its own generated scripts into MapScript.galaxy (an
+    # include plus an init call). This build rewrites that file wholesale, so
+    # any such wiring is dropped -- and dropping it fails silently, because an
+    # un-included script is simply an unused file rather than a compile error.
+    # Say so loudly instead.
+    editor_scripts = sorted(p.name for p in OUT.parent.glob("ai*.galaxy"))
+    if editor_scripts:
+        print(
+            f"warning: {', '.join(editor_scripts)} is editor-generated and will NOT be\n"
+            f"         included by this build. The AI it defines will not run. Either\n"
+            f"         delete the AI definition in the editor, or teach this script to\n"
+            f"         emit the include and InitCustomAI().",
+            file=sys.stderr,
+        )
+
     modules = sorted(SRC.glob("*.galaxy"))
     if not modules:
         print(f"error: no .galaxy modules in {SRC}", file=sys.stderr)
