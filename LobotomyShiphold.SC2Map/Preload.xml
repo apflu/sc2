@@ -4,6 +4,8 @@
 <Terrain id="KorhalPlatformEx2"/>
 <Unit id="Lob_Hero_Agent"/>
 <Unit id="Lob_Marker_Spawn"/>
+<Unit id="Lob_Core_Basic"/>
+<Unit id="Lob_CoreDown_Basic"/>
 <Unit id="Lob_Device_Basic"/>
 <Unit id="Lob_Pile_Ore"/>
 <Unit id="Lob_Recycler_Basic"/>

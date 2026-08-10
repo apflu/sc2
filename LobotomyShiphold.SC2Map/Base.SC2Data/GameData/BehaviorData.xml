@@ -35,4 +35,16 @@
         <ReturnDelay value="0.5"/>
         <IdealHarvesterCount value="2"/>
     </CBehaviorResource>
+
+    <!-- Recovery in the rest hall (baseline 8). Applied and removed by script
+         according to where the character is and whether the core is still held,
+         but the rate itself is data, so a welfare-department upgrade later
+         changes a number here rather than any code. -->
+    <CBehaviorBuff id="Lob_RestHall_Recovery">
+        <Alignment value="Positive"/>
+        <InfoIcon value="Assets\Textures\btn-ability-terran-scannersweep.dds"/>
+        <Modification>
+            <VitalRegenArray index="Life" value="12"/>
+        </Modification>
+    </CBehaviorBuff>
 </Catalog>

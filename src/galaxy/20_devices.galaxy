@@ -41,35 +41,6 @@ trigger gt_deviceFatal;
 trigger gt_deviceTick;
 
 //--------------------------------------------------------------------------------------------------
-// Swaps one type prefix for the other, keeping the variant segment.
-//--------------------------------------------------------------------------------------------------
-string Devices_Retype (string from, string fromPrefix, string toPrefix) {
-    return toPrefix + StringSub(from, StringLength(fromPrefix) + 1, StringLength(from));
-}
-
-//--------------------------------------------------------------------------------------------------
-// Replaces a device with its counterpart in the other state, in place.
-//--------------------------------------------------------------------------------------------------
-void Devices_Morph (unit which, string toType, fixed life) {
-    point where;
-    fixed facing;
-    int owner;
-
-    where = UnitGetPosition(which);
-    facing = UnitGetFacing(which);
-    owner = UnitGetOwner(which);
-
-    // Remove rather than kill: killing would fire the death handlers, and a
-    // device going offline is not a death in any sense the rest of the code
-    // means. Removing also takes the footprint away before the replacement
-    // needs it, though placement is ignored anyway for good measure.
-    UnitRemove(which);
-
-    UnitCreate(1, toType, c_unitCreateIgnorePlacement, owner, where, facing);
-    UnitSetPropertyFixed(UnitLastCreated(), c_unitPropLife, life);
-}
-
-//--------------------------------------------------------------------------------------------------
 // Devices worth sending a worker to: anything down, plus anything still online
 // but chipped. Down comes first because a downed device is off the grid, while
 // a chipped one is still paying out.
@@ -111,13 +82,7 @@ bool Devices_Fatal_Func (bool testConds, bool runActions) {
         return true;
     }
 
-    // Clamp first so the unit cannot die between here and the morph.
-    UnitSetPropertyFixed(victim, c_unitPropLife, 1.0);
-    Devices_Morph(
-        victim,
-        Devices_Retype(UnitGetType(victim), c_deviceUpPrefix, c_deviceDownPrefix),
-        1.0
-    );
+    Downable_TakeDown(victim, c_deviceUpPrefix, c_deviceDownPrefix);
     return true;
 }
 
@@ -125,32 +90,12 @@ bool Devices_Fatal_Func (bool testConds, bool runActions) {
 // Brings repaired devices back onto the grid, and counts for the readout.
 //--------------------------------------------------------------------------------------------------
 bool Devices_Tick_Func (bool testConds, bool runActions) {
-    unitgroup down;
-    unit device;
-    int count;
-    int i;
-
     if (!runActions) {
         return true;
     }
 
-    // Counting down, not up: morphing removes the unit, and a unit group drops
-    // units that stop existing, so walking forwards would renumber the tail and
-    // skip every second device that finished repairing on the same tick.
-    down = ObjectsGen_ScanDeviceDown();
-    count = UnitGroupCount(down, c_unitCountAlive);
-    i = count;
-    while (i >= 1) {
-        device = UnitGroupUnit(down, i);
-        if (device != null && UnitGetPropertyFixed(device, c_unitPropLifePercent, true) >= 99.0) {
-            Devices_Morph(
-                device,
-                Devices_Retype(UnitGetType(device), c_deviceDownPrefix, c_deviceUpPrefix),
-                UnitGetPropertyFixed(device, c_unitPropLifeMax, true)
-            );
-        }
-        i = i - 1;
-    }
+    Downable_RestoreRepaired(ObjectsGen_ScanDeviceDown(),
+                             c_deviceDownPrefix, c_deviceUpPrefix);
 
     gv_devicesOnline = UnitGroupCount(ObjectsGen_ScanDevice(), c_unitCountAlive);
     gv_devicesTotal = gv_devicesOnline

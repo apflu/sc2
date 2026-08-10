@@ -9,10 +9,10 @@
 // claim about work that never happened.
 //
 // What is left is dispatch -- pointing idle miners at the pile -- and the
-// greybox readout. Throughput is now the engine's saturation curve against the
-// haul distance, which is a better answer than the rate constant it replaces:
-// it makes where the pile sits matter, and it makes the miner count matter
-// without anybody choosing a number for how much.
+// greybox readout. Throughput is tuned on the pile's own CBehaviorResource:
+// HarvestTime, HarvestAmount, IdealHarvesterCount. Those get designed directly.
+// Where the pile sits is a spatial question and should stay one; deriving the
+// rate from the walk would tie two decisions together that want to move apart.
 //
 // Fully automatic and independent of power, per the design baseline. The player
 // never touches this; their only job is to keep the pile stocked, which is what
@@ -112,6 +112,7 @@ bool Economy_Status_Func (bool testConds, bool runActions) {
             + "/" + IntToString(PlayerGetPropertyInt(c_p0Player, c_playerPropSuppliesMade))
             + " (" + IntToString(gv_devicesOnline) + "/" + IntToString(gv_devicesTotal)
             + " devices online)"
+            + "  inner=" + Sector_HeldText(c_p0Player)
             + "  workers=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Worker(), c_unitCountAlive))
             + "  miners=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Miner(), c_unitCountAlive))
         )

@@ -1,6 +1,8 @@
 ﻿Button/Tooltip/Lob_Hero_Agent=Your character. Clears debris, repairs devices, and holds the line -- one pair of hands for all three.
 Button/Name/Lob_Debug_Haste=DEBUG: Haste
 Button/Tooltip/Lob_Debug_Haste=Debug only. 10x attack speed, 2x move speed, 10 minutes. Recast to refresh.<n/><n/><c val="ffff8a">Anything measured while this is up is not the real loop.</c>
+Button/Tooltip/Lob_Core_Basic=The heart of your inner layer. Department passives and rest hall recovery run off it.
+Button/Tooltip/Lob_CoreDown_Basic=Inner layer lost. Repair it to bring your sector back.
 Button/Tooltip/Lob_Debris_Normal=Barrier that can be destroyed to allow access to new areas.
 Button/Tooltip/Lob_DeviceDown_Basic=Offline. Off the power grid until repaired. Cannot be attacked while down.
 Button/Tooltip/Lob_Device_Basic=Contains upgrades for Terran infantry and structures. <n/><n/><c val="ffff8a">Enables:</c><n/>- Missile Turrets from SCVs<n/>- Sensor Towers from SCVs<n/>- Planetary Fortresses from Command Centers
@@ -18,6 +20,8 @@ Weapon/Name/Lob_Hero_Rifle=Service Rifle
 Unit/Name/Lob_SCV_Worker=Lob_SCV_Worker
 Unit/Name/Lob_Debris_4x4HighlightTooltip=Attack this to destroy it
 Unit/Name/Lob_Debris_Normal=Lob_Debris_Normal
+Unit/Name/Lob_Core_Basic=Rest Hall Core
+Unit/Name/Lob_CoreDown_Basic=Rest Hall Core (lost)
 Unit/Name/Lob_Device_Basic=Lob_Device_Basic
 Unit/Name/Lob_Pile_Ore=Salvage Pile
 Unit/Name/Lob_Recycler_Basic=Recycler

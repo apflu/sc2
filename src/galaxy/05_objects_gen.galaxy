@@ -6,6 +6,14 @@
 //--------------------------------------------------------------------------------------------------
 
 // Unit types, by the category segment of their id.
+const int c_typesCoreCount = 1;
+string[1] gvg_typesCore;
+const int c_typesCoreDownCount = 1;
+string[1] gvg_typesCoreDown;
+const int c_typesCoreDown_BasicCount = 1;
+string[1] gvg_typesCoreDown_Basic;
+const int c_typesCore_BasicCount = 1;
+string[1] gvg_typesCore_Basic;
 const int c_typesDebrisCount = 1;
 string[1] gvg_typesDebris;
 const int c_typesDebris_NormalCount = 1;
@@ -52,6 +60,10 @@ int[1] gvg_groupSize;
 int[2] gvg_groupMembers;
 
 void ObjectsGen_Init () {
+    gvg_typesCore[0] = "Lob_Core_Basic";
+    gvg_typesCoreDown[0] = "Lob_CoreDown_Basic";
+    gvg_typesCoreDown_Basic[0] = "Lob_CoreDown_Basic";
+    gvg_typesCore_Basic[0] = "Lob_Core_Basic";
     gvg_typesDebris[0] = "Lob_Debris_Normal";
     gvg_typesDebris_Normal[0] = "Lob_Debris_Normal";
     gvg_typesDevice[0] = "Lob_Device_Basic";
@@ -77,6 +89,158 @@ void ObjectsGen_Init () {
     gvg_groupSize[0] = 2;
     gvg_groupMembers[0] = 982629277;
     gvg_groupMembers[1] = 1070187309;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live Core unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanCore () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesCoreCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesCore[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Core, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsCore (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesCoreCount) {
+        if (UnitGetType(target) == gvg_typesCore[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live CoreDown unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanCoreDown () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesCoreDownCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesCoreDown[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a CoreDown, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsCoreDown (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesCoreDownCount) {
+        if (UnitGetType(target) == gvg_typesCoreDown[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live CoreDown_Basic unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanCoreDown_Basic () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesCoreDown_BasicCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesCoreDown_Basic[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a CoreDown_Basic, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsCoreDown_Basic (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesCoreDown_BasicCount) {
+        if (UnitGetType(target) == gvg_typesCoreDown_Basic[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live Core_Basic unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanCore_Basic () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesCore_BasicCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesCore_Basic[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Core_Basic, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsCore_Basic (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesCore_BasicCount) {
+        if (UnitGetType(target) == gvg_typesCore_Basic[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
 }
 
 //--------------------------------------------------------------------------------------------------
