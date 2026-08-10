@@ -1,0 +1,107 @@
+//--------------------------------------------------------------------------------------------------
+// The player character.
+//
+// P0's whole proposition is that clearing, fighting and repairing all want the
+// same pair of hands. That only means anything if the hands exist, so this
+// module owns the one unit the player actually drives: handing it over at
+// start, and putting it back after it dies.
+//
+// Death costs time and nothing else, per the design baseline -- no resources
+// lost, no lasting penalty on the character. The cost is the walk back plus
+// whatever fell apart in the meantime, and that is a real cost precisely
+// because the other two jobs do not pause while the player is dead.
+//
+// The character's type is read from the generated table rather than named
+// here, so renaming the unit in the editor does not need a code change. If no
+// Hero unit has been authored yet the module simply does nothing.
+//--------------------------------------------------------------------------------------------------
+
+const fixed c_heroRespawnDelay = 15.0;
+
+unit gv_hero;
+point gv_heroHome;
+timer gv_heroRespawn;
+
+trigger gt_heroDied;
+trigger gt_heroBack;
+
+//--------------------------------------------------------------------------------------------------
+// Creates the character at its home point and hands it to the player.
+//--------------------------------------------------------------------------------------------------
+void Hero_Spawn () {
+    if (c_typesHeroCount == 0) {
+        return;
+    }
+
+    // Ignoring placement is not optional. The home point may well be full of
+    // zerglings at exactly the moment the character is due back, and "the
+    // player does not respawn" is not a cost the design ever asked for.
+    UnitCreate(1, gvg_typesHero[0], c_unitCreateIgnorePlacement,
+               c_p0Player, gv_heroHome, 270.0);
+    gv_hero = UnitLastCreated();
+    UnitSelect(gv_hero, c_p0Player, true);
+    CameraPan(c_p0Player, gv_heroHome, 0.0, -1.0, 10.0, true);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Any unit death, filtered down to the character. Same shape as the debris
+// death handler in 25_clearing.galaxy, and for the same reason: it covers a
+// character that was spawned at runtime, which after the first respawn is
+// every character there will ever be.
+//--------------------------------------------------------------------------------------------------
+bool Hero_Died_Func (bool testConds, bool runActions) {
+    if (!runActions) {
+        return true;
+    }
+    if (!ObjectsGen_IsHero(EventUnit())) {
+        return true;
+    }
+
+    UIDisplayMessage(
+        PlayerGroupAll(),
+        c_messageAreaSubtitle,
+        StringToText("agent down -- back in "
+                     + IntToString(FixedToInt(c_heroRespawnDelay)) + "s")
+    );
+    TimerStart(gv_heroRespawn, c_heroRespawnDelay, false, c_timeGame);
+    return true;
+}
+
+//--------------------------------------------------------------------------------------------------
+// The respawn is a timer rather than a Wait inside the death handler. This
+// trigger runs on every unit death on the map, so waiting inside it would park
+// the whole handler for the delay and queue up every death that happened
+// meanwhile. Those queued runs would all no-op on the type check, but a handler
+// that is deaf for fifteen seconds at a time is not something to leave in place
+// on the assumption that nothing will ever need it.
+//--------------------------------------------------------------------------------------------------
+bool Hero_Back_Func (bool testConds, bool runActions) {
+    if (!runActions) {
+        return true;
+    }
+    Hero_Spawn();
+    return true;
+}
+
+void Hero_Init () {
+    gv_hero = UnitGroupUnit(ObjectsGen_ScanHero(), 1);
+    if (gv_hero == null) {
+        return;
+    }
+
+    // Where the character was placed is where it comes back. Deliberately not
+    // a separate marker: a respawn point that can drift away from the start
+    // point is a bug waiting to happen, and P0 has nothing that would move it.
+    gv_heroHome = UnitGetPosition(gv_hero);
+
+    UnitSelect(gv_hero, c_p0Player, true);
+    CameraPan(c_p0Player, gv_heroHome, 0.0, -1.0, 10.0, true);
+
+    gv_heroRespawn = TimerCreate();
+
+    gt_heroBack = TriggerCreate("Hero_Back_Func");
+    TriggerAddEventTimer(gt_heroBack, gv_heroRespawn);
+
+    gt_heroDied = TriggerCreate("Hero_Died_Func");
+    TriggerAddEventUnitDied(gt_heroDied, null);
+}

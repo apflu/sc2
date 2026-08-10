@@ -14,8 +14,10 @@ const int c_typesDeviceCount = 1;
 string[1] gvg_typesDevice;
 const int c_typesDevice_BasicCount = 1;
 string[1] gvg_typesDevice_Basic;
-const int c_typesHeroCount = 0;
+const int c_typesHeroCount = 1;
 string[1] gvg_typesHero;
+const int c_typesHero_AgentCount = 1;
+string[1] gvg_typesHero_Agent;
 const int c_typesMarkerCount = 1;
 string[1] gvg_typesMarker;
 const int c_typesMarker_SpawnCount = 1;
@@ -42,6 +44,8 @@ void ObjectsGen_Init () {
     gvg_typesDebris_Normal[0] = "Lob_Debris_Normal";
     gvg_typesDevice[0] = "Lob_Device_Basic";
     gvg_typesDevice_Basic[0] = "Lob_Device_Basic";
+    gvg_typesHero[0] = "Lob_Hero_Agent";
+    gvg_typesHero_Agent[0] = "Lob_Hero_Agent";
     gvg_typesMarker[0] = "Lob_Marker_Spawn";
     gvg_typesMarker_Spawn[0] = "Lob_Marker_Spawn";
     gvg_typesSCV[0] = "Lob_SCV_Miner";
@@ -240,6 +244,44 @@ bool ObjectsGen_IsHero (unit target) {
     i = 0;
     while (i < c_typesHeroCount) {
         if (UnitGetType(target) == gvg_typesHero[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live Hero_Agent unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanHero_Agent () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesHero_AgentCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesHero_Agent[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Hero_Agent, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsHero_Agent (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesHero_AgentCount) {
+        if (UnitGetType(target) == gvg_typesHero_Agent[i]) {
             return true;
         }
         i = i + 1;

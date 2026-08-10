@@ -101,13 +101,53 @@
         <Collide index="Small" value="1"/>
         <Attributes index="Armored" value="1"/>
         <Attributes index="Structure" value="1"/>
-        <LifeStart value="2000"/>
-        <LifeMax value="2000"/>
-        <LifeArmor value="3"/>
+        <!-- Greybox tuning. 2000 health behind 3 armor meant a worker SCV spent
+             25 minutes on one pile, which makes the clearing loop impossible to
+             observe in a session. Zero armor is deliberate too: it keeps the
+             clear time readable straight off the DPS numbers while P0 is still
+             deciding what those should be. -->
+        <LifeStart value="600"/>
+        <LifeMax value="600"/>
+        <LifeArmor value="0"/>
         <LifeArmorName value="Unit/LifeArmorName/HardenedMaterial"/>
         <Footprint value="Footprint4x4ContourDestructibleRock"/>
         <MinimapRadius value="2.5"/>
         <EditorCategories value="ObjectType:Destructible,ObjectFamily:Melee"/>
+    </CUnit>
+    <!-- The player character.
+
+         Parented rather than flattened: everything not listed here is a
+         Marine, so this entry reads as a diff against one. Marine's ability
+         list is stop/attack/move/Stimpack, so Repair swaps straight into
+         index 3 and its button into card slot 5, and the character ends up
+         with no harvest and no build. The only things that can want it are
+         the three P0 is testing, which is what makes "the player is busy"
+         have exactly one explanation.
+
+         Intended target is RaynorCommando, which is already almost this unit;
+         it needs a campaign dependency the map does not have yet. See
+         docs/dev/authoring-contract.md.
+
+         Death costs only time, handled in src/galaxy/15_hero.galaxy, because
+         that is a design rule rather than a data one. -->
+    <CUnit id="Lob_Hero_Agent" parent="Marine">
+        <FlagArray index="Hero" value="1"/>
+        <LifeStart value="250"/>
+        <LifeMax value="250"/>
+        <LifeArmor value="1"/>
+        <!-- Slow constant regeneration. Nothing in P0 heals, and chip damage
+             that never comes back would quietly turn every wave into a
+             countdown to a death the player cannot avoid, which is the
+             opposite of "death costs only time". -->
+        <LifeRegenRate value="1"/>
+        <Speed value="3"/>
+        <Food value="0"/>
+        <AbilArray index="3" Link="Repair"/>
+        <WeaponArray index="0" Link="Lob_Hero_Rifle"/>
+        <CardLayouts>
+            <LayoutButtons index="5" Face="Repair" Type="AbilCmd" AbilCmd="Repair,Execute" Row="1" Column="0"/>
+        </CardLayouts>
+        <EditorCategories value="ObjectType:Hero,ObjectFamily:Campaign"/>
     </CUnit>
     <CUnit id="Lob_SCV_Unassigned">
         <DeathRevealRadius value="3"/>

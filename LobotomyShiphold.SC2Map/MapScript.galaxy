@@ -41,8 +41,10 @@ const int c_typesDeviceCount = 1;
 string[1] gvg_typesDevice;
 const int c_typesDevice_BasicCount = 1;
 string[1] gvg_typesDevice_Basic;
-const int c_typesHeroCount = 0;
+const int c_typesHeroCount = 1;
 string[1] gvg_typesHero;
+const int c_typesHero_AgentCount = 1;
+string[1] gvg_typesHero_Agent;
 const int c_typesMarkerCount = 1;
 string[1] gvg_typesMarker;
 const int c_typesMarker_SpawnCount = 1;
@@ -69,6 +71,8 @@ void ObjectsGen_Init () {
     gvg_typesDebris_Normal[0] = "Lob_Debris_Normal";
     gvg_typesDevice[0] = "Lob_Device_Basic";
     gvg_typesDevice_Basic[0] = "Lob_Device_Basic";
+    gvg_typesHero[0] = "Lob_Hero_Agent";
+    gvg_typesHero_Agent[0] = "Lob_Hero_Agent";
     gvg_typesMarker[0] = "Lob_Marker_Spawn";
     gvg_typesMarker_Spawn[0] = "Lob_Marker_Spawn";
     gvg_typesSCV[0] = "Lob_SCV_Miner";
@@ -267,6 +271,44 @@ bool ObjectsGen_IsHero (unit target) {
     i = 0;
     while (i < c_typesHeroCount) {
         if (UnitGetType(target) == gvg_typesHero[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live Hero_Agent unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanHero_Agent () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesHero_AgentCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesHero_Agent[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Hero_Agent, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsHero_Agent (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesHero_AgentCount) {
+        if (UnitGetType(target) == gvg_typesHero_Agent[i]) {
             return true;
         }
         i = i + 1;
@@ -549,13 +591,125 @@ void Registry_Init () {
         PlayerGroupAll(),
         c_messageAreaSubtitle,
         StringToText(
-            "scan: debris=" + IntToString(UnitGroupCount(ObjectsGen_ScanDebris(), c_unitCountAlive))
+            "scan: hero=" + IntToString(UnitGroupCount(ObjectsGen_ScanHero(), c_unitCountAlive))
+            + " debris=" + IntToString(UnitGroupCount(ObjectsGen_ScanDebris(), c_unitCountAlive))
             + " worker=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Worker(), c_unitCountAlive))
             + " miner=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Miner(), c_unitCountAlive))
             + " device=" + IntToString(UnitGroupCount(ObjectsGen_ScanDevice(), c_unitCountAlive))
             + " | group(debris)=" + IntToString(UnitGroupCount(ObjectsGen_Group("debris"), c_unitCountAlive))
         )
     );
+}
+
+//--------------------------------------------------------------------------------------------------
+// src/galaxy/15_hero.galaxy
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// The player character.
+//
+// P0's whole proposition is that clearing, fighting and repairing all want the
+// same pair of hands. That only means anything if the hands exist, so this
+// module owns the one unit the player actually drives: handing it over at
+// start, and putting it back after it dies.
+//
+// Death costs time and nothing else, per the design baseline -- no resources
+// lost, no lasting penalty on the character. The cost is the walk back plus
+// whatever fell apart in the meantime, and that is a real cost precisely
+// because the other two jobs do not pause while the player is dead.
+//
+// The character's type is read from the generated table rather than named
+// here, so renaming the unit in the editor does not need a code change. If no
+// Hero unit has been authored yet the module simply does nothing.
+//--------------------------------------------------------------------------------------------------
+
+const fixed c_heroRespawnDelay = 15.0;
+
+unit gv_hero;
+point gv_heroHome;
+timer gv_heroRespawn;
+
+trigger gt_heroDied;
+trigger gt_heroBack;
+
+//--------------------------------------------------------------------------------------------------
+// Creates the character at its home point and hands it to the player.
+//--------------------------------------------------------------------------------------------------
+void Hero_Spawn () {
+    if (c_typesHeroCount == 0) {
+        return;
+    }
+
+    // Ignoring placement is not optional. The home point may well be full of
+    // zerglings at exactly the moment the character is due back, and "the
+    // player does not respawn" is not a cost the design ever asked for.
+    UnitCreate(1, gvg_typesHero[0], c_unitCreateIgnorePlacement,
+               c_p0Player, gv_heroHome, 270.0);
+    gv_hero = UnitLastCreated();
+    UnitSelect(gv_hero, c_p0Player, true);
+    CameraPan(c_p0Player, gv_heroHome, 0.0, -1.0, 10.0, true);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Any unit death, filtered down to the character. Same shape as the debris
+// death handler in 25_clearing.galaxy, and for the same reason: it covers a
+// character that was spawned at runtime, which after the first respawn is
+// every character there will ever be.
+//--------------------------------------------------------------------------------------------------
+bool Hero_Died_Func (bool testConds, bool runActions) {
+    if (!runActions) {
+        return true;
+    }
+    if (!ObjectsGen_IsHero(EventUnit())) {
+        return true;
+    }
+
+    UIDisplayMessage(
+        PlayerGroupAll(),
+        c_messageAreaSubtitle,
+        StringToText("agent down -- back in "
+                     + IntToString(FixedToInt(c_heroRespawnDelay)) + "s")
+    );
+    TimerStart(gv_heroRespawn, c_heroRespawnDelay, false, c_timeGame);
+    return true;
+}
+
+//--------------------------------------------------------------------------------------------------
+// The respawn is a timer rather than a Wait inside the death handler. This
+// trigger runs on every unit death on the map, so waiting inside it would park
+// the whole handler for the delay and queue up every death that happened
+// meanwhile. Those queued runs would all no-op on the type check, but a handler
+// that is deaf for fifteen seconds at a time is not something to leave in place
+// on the assumption that nothing will ever need it.
+//--------------------------------------------------------------------------------------------------
+bool Hero_Back_Func (bool testConds, bool runActions) {
+    if (!runActions) {
+        return true;
+    }
+    Hero_Spawn();
+    return true;
+}
+
+void Hero_Init () {
+    gv_hero = UnitGroupUnit(ObjectsGen_ScanHero(), 1);
+    if (gv_hero == null) {
+        return;
+    }
+
+    // Where the character was placed is where it comes back. Deliberately not
+    // a separate marker: a respawn point that can drift away from the start
+    // point is a bug waiting to happen, and P0 has nothing that would move it.
+    gv_heroHome = UnitGetPosition(gv_hero);
+
+    UnitSelect(gv_hero, c_p0Player, true);
+    CameraPan(c_p0Player, gv_heroHome, 0.0, -1.0, 10.0, true);
+
+    gv_heroRespawn = TimerCreate();
+
+    gt_heroBack = TriggerCreate("Hero_Back_Func");
+    TriggerAddEventTimer(gt_heroBack, gv_heroRespawn);
+
+    gt_heroDied = TriggerCreate("Hero_Died_Func");
+    TriggerAddEventUnitDied(gt_heroDied, null);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -689,7 +843,14 @@ void Devices_Init () {
 // Credit banked into the ore pile when a piece of debris is finished off. The
 // pile is the inner-room stockpile; converting it into spendable resources is
 // the miners' job, in 30_economy.galaxy.
-const int c_oreCreditPerDebris = 25;
+// Sized against how long the pile then takes to drain, not against how much a
+// piece of debris "should" be worth. At 25 the two starting miners ate a whole
+// debris in five seconds, so the pile was empty essentially always -- which
+// makes miner headcount irrelevant and quietly guts the separate miner upgrade
+// line in baseline section 5.2. At 120 a debris is about 24 seconds of mining
+// against about 30 seconds of a player clearing it, so the pile backs up as
+// soon as the workers help, and more miners start being worth something.
+const int c_oreCreditPerDebris = 120;
 
 int gv_orePile;
 int gv_debrisCleared;
@@ -946,7 +1107,7 @@ bool Waves_Spawn_Func (bool testConds, bool runActions) {
         spawned = UnitCreate(
             c_waveBaseSize + gv_waveNumber,
             c_waveUnitType,
-            0,
+            c_unitCreateIgnorePlacement,
             c_p0Zerg,
             where,
             270.0
@@ -981,6 +1142,7 @@ void InitMap () {
     libNtve_InitLib();
     ObjectsGen_Init();
     Registry_Init();
+    Hero_Init();
     Devices_Init();
     Clearing_Init();
     Workers_Init();

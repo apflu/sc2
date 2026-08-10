@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Catalog>
+    <!-- The player character's damage. Split out from the weapon because SC2
+         keeps "how hard it hits" in the effect and "how often" in the weapon;
+         the two together are what P0 tunes when asking whether a player clears
+         debris meaningfully faster than a worker does. -->
+    <CEffectDamage id="Lob_Hero_Rifle" parent="DU_WEAP">
+        <Kind value="Ranged"/>
+        <Amount value="20"/>
+    </CEffectDamage>
+</Catalog>

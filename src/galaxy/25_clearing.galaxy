@@ -15,7 +15,14 @@
 // Credit banked into the ore pile when a piece of debris is finished off. The
 // pile is the inner-room stockpile; converting it into spendable resources is
 // the miners' job, in 30_economy.galaxy.
-const int c_oreCreditPerDebris = 25;
+// Sized against how long the pile then takes to drain, not against how much a
+// piece of debris "should" be worth. At 25 the two starting miners ate a whole
+// debris in five seconds, so the pile was empty essentially always -- which
+// makes miner headcount irrelevant and quietly guts the separate miner upgrade
+// line in baseline section 5.2. At 120 a debris is about 24 seconds of mining
+// against about 30 seconds of a player clearing it, so the pile backs up as
+// soon as the workers help, and more miners start being worth something.
+const int c_oreCreditPerDebris = 120;
 
 int gv_orePile;
 int gv_debrisCleared;

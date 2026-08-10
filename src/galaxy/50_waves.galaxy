@@ -61,7 +61,7 @@ bool Waves_Spawn_Func (bool testConds, bool runActions) {
         spawned = UnitCreate(
             c_waveBaseSize + gv_waveNumber,
             c_waveUnitType,
-            0,
+            c_unitCreateIgnorePlacement,
             c_p0Zerg,
             where,
             270.0

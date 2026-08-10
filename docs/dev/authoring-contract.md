@@ -69,10 +69,10 @@ python3 tools/build_galaxy.py
 地图加载后打印：
 
 ```
-registry: debris=N scv=N group(debris)=N
+scan: hero=N debris=N worker=N miner=N device=N | group(debris)=N
 ```
 
-前两个数来自类型扫描，第三个来自 group 表。**如果 group 那个数是 0 而 debris 不是 0，说明构建没跟上编辑器的存盘**，重跑一次构建即可。
+前几个数来自类型扫描，最后一个来自 group 表。**如果 group 那个数是 0 而 debris 不是 0，说明构建没跟上编辑器的存盘**，重跑一次构建即可。
 
 > 如果三个数字全是 0，说明预放单位在 `InitMap()` 执行时还没创建完。届时把扫描挪到 0 秒定时触发器里即可，代码侧改一行。
 
@@ -81,12 +81,46 @@ registry: debris=N scv=N group(debris)=N
 一个扇区，先不做多扇区。
 
 1. **地形**：一个内层房间 + 通向外层的走廊 + 外层开阔区。粗糙即可。
-2. **玩家英雄**：内层放一个，先用现成单位顶替。
-3. **残骸** `Lob_Debris_*`：外层摆 8-12 个，堵住部分通路。
-4. **设备** `Lob_Device_*`（还没建这个单位）：外层摆 2 个，至少一个**被残骸挡住**。
-5. **虫群入口**：外层边缘 1-2 处。
+2. **玩家角色** `Lob_Hero_Agent`：内层放**恰好一个**。它摆在哪就在哪复活——脚本不另设复活点，因为一个会和出生点漂移开的复活点迟早会变成 bug。
+3. **残骸** `Lob_Debris_*`：外层摆 **14-18 个**，堵住部分通路。数量是算出来的，不是拍的——见 `docs/design/p0-scope.md` 的场景规模检查。
+4. **设备** `Lob_Device_*`：外层摆 ≥2 个，至少一个**被残骸挡住**，且至少一个**离内层 25-35 格**。
+5. **虫群入口**：外层边缘 1-2 处，到设备要留出行军距离。
 
-**摆放的设计意图**：内层、设备、虫群入口三者的距离关系，决定了"跑过去修" vs "留下来打"这个取舍存不存在。设备离内层太近，玩家就不需要做选择，P0 白测。让至少一个设备远到跑一趟要付出真实代价。
+**摆放的设计意图**：内层、设备、虫群入口三者的距离关系，决定了"跑过去修" vs "留下来打"这个取舍存不存在。设备离内层太近，玩家就不需要做选择，P0 白测。让至少一个设备远到跑一趟要付出真实代价——角色移速 3.0，往返 30 格是 20 秒，对着 45 秒的波次周期才算数。
+
+## 数据文件
+
+`Base.SC2Data/GameData/` 下目前有四个 catalog，都是手写的：
+
+| 文件 | 内容 |
+|------|------|
+| `UnitData.xml` | `CUnit` |
+| `ActorData.xml` | `CActorUnit` |
+| `WeaponData.xml` | `CWeaponLegacy` |
+| `EffectData.xml` | `CEffectDamage` |
+
+SC2 按固定文件名自动加载这个目录，新增一个 catalog 不需要改 `ComponentList.SC2Components`。
+
+**继承，不要展开。**编辑器"复制单位"会把父单位的字段全量拍平进新条目——`Lob_SCV_*` 就是这么来的，一个单位 60 行。手写时用 `parent=`，条目就变成一份相对基准单位的 diff，一眼能看出改了什么。数组字段按下标覆盖：
+
+```xml
+<CUnit id="Lob_Hero_Agent" parent="Marine">
+    <AbilArray index="3" Link="Repair"/>   <!-- 顶掉 Marine 的 Stimpack -->
+    <WeaponArray index="0" Link="Lob_Hero_Rifle"/>
+</CUnit>
+```
+
+要删掉继承来的数组项用 `<XxxArray index="N" removed="1"/>`。
+
+**唯一必须重申的字段是 actor 的 `Model`。**暴雪的很多 actor 根本不写 `Model`——它靠 actor id 和 model id 同名来解析。继承一个"未设置"的字段，意味着子 actor 会拿自己的 id 去找模型，然后找不到。
+
+### 依赖
+
+地图当前依赖 `Void (Mod)`，也就是多人数据链（core + liberty + swarm + void 的 multi 部分）。
+
+**战役单位不在里面。**`Raynor` / `RaynorCommando` 这类只存在于 `*.sc2campaign`。要用它们得在编辑器里 Map → Dependencies → Add Standard → **Void (Campaign)**。加完之后 `Lob_Hero_Agent` 的 `parent` 从 `Marine` 换成 `RaynorCommando` 就行——`RaynorCommando` 本来就是 200 血 / 护甲 1 / 只有 stop-attack-move 加一个技能，和我们要的几乎是同一个单位。
+
+**XML 注释里不能出现 `--`**。这是 XML 规范本身的限制，不是 SC2 的。写中文破折号或者改标点。构建时 `gen_objects.py` 会解析 `UnitData.xml`，所以这类错误至少会在构建时炸出来，而不是留到游戏里。
 
 ## 扇区划分（P0.5+）
 
