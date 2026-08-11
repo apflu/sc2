@@ -980,7 +980,7 @@ unitgroup ObjectsGen_Group (string name) {
 }
 
 // Editor regions, by the name typed in the editor.
-const int c_regionCount = 0;
+const int c_regionCount = 1;
 string[1] gvg_regionNames;
 int[1] gvg_regionIds;
 
@@ -1002,150 +1002,7 @@ region ObjectsGen_Region (string name) {
 }
 
 //--------------------------------------------------------------------------------------------------
-// src/galaxy/10_registry.galaxy
-//--------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------
-// Startup self-check.
-//
-// There is no registry object to maintain: the generated scan functions in
-// 05_objects_gen.galaxy already answer "what is on the map", live, including
-// for units spawned at runtime. This module only reports what they see once at
-// startup, which is where authoring mistakes show up.
-//
-// Type counts come from a runtime scan; the group count comes from the build's
-// snapshot of Objects. Printing them side by side is deliberate: a nonzero type
-// count next to a zero group count means the build did not run after the last
-// editor save, which is otherwise an invisible and very confusing state.
-//--------------------------------------------------------------------------------------------------
-
-void Registry_Init () {
-    UIDisplayMessage(
-        PlayerGroupAll(),
-        c_messageAreaSubtitle,
-        StringToText(
-            "scan: hero=" + IntToString(UnitGroupCount(ObjectsGen_ScanHero(), c_unitCountAlive))
-            + " debris=" + IntToString(UnitGroupCount(ObjectsGen_ScanDebris(), c_unitCountAlive))
-            + " worker=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Worker(), c_unitCountAlive))
-            + " miner=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Miner(), c_unitCountAlive))
-            + " device=" + IntToString(UnitGroupCount(ObjectsGen_ScanDevice(), c_unitCountAlive))
-            + " | group(debris)=" + IntToString(UnitGroupCount(ObjectsGen_Group("debris"), c_unitCountAlive))
-        )
-    );
-}
-
-//--------------------------------------------------------------------------------------------------
-// src/galaxy/15_hero.galaxy
-//--------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------
-// The player character.
-//
-// P0's whole proposition is that clearing, fighting and repairing all want the
-// same pair of hands. That only means anything if the hands exist, so this
-// module owns the one unit the player actually drives: handing it over at
-// start, and putting it back after it dies.
-//
-// Death costs time and nothing else, per the design baseline -- no resources
-// lost, no lasting penalty on the character. The cost is the walk back plus
-// whatever fell apart in the meantime, and that is a real cost precisely
-// because the other two jobs do not pause while the player is dead.
-//
-// The character's type is read from the generated table rather than named
-// here, so renaming the unit in the editor does not need a code change. If no
-// Hero unit has been authored yet the module simply does nothing.
-//--------------------------------------------------------------------------------------------------
-
-const fixed c_heroRespawnDelay = 15.0;
-
-unit gv_hero;
-point gv_heroHome;
-timer gv_heroRespawn;
-
-trigger gt_heroDied;
-trigger gt_heroBack;
-
-//--------------------------------------------------------------------------------------------------
-// Creates the character at its home point and hands it to the player.
-//--------------------------------------------------------------------------------------------------
-void Hero_Spawn () {
-    if (c_typesHeroCount == 0) {
-        return;
-    }
-
-    // Ignoring placement is not optional. The home point may well be full of
-    // zerglings at exactly the moment the character is due back, and "the
-    // player does not respawn" is not a cost the design ever asked for.
-    UnitCreate(1, gvg_typesHero[0], c_unitCreateIgnorePlacement,
-               c_p0Player, gv_heroHome, 270.0);
-    gv_hero = UnitLastCreated();
-    UnitSelect(gv_hero, c_p0Player, true);
-    CameraPan(c_p0Player, gv_heroHome, 0.0, -1.0, 10.0, true);
-}
-
-//--------------------------------------------------------------------------------------------------
-// Any unit death, filtered down to the character. Same shape as the debris
-// death handler in 25_clearing.galaxy, and for the same reason: it covers a
-// character that was spawned at runtime, which after the first respawn is
-// every character there will ever be.
-//--------------------------------------------------------------------------------------------------
-bool Hero_Died_Func (bool testConds, bool runActions) {
-    if (!runActions) {
-        return true;
-    }
-    if (!ObjectsGen_IsHero(EventUnit())) {
-        return true;
-    }
-
-    UIDisplayMessage(
-        PlayerGroupAll(),
-        c_messageAreaSubtitle,
-        StringToText("agent down -- back in "
-                     + IntToString(FixedToInt(c_heroRespawnDelay)) + "s")
-    );
-    TimerStart(gv_heroRespawn, c_heroRespawnDelay, false, c_timeGame);
-    return true;
-}
-
-//--------------------------------------------------------------------------------------------------
-// The respawn is a timer rather than a Wait inside the death handler. This
-// trigger runs on every unit death on the map, so waiting inside it would park
-// the whole handler for the delay and queue up every death that happened
-// meanwhile. Those queued runs would all no-op on the type check, but a handler
-// that is deaf for fifteen seconds at a time is not something to leave in place
-// on the assumption that nothing will ever need it.
-//--------------------------------------------------------------------------------------------------
-bool Hero_Back_Func (bool testConds, bool runActions) {
-    if (!runActions) {
-        return true;
-    }
-    Hero_Spawn();
-    return true;
-}
-
-void Hero_Init () {
-    gv_hero = UnitGroupUnit(ObjectsGen_ScanHero(), 1);
-    if (gv_hero == null) {
-        return;
-    }
-
-    // Where the character was placed is where it comes back. Deliberately not
-    // a separate marker: a respawn point that can drift away from the start
-    // point is a bug waiting to happen, and P0 has nothing that would move it.
-    gv_heroHome = UnitGetPosition(gv_hero);
-
-    UnitSelect(gv_hero, c_p0Player, true);
-    CameraPan(c_p0Player, gv_heroHome, 0.0, -1.0, 10.0, true);
-
-    gv_heroRespawn = TimerCreate();
-
-    gt_heroBack = TriggerCreate("Hero_Back_Func");
-    TriggerAddEventTimer(gt_heroBack, gv_heroRespawn);
-
-    gt_heroDied = TriggerCreate("Hero_Died_Func");
-    TriggerAddEventUnitDied(gt_heroDied, null);
-}
-
-//--------------------------------------------------------------------------------------------------
-// src/galaxy/18_downable.galaxy
+// src/galaxy/08_downable.galaxy
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
 // Things that answer a killing blow by going offline instead of dying.
@@ -1235,7 +1092,7 @@ void Downable_RestoreRepaired (unitgroup down, string downPrefix, string upPrefi
 }
 
 //--------------------------------------------------------------------------------------------------
-// src/galaxy/19_sector.galaxy
+// src/galaxy/09_sector.galaxy
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
 // Sectors and the inner layer.
@@ -1508,6 +1365,509 @@ void Sector_Init () {
 
     gt_sectorTick = TriggerCreate("Sector_Tick_Func");
     TriggerAddEventTimePeriodic(gt_sectorTick, c_sectorPeriod, c_timeGame);
+}
+
+//--------------------------------------------------------------------------------------------------
+// src/galaxy/10_registry.galaxy
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// Startup self-check.
+//
+// There is no registry object to maintain: the generated scan functions in
+// 05_objects_gen.galaxy already answer "what is on the map", live, including
+// for units spawned at runtime. This module only reports what they see once at
+// startup, which is where authoring mistakes show up.
+//
+// Type counts come from a runtime scan; the group count comes from the build's
+// snapshot of Objects. Printing them side by side is deliberate: a nonzero type
+// count next to a zero group count means the build did not run after the last
+// editor save, which is otherwise an invisible and very confusing state.
+//--------------------------------------------------------------------------------------------------
+
+void Registry_Init () {
+    UIDisplayMessage(
+        PlayerGroupAll(),
+        c_messageAreaSubtitle,
+        StringToText(
+            "scan: hero=" + IntToString(UnitGroupCount(ObjectsGen_ScanHero(), c_unitCountAlive))
+            + " debris=" + IntToString(UnitGroupCount(ObjectsGen_ScanDebris(), c_unitCountAlive))
+            + " worker=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Worker(), c_unitCountAlive))
+            + " miner=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Miner(), c_unitCountAlive))
+            + " device=" + IntToString(UnitGroupCount(ObjectsGen_ScanDevice(), c_unitCountAlive))
+            + " | group(debris)=" + IntToString(UnitGroupCount(ObjectsGen_Group("debris"), c_unitCountAlive))
+        )
+    );
+}
+
+//--------------------------------------------------------------------------------------------------
+// src/galaxy/12_departments.galaxy
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// Departments.
+//
+// This is the framework only: who belongs to which department, what upgrade
+// lines exist, what level each player has them at, and the rules that decide
+// what a level is actually worth right now. It deliberately contains no
+// effects. docs/usr/department.md is still being written, and every upgrade in
+// it reaches into a system that does not exist yet -- abnormalities, the
+// codex, PE-Box, E.G.O, pings, psionic suppressors. Encoding those now would be
+// encoding guesses.
+//
+// What does not change once the effects are written, and so is worth building
+// now, is the shape:
+//
+//   Level. Upgrades run lv1..lv4, and lv4 is gated on that department having
+//   finished core suppression.
+//
+//   Reach. An upgrade is either for its owner only, or for its owner and every
+//   ally with the allies getting a weaker version. That is a property of the
+//   upgrade, not of whatever it happens to do, so it belongs in the table.
+//
+//   Suspension. Baseline 7.3 and 3.2: while a player's inner layer is lost, the
+//   effects that depend on physical installations stop, and the ones that are
+//   pure numbers keep working. That is what keeps losing the core a degradation
+//   rather than a spiral -- section 1's principle again. So every upgrade is
+//   classified facility or stat, and Dept_EffectiveLevel is what callers ask.
+//
+// Nothing reads a level directly. Dept_EffectiveLevel and Dept_AllyLevel apply
+// the two rules above, so an effect written later cannot forget them.
+//--------------------------------------------------------------------------------------------------
+
+const int c_deptNone = -1;
+const int c_deptControl = 0;
+const int c_deptInformation = 1;
+const int c_deptSafety = 2;
+const int c_deptTraining = 3;
+const int c_deptCentral = 4;
+const int c_deptWelfare = 5;
+const int c_deptDisciplinary = 6;
+const int c_deptRecord = 7;
+const int c_deptExtraction = 8;
+const int c_deptCount = 9;
+
+// Sephirot tiers. Not decoration: the doc groups upgrades by tier and later
+// content is expected to key off it.
+const int c_tierAsiyah = 0;
+const int c_tierBriah = 1;
+const int c_tierAtziluth = 2;
+
+string[9] gvg_deptName;
+int[9] gvg_deptTier;
+
+// An upgrade is suspended while the inner layer is lost, or it is not.
+const int c_upClassFacility = 0;
+const int c_upClassStat = 1;
+
+// Who an upgrade reaches.
+const int c_upScopeSelf = 0;
+const int c_upScopeAllies = 1;
+
+// Upgrade lines. Only the ones docs/usr/department.md actually names, so the
+// table stays a transcription rather than an invention. Departments whose
+// section is still empty simply have no lines yet, which is inert: every query
+// about them returns zero.
+const int c_upControlJointCommand = 0;
+const int c_upControlRecall = 1;
+const int c_upInfoEnemyIntel = 2;
+const int c_upInfoAllyIntel = 3;
+const int c_upInfoSharedIntel = 4;
+const int c_upSafetyTurret = 5;
+const int c_upSafetyStaffProtection = 6;
+const int c_upCentralAuthority = 7;
+const int c_upCentralBackstop = 8;
+const int c_upCentralSplendour = 9;
+const int c_upgradeCount = 10;
+
+// Table capacity, and the stride of the per-player level array below. The array
+// length has to be a literal, so the two are coupled by hand: keep
+// c_upgradeCapacity equal to the stride used in gvg_upLevel's declaration.
+const int c_upgradeCapacity = 64;
+
+string[64] gvg_upName;
+int[64] gvg_upDept;
+int[64] gvg_upMaxLevel;
+int[64] gvg_upClass;
+int[64] gvg_upScope;
+
+// Per player: department, core suppression, and 64 upgrade levels each.
+int[16] gvg_deptOf;
+bool[16] gvg_coreSuppressed;
+int[1024] gvg_upLevel;
+
+//--------------------------------------------------------------------------------------------------
+// Flattened index into gvg_upLevel.
+//--------------------------------------------------------------------------------------------------
+int Dept_Slot (int player, int upgrade) {
+    return player * c_upgradeCapacity + upgrade;
+}
+
+int Dept_Of (int player) {
+    if (player < 1 || player > 15) {
+        return c_deptNone;
+    }
+    return gvg_deptOf[player];
+}
+
+void Dept_SetOf (int player, int dept) {
+    if (player < 1 || player > 15) {
+        return;
+    }
+    gvg_deptOf[player] = dept;
+}
+
+//--------------------------------------------------------------------------------------------------
+// How many distinct departments are in play.
+//
+// Baseline 7.1 allows duplicates but requires at least three distinct ones in a
+// game. Nothing enforces that yet because there is no selection UI to enforce
+// it at; this is what that UI will ask.
+//--------------------------------------------------------------------------------------------------
+int Dept_DistinctCount () {
+    int player;
+    int earlier;
+    int total;
+    bool duplicate;
+
+    total = 0;
+    player = 1;
+    while (player <= 15) {
+        if (gvg_deptOf[player] >= 0) {
+            // Counted by looking backwards rather than with a seen-table,
+            // because a local array is one more thing to be sure of for no gain
+            // at fifteen players.
+            duplicate = false;
+            earlier = 1;
+            while (earlier < player) {
+                if (gvg_deptOf[earlier] == gvg_deptOf[player]) {
+                    duplicate = true;
+                }
+                earlier = earlier + 1;
+            }
+            if (!duplicate) {
+                total = total + 1;
+            }
+        }
+        player = player + 1;
+    }
+    return total;
+}
+
+//--------------------------------------------------------------------------------------------------
+// The level a player has bought, ignoring whether it currently does anything.
+//--------------------------------------------------------------------------------------------------
+int Dept_Level (int player, int upgrade) {
+    if (player < 1 || player > 15 || upgrade < 0 || upgrade >= c_upgradeCount) {
+        return 0;
+    }
+    return gvg_upLevel[Dept_Slot(player, upgrade)];
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether this player has finished core suppression, which is what lv4 needs.
+//
+// No way to set it yet: it is an extremely hard challenge that does not exist.
+// It is here because lv4 gating is framework rather than content, and leaving
+// the gate out would mean writing it into every upgrade later.
+//--------------------------------------------------------------------------------------------------
+bool Dept_CoreSuppressed (int player) {
+    if (player < 1 || player > 15) {
+        return false;
+    }
+    return gvg_coreSuppressed[player];
+}
+
+//--------------------------------------------------------------------------------------------------
+// Buys the next level, if it is allowed. Returns the level now held.
+//
+// Cost is not charged here. What an upgrade costs is tuning that the design has
+// not set, and taking payment in the same call that grants the level would mean
+// every caller had to be rewritten when it does.
+//--------------------------------------------------------------------------------------------------
+int Dept_Advance (int player, int upgrade) {
+    int level;
+
+    level = Dept_Level(player, upgrade);
+    if (upgrade < 0 || upgrade >= c_upgradeCount) {
+        return level;
+    }
+    if (level >= gvg_upMaxLevel[upgrade]) {
+        return level;
+    }
+    if (level + 1 >= 4 && !Dept_CoreSuppressed(player)) {
+        return level;
+    }
+
+    gvg_upLevel[Dept_Slot(player, upgrade)] = level + 1;
+    return level + 1;
+}
+
+//--------------------------------------------------------------------------------------------------
+// What the upgrade is worth to its owner right now.
+//
+// This is the call effects should use. A facility-class upgrade reads as zero
+// while the inner layer is lost, because the installations it runs on are in
+// there; a stat-class one is unaffected, so losing the core degrades the
+// experience without leaving the player unable to fight back.
+//--------------------------------------------------------------------------------------------------
+int Dept_EffectiveLevel (int player, int upgrade) {
+    if (upgrade < 0 || upgrade >= c_upgradeCount) {
+        return 0;
+    }
+    if (gvg_upClass[upgrade] == c_upClassFacility && !Sector_InnerHeld(player)) {
+        return 0;
+    }
+    return Dept_Level(player, upgrade);
+}
+
+//--------------------------------------------------------------------------------------------------
+// What somebody else's upgrade is worth to this player.
+//
+// Ally-scoped upgrades give allies a weaker version, which the doc states over
+// and over, so it is modelled once here as one level down rather than being
+// re-decided per upgrade. The best ally's level is what counts: two allies with
+// the same upgrade do not stack, they overlap.
+//
+// Suspension is judged against the owner, not the beneficiary. It is the owner's
+// installations doing the work.
+//--------------------------------------------------------------------------------------------------
+int Dept_AllyLevel (int player, int upgrade) {
+    int best;
+    int theirs;
+    int other;
+
+    if (upgrade < 0 || upgrade >= c_upgradeCount) {
+        return 0;
+    }
+    if (gvg_upScope[upgrade] != c_upScopeAllies) {
+        return 0;
+    }
+
+    best = 0;
+    other = 1;
+    while (other <= 15) {
+        if (other != player) {
+            theirs = Dept_EffectiveLevel(other, upgrade);
+            if (theirs > best) {
+                best = theirs;
+            }
+        }
+        other = other + 1;
+    }
+
+    if (best <= 1) {
+        return 0;
+    }
+    return best - 1;
+}
+
+//--------------------------------------------------------------------------------------------------
+// The best of what a player has themselves and what an ally is lending them.
+//--------------------------------------------------------------------------------------------------
+int Dept_ReachLevel (int player, int upgrade) {
+    int mine;
+    int theirs;
+
+    mine = Dept_EffectiveLevel(player, upgrade);
+    theirs = Dept_AllyLevel(player, upgrade);
+    if (theirs > mine) {
+        return theirs;
+    }
+    return mine;
+}
+
+string Dept_NameOf (int player) {
+    int dept;
+
+    dept = Dept_Of(player);
+    if (dept < 0 || dept >= c_deptCount) {
+        return "none";
+    }
+    return gvg_deptName[dept];
+}
+
+//--------------------------------------------------------------------------------------------------
+// One upgrade line's row in the table.
+//--------------------------------------------------------------------------------------------------
+void Departments_Define (int upgrade, string name, int dept, int maxLevel,
+                         int suspendClass, int scope) {
+    gvg_upName[upgrade] = name;
+    gvg_upDept[upgrade] = dept;
+    gvg_upMaxLevel[upgrade] = maxLevel;
+    gvg_upClass[upgrade] = suspendClass;
+    gvg_upScope[upgrade] = scope;
+}
+
+void Departments_Init () {
+    int player;
+
+    gvg_deptName[c_deptControl] = "Control";
+    gvg_deptName[c_deptInformation] = "Information";
+    gvg_deptName[c_deptSafety] = "Safety";
+    gvg_deptName[c_deptTraining] = "Training";
+    gvg_deptName[c_deptCentral] = "Central Command";
+    gvg_deptName[c_deptWelfare] = "Welfare";
+    gvg_deptName[c_deptDisciplinary] = "Disciplinary";
+    gvg_deptName[c_deptRecord] = "Record";
+    gvg_deptName[c_deptExtraction] = "Extraction";
+
+    gvg_deptTier[c_deptControl] = c_tierAsiyah;
+    gvg_deptTier[c_deptInformation] = c_tierAsiyah;
+    gvg_deptTier[c_deptSafety] = c_tierAsiyah;
+    gvg_deptTier[c_deptTraining] = c_tierAsiyah;
+    gvg_deptTier[c_deptCentral] = c_tierBriah;
+    gvg_deptTier[c_deptWelfare] = c_tierBriah;
+    gvg_deptTier[c_deptDisciplinary] = c_tierBriah;
+    gvg_deptTier[c_deptRecord] = c_tierAtziluth;
+    gvg_deptTier[c_deptExtraction] = c_tierAtziluth;
+
+    // Facility where the effect runs on something built and standing, stat
+    // where it is a number on a unit. Joint command is facility because what it
+    // grants is permission to work on installations; shared intel is stat
+    // because a marked enemy stays marked whoever is holding what.
+    Departments_Define(c_upControlJointCommand, "Joint Command",
+                       c_deptControl, 4, c_upClassFacility, c_upScopeAllies);
+    Departments_Define(c_upControlRecall, "Recall",
+                       c_deptControl, 4, c_upClassFacility, c_upScopeAllies);
+    Departments_Define(c_upInfoEnemyIntel, "Enemy Intel",
+                       c_deptInformation, 3, c_upClassStat, c_upScopeAllies);
+    Departments_Define(c_upInfoAllyIntel, "Ally Intel",
+                       c_deptInformation, 3, c_upClassStat, c_upScopeAllies);
+    Departments_Define(c_upInfoSharedIntel, "Shared Intel",
+                       c_deptInformation, 3, c_upClassStat, c_upScopeSelf);
+    Departments_Define(c_upSafetyTurret, "Security Turret",
+                       c_deptSafety, 4, c_upClassFacility, c_upScopeSelf);
+    Departments_Define(c_upSafetyStaffProtection, "Staff Protection",
+                       c_deptSafety, 4, c_upClassStat, c_upScopeSelf);
+    // Authority has no levels of its own: it opens the lv1 lines of departments
+    // absent from the game. Recorded as max level 1 so it can be held or not.
+    Departments_Define(c_upCentralAuthority, "Authority",
+                       c_deptCentral, 1, c_upClassStat, c_upScopeSelf);
+    Departments_Define(c_upCentralBackstop, "Backstop",
+                       c_deptCentral, 3, c_upClassFacility, c_upScopeSelf);
+    Departments_Define(c_upCentralSplendour, "Splendour",
+                       c_deptCentral, 3, c_upClassStat, c_upScopeSelf);
+
+    player = 1;
+    while (player <= 15) {
+        gvg_deptOf[player] = c_deptNone;
+        gvg_coreSuppressed[player] = false;
+        player = player + 1;
+    }
+
+    // Placeholder until there is a selection screen. Baseline 7.1 has players
+    // choosing, and requires three distinct departments in a game.
+    Dept_SetOf(c_p0Player, c_deptControl);
+}
+
+//--------------------------------------------------------------------------------------------------
+// src/galaxy/15_hero.galaxy
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// The player character.
+//
+// P0's whole proposition is that clearing, fighting and repairing all want the
+// same pair of hands. That only means anything if the hands exist, so this
+// module owns the one unit the player actually drives: handing it over at
+// start, and putting it back after it dies.
+//
+// Death costs time and nothing else, per the design baseline -- no resources
+// lost, no lasting penalty on the character. The cost is the walk back plus
+// whatever fell apart in the meantime, and that is a real cost precisely
+// because the other two jobs do not pause while the player is dead.
+//
+// The character's type is read from the generated table rather than named
+// here, so renaming the unit in the editor does not need a code change. If no
+// Hero unit has been authored yet the module simply does nothing.
+//--------------------------------------------------------------------------------------------------
+
+const fixed c_heroRespawnDelay = 15.0;
+
+unit gv_hero;
+point gv_heroHome;
+timer gv_heroRespawn;
+
+trigger gt_heroDied;
+trigger gt_heroBack;
+
+//--------------------------------------------------------------------------------------------------
+// Creates the character at its home point and hands it to the player.
+//--------------------------------------------------------------------------------------------------
+void Hero_Spawn () {
+    if (c_typesHeroCount == 0) {
+        return;
+    }
+
+    // Ignoring placement is not optional. The home point may well be full of
+    // zerglings at exactly the moment the character is due back, and "the
+    // player does not respawn" is not a cost the design ever asked for.
+    UnitCreate(1, gvg_typesHero[0], c_unitCreateIgnorePlacement,
+               c_p0Player, gv_heroHome, 270.0);
+    gv_hero = UnitLastCreated();
+    UnitSelect(gv_hero, c_p0Player, true);
+    CameraPan(c_p0Player, gv_heroHome, 0.0, -1.0, 10.0, true);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Any unit death, filtered down to the character. Same shape as the debris
+// death handler in 25_clearing.galaxy, and for the same reason: it covers a
+// character that was spawned at runtime, which after the first respawn is
+// every character there will ever be.
+//--------------------------------------------------------------------------------------------------
+bool Hero_Died_Func (bool testConds, bool runActions) {
+    if (!runActions) {
+        return true;
+    }
+    if (!ObjectsGen_IsHero(EventUnit())) {
+        return true;
+    }
+
+    UIDisplayMessage(
+        PlayerGroupAll(),
+        c_messageAreaSubtitle,
+        StringToText("agent down -- back in "
+                     + IntToString(FixedToInt(c_heroRespawnDelay)) + "s")
+    );
+    TimerStart(gv_heroRespawn, c_heroRespawnDelay, false, c_timeGame);
+    return true;
+}
+
+//--------------------------------------------------------------------------------------------------
+// The respawn is a timer rather than a Wait inside the death handler. This
+// trigger runs on every unit death on the map, so waiting inside it would park
+// the whole handler for the delay and queue up every death that happened
+// meanwhile. Those queued runs would all no-op on the type check, but a handler
+// that is deaf for fifteen seconds at a time is not something to leave in place
+// on the assumption that nothing will ever need it.
+//--------------------------------------------------------------------------------------------------
+bool Hero_Back_Func (bool testConds, bool runActions) {
+    if (!runActions) {
+        return true;
+    }
+    Hero_Spawn();
+    return true;
+}
+
+void Hero_Init () {
+    gv_hero = UnitGroupUnit(ObjectsGen_ScanHero(), 1);
+    if (gv_hero == null) {
+        return;
+    }
+
+    // Where the character was placed is where it comes back. Deliberately not
+    // a separate marker: a respawn point that can drift away from the start
+    // point is a bug waiting to happen, and P0 has nothing that would move it.
+    gv_heroHome = UnitGetPosition(gv_hero);
+
+    UnitSelect(gv_hero, c_p0Player, true);
+    CameraPan(c_p0Player, gv_heroHome, 0.0, -1.0, 10.0, true);
+
+    gv_heroRespawn = TimerCreate();
+
+    gt_heroBack = TriggerCreate("Hero_Back_Func");
+    TriggerAddEventTimer(gt_heroBack, gv_heroRespawn);
+
+    gt_heroDied = TriggerCreate("Hero_Died_Func");
+    TriggerAddEventUnitDied(gt_heroDied, null);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -1898,6 +2258,7 @@ bool Economy_Status_Func (bool testConds, bool runActions) {
             + "/" + IntToString(PlayerGetPropertyInt(c_p0Player, c_playerPropSuppliesMade))
             + " (" + IntToString(gv_devicesOnline) + "/" + IntToString(gv_devicesTotal)
             + " devices online)"
+            + "  dept=" + Dept_NameOf(c_p0Player)
             + "  inner=" + Sector_HeldText(c_p0Player)
             + "  workers=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Worker(), c_unitCountAlive))
             + "  miners=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Miner(), c_unitCountAlive))
@@ -2014,9 +2375,10 @@ void Waves_Init () {
 void InitMap () {
     libNtve_InitLib();
     ObjectsGen_Init();
-    Registry_Init();
-    Hero_Init();
     Sector_Init();
+    Registry_Init();
+    Departments_Init();
+    Hero_Init();
     Devices_Init();
     Clearing_Init();
     Workers_Init();

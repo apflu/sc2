@@ -953,7 +953,7 @@ unitgroup ObjectsGen_Group (string name) {
 }
 
 // Editor regions, by the name typed in the editor.
-const int c_regionCount = 0;
+const int c_regionCount = 1;
 string[1] gvg_regionNames;
 int[1] gvg_regionIds;
 
