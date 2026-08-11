@@ -1476,8 +1476,12 @@ void Sector_BuildRestHalls () {
             matched = false;
             i = 0;
             while (i < c_regionCount) {
-                if (StringSub(gvg_regionNames[i], 1, StringLength(c_restHallRegionPrefix))
-                    == c_restHallRegionPrefix) {
+                // Length checked first: a region whose name is shorter than
+                // the prefix would otherwise be handed to StringSub with an end
+                // index past its last character.
+                if (StringLength(gvg_regionNames[i]) >= StringLength(c_restHallRegionPrefix)
+                    && StringSub(gvg_regionNames[i], 1, StringLength(c_restHallRegionPrefix))
+                       == c_restHallRegionPrefix) {
                     drawn = RegionFromId(gvg_regionIds[i]);
                     if (RegionContainsPoint(drawn, UnitGetPosition(core))) {
                         RegionAddRegion(gvg_restHall[player], drawn);
