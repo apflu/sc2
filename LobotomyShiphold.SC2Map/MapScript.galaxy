@@ -979,6 +979,15 @@ unitgroup ObjectsGen_Group (string name) {
     return found;
 }
 
+// Department upgrades, split out of their ids. The ally variant is
+// resolved here so the script never has to build a name by hand.
+const int c_deptUpgradeCount = 2;
+string[2] gvg_deptUpgradeId;
+string[2] gvg_deptUpgradeLine;
+string[2] gvg_deptUpgradeAlly;
+int[2] gvg_deptUpgradeLevel;
+bool[2] gvg_deptUpgradeIsAlly;
+
 // Editor regions, by the name typed in the editor.
 const int c_regionCount = 1;
 string[1] gvg_regionNames;
@@ -1405,101 +1414,62 @@ void Registry_Init () {
 //--------------------------------------------------------------------------------------------------
 // Departments.
 //
-// This is the framework only: who belongs to which department, what upgrade
-// lines exist, what level each player has them at, and the rules that decide
-// what a level is actually worth right now. It deliberately contains no
-// effects. docs/usr/department.md is still being written, and every upgrade in
-// it reaches into a system that does not exist yet -- abnormalities, the
-// codex, PE-Box, E.G.O, pings, psionic suppressors. Encoding those now would be
-// encoding guesses.
+// Upgrades are real CUpgrade entries authored in the data editor, one per
+// level, named
 //
-// What does not change once the effects are written, and so is worth building
-// now, is the shape:
+//     <Sephirot>_Upg<line>_<level>[_Ally]
 //
-//   Level. Upgrades run lv1..lv4, and lv4 is gated on that department having
-//   finished core suppression.
+// so Malkuth_Upg2_1 and Malkuth_Upg2_1_Ally are the owner's and the allies'
+// version of the same step. That is not a formatting choice; it decides how
+// much code there is. Because each level is its own upgrade, most effects are
+// EffectArray rows in data -- "Unit,Lob_Hero_Agent,Speed", "Weapon,X,Range" --
+// and need no script at all. And because the ally version is a separate
+// upgrade rather than a discount applied to the owner's, it can do something
+// genuinely different instead of merely less.
 //
-//   Reach. An upgrade is either for its owner only, or for its owner and every
-//   ally with the allies getting a weaker version. That is a property of the
-//   upgrade, not of whatever it happens to do, so it belongs in the table.
+// So this module names no upgrade and holds no per-upgrade code. It knows the
+// shape of the name, which the build reads out of UpgradeData.xml, and it
+// implements the rules that are true of every line:
 //
-//   Suspension. Baseline 7.3 and 3.2: while a player's inner layer is lost, the
-//   effects that depend on physical installations stop, and the ones that are
-//   pure numbers keep working. That is what keeps losing the core a degradation
-//   rather than a spiral -- section 1's principle again. So every upgrade is
-//   classified facility or stat, and Dept_EffectiveLevel is what callers ask.
+//   Ally propagation. Completing a step that has an _Ally twin grants that twin
+//   to everybody else. One rule, driven off the table, covering every upgrade
+//   the doc describes as "对自身和所有盟友都有效".
 //
-// Nothing reads a level directly. Dept_EffectiveLevel and Dept_AllyLevel apply
-// the two rules above, so an effect written later cannot forget them.
+//   Levels are cumulative by holding, not by counting. A line's level is the
+//   highest numbered step the player actually holds, so a step granted out of
+//   order still reads correctly.
+//
+// Suspension while the inner layer is lost (baseline 7.3) is NOT here yet. It
+// needs each upgrade classified as running on installations or on numbers, and
+// there is no field carrying that yet -- see docs/design/p0-scope.md. Guessing
+// a marker now would be inventing convention the design has not asked for.
 //--------------------------------------------------------------------------------------------------
 
 const int c_deptNone = -1;
-const int c_deptControl = 0;
-const int c_deptInformation = 1;
-const int c_deptSafety = 2;
-const int c_deptTraining = 3;
-const int c_deptCentral = 4;
-const int c_deptWelfare = 5;
-const int c_deptDisciplinary = 6;
-const int c_deptRecord = 7;
-const int c_deptExtraction = 8;
+const int c_deptMalkuth = 0;
+const int c_deptYesod = 1;
+const int c_deptNetzach = 2;
+const int c_deptHod = 3;
+const int c_deptTiphereth = 4;
+const int c_deptChesed = 5;
+const int c_deptGeburah = 6;
+const int c_deptHokma = 7;
+const int c_deptBinah = 8;
 const int c_deptCount = 9;
 
-// Sephirot tiers. Not decoration: the doc groups upgrades by tier and later
-// content is expected to key off it.
+// Sephirot tiers, as the doc groups them.
 const int c_tierAsiyah = 0;
 const int c_tierBriah = 1;
 const int c_tierAtziluth = 2;
 
+// Keyed by the Sephirot name, because that is what the upgrade ids are keyed by.
+string[9] gvg_deptKey;
 string[9] gvg_deptName;
 int[9] gvg_deptTier;
 
-// An upgrade is suspended while the inner layer is lost, or it is not.
-const int c_upClassFacility = 0;
-const int c_upClassStat = 1;
-
-// Who an upgrade reaches.
-const int c_upScopeSelf = 0;
-const int c_upScopeAllies = 1;
-
-// Upgrade lines. Only the ones docs/usr/department.md actually names, so the
-// table stays a transcription rather than an invention. Departments whose
-// section is still empty simply have no lines yet, which is inert: every query
-// about them returns zero.
-const int c_upControlJointCommand = 0;
-const int c_upControlRecall = 1;
-const int c_upInfoEnemyIntel = 2;
-const int c_upInfoAllyIntel = 3;
-const int c_upInfoSharedIntel = 4;
-const int c_upSafetyTurret = 5;
-const int c_upSafetyStaffProtection = 6;
-const int c_upCentralAuthority = 7;
-const int c_upCentralBackstop = 8;
-const int c_upCentralSplendour = 9;
-const int c_upgradeCount = 10;
-
-// Table capacity, and the stride of the per-player level array below. The array
-// length has to be a literal, so the two are coupled by hand: keep
-// c_upgradeCapacity equal to the stride used in gvg_upLevel's declaration.
-const int c_upgradeCapacity = 64;
-
-string[64] gvg_upName;
-int[64] gvg_upDept;
-int[64] gvg_upMaxLevel;
-int[64] gvg_upClass;
-int[64] gvg_upScope;
-
-// Per player: department, core suppression, and 64 upgrade levels each.
 int[16] gvg_deptOf;
-bool[16] gvg_coreSuppressed;
-int[1024] gvg_upLevel;
 
-//--------------------------------------------------------------------------------------------------
-// Flattened index into gvg_upLevel.
-//--------------------------------------------------------------------------------------------------
-int Dept_Slot (int player, int upgrade) {
-    return player * c_upgradeCapacity + upgrade;
-}
+trigger gt_upgradeChanged;
 
 int Dept_Of (int player) {
     if (player < 1 || player > 15) {
@@ -1515,12 +1485,22 @@ void Dept_SetOf (int player, int dept) {
     gvg_deptOf[player] = dept;
 }
 
+string Dept_NameOf (int player) {
+    int dept;
+
+    dept = Dept_Of(player);
+    if (dept < 0 || dept >= c_deptCount) {
+        return "none";
+    }
+    return gvg_deptName[dept];
+}
+
 //--------------------------------------------------------------------------------------------------
 // How many distinct departments are in play.
 //
-// Baseline 7.1 allows duplicates but requires at least three distinct ones in a
-// game. Nothing enforces that yet because there is no selection UI to enforce
-// it at; this is what that UI will ask.
+// Baseline 7.1 allows duplicates but wants at least three distinct ones in a
+// game. Nothing enforces it yet because there is no selection screen to enforce
+// it at; this is the question that screen will ask.
 //--------------------------------------------------------------------------------------------------
 int Dept_DistinctCount () {
     int player;
@@ -1532,9 +1512,6 @@ int Dept_DistinctCount () {
     player = 1;
     while (player <= 15) {
         if (gvg_deptOf[player] >= 0) {
-            // Counted by looking backwards rather than with a seen-table,
-            // because a local array is one more thing to be sure of for no gain
-            // at fifteen players.
             duplicate = false;
             earlier = 1;
             while (earlier < player) {
@@ -1553,210 +1530,167 @@ int Dept_DistinctCount () {
 }
 
 //--------------------------------------------------------------------------------------------------
-// The level a player has bought, ignoring whether it currently does anything.
+// Whether a player holds a particular step.
 //--------------------------------------------------------------------------------------------------
-int Dept_Level (int player, int upgrade) {
-    if (player < 1 || player > 15 || upgrade < 0 || upgrade >= c_upgradeCount) {
-        return 0;
-    }
-    return gvg_upLevel[Dept_Slot(player, upgrade)];
+bool Dept_Holds (int player, string upgradeId) {
+    return TechTreeUpgradeCount(player, upgradeId, c_techCountCompleteOnly) > 0;
 }
 
 //--------------------------------------------------------------------------------------------------
-// Whether this player has finished core suppression, which is what lv4 needs.
+// The level a player has reached on a line, owner's version.
 //
-// No way to set it yet: it is an extremely hard challenge that does not exist.
-// It is here because lv4 gating is framework rather than content, and leaving
-// the gate out would mean writing it into every upgrade later.
+// The highest step held rather than a count of steps held, so a step granted
+// out of order -- which Central Command's substitution rules will do -- still
+// reads as the level it is.
 //--------------------------------------------------------------------------------------------------
-bool Dept_CoreSuppressed (int player) {
-    if (player < 1 || player > 15) {
-        return false;
-    }
-    return gvg_coreSuppressed[player];
-}
-
-//--------------------------------------------------------------------------------------------------
-// Buys the next level, if it is allowed. Returns the level now held.
-//
-// Cost is not charged here. What an upgrade costs is tuning that the design has
-// not set, and taking payment in the same call that grants the level would mean
-// every caller had to be rewritten when it does.
-//--------------------------------------------------------------------------------------------------
-int Dept_Advance (int player, int upgrade) {
-    int level;
-
-    level = Dept_Level(player, upgrade);
-    if (upgrade < 0 || upgrade >= c_upgradeCount) {
-        return level;
-    }
-    if (level >= gvg_upMaxLevel[upgrade]) {
-        return level;
-    }
-    if (level + 1 >= 4 && !Dept_CoreSuppressed(player)) {
-        return level;
-    }
-
-    gvg_upLevel[Dept_Slot(player, upgrade)] = level + 1;
-    return level + 1;
-}
-
-//--------------------------------------------------------------------------------------------------
-// What the upgrade is worth to its owner right now.
-//
-// This is the call effects should use. A facility-class upgrade reads as zero
-// while the inner layer is lost, because the installations it runs on are in
-// there; a stat-class one is unaffected, so losing the core degrades the
-// experience without leaving the player unable to fight back.
-//--------------------------------------------------------------------------------------------------
-int Dept_EffectiveLevel (int player, int upgrade) {
-    if (upgrade < 0 || upgrade >= c_upgradeCount) {
-        return 0;
-    }
-    if (gvg_upClass[upgrade] == c_upClassFacility && !Sector_InnerHeld(player)) {
-        return 0;
-    }
-    return Dept_Level(player, upgrade);
-}
-
-//--------------------------------------------------------------------------------------------------
-// What somebody else's upgrade is worth to this player.
-//
-// Ally-scoped upgrades give allies a weaker version, which the doc states over
-// and over, so it is modelled once here as one level down rather than being
-// re-decided per upgrade. The best ally's level is what counts: two allies with
-// the same upgrade do not stack, they overlap.
-//
-// Suspension is judged against the owner, not the beneficiary. It is the owner's
-// installations doing the work.
-//--------------------------------------------------------------------------------------------------
-int Dept_AllyLevel (int player, int upgrade) {
+int Dept_LineLevel (int player, string line) {
     int best;
-    int theirs;
-    int other;
-
-    if (upgrade < 0 || upgrade >= c_upgradeCount) {
-        return 0;
-    }
-    if (gvg_upScope[upgrade] != c_upScopeAllies) {
-        return 0;
-    }
+    int i;
 
     best = 0;
+    i = 0;
+    while (i < c_deptUpgradeCount) {
+        if (gvg_deptUpgradeLine[i] == line
+            && !gvg_deptUpgradeIsAlly[i]
+            && gvg_deptUpgradeLevel[i] > best
+            && Dept_Holds(player, gvg_deptUpgradeId[i])) {
+            best = gvg_deptUpgradeLevel[i];
+        }
+        i = i + 1;
+    }
+    return best;
+}
+
+//--------------------------------------------------------------------------------------------------
+// The level a player has on a line by way of somebody else's generosity.
+//--------------------------------------------------------------------------------------------------
+int Dept_LineLevelFromAlly (int player, string line) {
+    int best;
+    int i;
+
+    best = 0;
+    i = 0;
+    while (i < c_deptUpgradeCount) {
+        if (gvg_deptUpgradeLine[i] == line
+            && gvg_deptUpgradeIsAlly[i]
+            && gvg_deptUpgradeLevel[i] > best
+            && Dept_Holds(player, gvg_deptUpgradeId[i])) {
+            best = gvg_deptUpgradeLevel[i];
+        }
+        i = i + 1;
+    }
+    return best;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Grants a step, which is how anything other than a research button hands one
+// out. Ally propagation happens off the resulting event, not here, so it works
+// the same whoever did the granting.
+//--------------------------------------------------------------------------------------------------
+void Dept_Grant (int player, string upgradeId) {
+    TechTreeUpgradeAddLevel(player, upgradeId, 1);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Ally propagation.
+//
+// When somebody finishes a step that has an _Ally twin, everybody else gets the
+// twin. Reading the twin's name from the generated table rather than building
+// it by string concatenation means an upgrade whose ally version was never
+// authored simply propagates nothing, instead of granting an id that does not
+// exist.
+//
+// Only positive deltas propagate. A level going down is either an undo or the
+// suspension rule arriving later, and neither should hand allies anything.
+//--------------------------------------------------------------------------------------------------
+bool Dept_UpgradeChanged_Func (bool testConds, bool runActions) {
+    string changed;
+    string ally;
+    int owner;
+    int other;
+    int i;
+
+    if (!runActions) {
+        return true;
+    }
+    if (EventUpgradeLevelDelta() <= 0) {
+        return true;
+    }
+
+    changed = EventUpgradeName();
+    owner = EventPlayer();
+
+    ally = "";
+    i = 0;
+    while (i < c_deptUpgradeCount) {
+        if (gvg_deptUpgradeId[i] == changed) {
+            ally = gvg_deptUpgradeAlly[i];
+        }
+        i = i + 1;
+    }
+    if (ally == "") {
+        return true;
+    }
+
     other = 1;
     while (other <= 15) {
-        if (other != player) {
-            theirs = Dept_EffectiveLevel(other, upgrade);
-            if (theirs > best) {
-                best = theirs;
-            }
+        if (other != owner && gvg_deptOf[other] != c_deptNone
+            && !Dept_Holds(other, ally)) {
+            TechTreeUpgradeAddLevel(other, ally, 1);
         }
         other = other + 1;
     }
-
-    if (best <= 1) {
-        return 0;
-    }
-    return best - 1;
-}
-
-//--------------------------------------------------------------------------------------------------
-// The best of what a player has themselves and what an ally is lending them.
-//--------------------------------------------------------------------------------------------------
-int Dept_ReachLevel (int player, int upgrade) {
-    int mine;
-    int theirs;
-
-    mine = Dept_EffectiveLevel(player, upgrade);
-    theirs = Dept_AllyLevel(player, upgrade);
-    if (theirs > mine) {
-        return theirs;
-    }
-    return mine;
-}
-
-string Dept_NameOf (int player) {
-    int dept;
-
-    dept = Dept_Of(player);
-    if (dept < 0 || dept >= c_deptCount) {
-        return "none";
-    }
-    return gvg_deptName[dept];
-}
-
-//--------------------------------------------------------------------------------------------------
-// One upgrade line's row in the table.
-//--------------------------------------------------------------------------------------------------
-void Departments_Define (int upgrade, string name, int dept, int maxLevel,
-                         int suspendClass, int scope) {
-    gvg_upName[upgrade] = name;
-    gvg_upDept[upgrade] = dept;
-    gvg_upMaxLevel[upgrade] = maxLevel;
-    gvg_upClass[upgrade] = suspendClass;
-    gvg_upScope[upgrade] = scope;
+    return true;
 }
 
 void Departments_Init () {
     int player;
 
-    gvg_deptName[c_deptControl] = "Control";
-    gvg_deptName[c_deptInformation] = "Information";
-    gvg_deptName[c_deptSafety] = "Safety";
-    gvg_deptName[c_deptTraining] = "Training";
-    gvg_deptName[c_deptCentral] = "Central Command";
-    gvg_deptName[c_deptWelfare] = "Welfare";
-    gvg_deptName[c_deptDisciplinary] = "Disciplinary";
-    gvg_deptName[c_deptRecord] = "Record";
-    gvg_deptName[c_deptExtraction] = "Extraction";
+    gvg_deptKey[c_deptMalkuth] = "Malkuth";
+    gvg_deptKey[c_deptYesod] = "Yesod";
+    gvg_deptKey[c_deptNetzach] = "Netzach";
+    gvg_deptKey[c_deptHod] = "Hod";
+    gvg_deptKey[c_deptTiphereth] = "Tiphereth";
+    gvg_deptKey[c_deptChesed] = "Chesed";
+    gvg_deptKey[c_deptGeburah] = "Geburah";
+    gvg_deptKey[c_deptHokma] = "Hokma";
+    gvg_deptKey[c_deptBinah] = "Binah";
 
-    gvg_deptTier[c_deptControl] = c_tierAsiyah;
-    gvg_deptTier[c_deptInformation] = c_tierAsiyah;
-    gvg_deptTier[c_deptSafety] = c_tierAsiyah;
-    gvg_deptTier[c_deptTraining] = c_tierAsiyah;
-    gvg_deptTier[c_deptCentral] = c_tierBriah;
-    gvg_deptTier[c_deptWelfare] = c_tierBriah;
-    gvg_deptTier[c_deptDisciplinary] = c_tierBriah;
-    gvg_deptTier[c_deptRecord] = c_tierAtziluth;
-    gvg_deptTier[c_deptExtraction] = c_tierAtziluth;
+    gvg_deptName[c_deptMalkuth] = "Control";
+    gvg_deptName[c_deptYesod] = "Information";
+    gvg_deptName[c_deptNetzach] = "Safety";
+    gvg_deptName[c_deptHod] = "Training";
+    gvg_deptName[c_deptTiphereth] = "Central Command";
+    gvg_deptName[c_deptChesed] = "Welfare";
+    gvg_deptName[c_deptGeburah] = "Disciplinary";
+    gvg_deptName[c_deptHokma] = "Record";
+    gvg_deptName[c_deptBinah] = "Extraction";
 
-    // Facility where the effect runs on something built and standing, stat
-    // where it is a number on a unit. Joint command is facility because what it
-    // grants is permission to work on installations; shared intel is stat
-    // because a marked enemy stays marked whoever is holding what.
-    Departments_Define(c_upControlJointCommand, "Joint Command",
-                       c_deptControl, 4, c_upClassFacility, c_upScopeAllies);
-    Departments_Define(c_upControlRecall, "Recall",
-                       c_deptControl, 4, c_upClassFacility, c_upScopeAllies);
-    Departments_Define(c_upInfoEnemyIntel, "Enemy Intel",
-                       c_deptInformation, 3, c_upClassStat, c_upScopeAllies);
-    Departments_Define(c_upInfoAllyIntel, "Ally Intel",
-                       c_deptInformation, 3, c_upClassStat, c_upScopeAllies);
-    Departments_Define(c_upInfoSharedIntel, "Shared Intel",
-                       c_deptInformation, 3, c_upClassStat, c_upScopeSelf);
-    Departments_Define(c_upSafetyTurret, "Security Turret",
-                       c_deptSafety, 4, c_upClassFacility, c_upScopeSelf);
-    Departments_Define(c_upSafetyStaffProtection, "Staff Protection",
-                       c_deptSafety, 4, c_upClassStat, c_upScopeSelf);
-    // Authority has no levels of its own: it opens the lv1 lines of departments
-    // absent from the game. Recorded as max level 1 so it can be held or not.
-    Departments_Define(c_upCentralAuthority, "Authority",
-                       c_deptCentral, 1, c_upClassStat, c_upScopeSelf);
-    Departments_Define(c_upCentralBackstop, "Backstop",
-                       c_deptCentral, 3, c_upClassFacility, c_upScopeSelf);
-    Departments_Define(c_upCentralSplendour, "Splendour",
-                       c_deptCentral, 3, c_upClassStat, c_upScopeSelf);
+    gvg_deptTier[c_deptMalkuth] = c_tierAsiyah;
+    gvg_deptTier[c_deptYesod] = c_tierAsiyah;
+    gvg_deptTier[c_deptNetzach] = c_tierAsiyah;
+    gvg_deptTier[c_deptHod] = c_tierAsiyah;
+    gvg_deptTier[c_deptTiphereth] = c_tierBriah;
+    gvg_deptTier[c_deptChesed] = c_tierBriah;
+    gvg_deptTier[c_deptGeburah] = c_tierBriah;
+    gvg_deptTier[c_deptHokma] = c_tierAtziluth;
+    gvg_deptTier[c_deptBinah] = c_tierAtziluth;
 
     player = 1;
     while (player <= 15) {
         gvg_deptOf[player] = c_deptNone;
-        gvg_coreSuppressed[player] = false;
         player = player + 1;
     }
 
-    // Placeholder until there is a selection screen. Baseline 7.1 has players
-    // choosing, and requires three distinct departments in a game.
-    Dept_SetOf(c_p0Player, c_deptControl);
+    // Placeholder until there is a selection screen.
+    Dept_SetOf(c_p0Player, c_deptMalkuth);
+
+    gt_upgradeChanged = TriggerCreate("Dept_UpgradeChanged_Func");
+    player = 1;
+    while (player <= 15) {
+        TriggerAddEventUpgradeLevelChanged(gt_upgradeChanged, player);
+        player = player + 1;
+    }
 }
 
 //--------------------------------------------------------------------------------------------------

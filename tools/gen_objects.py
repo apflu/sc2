@@ -8,6 +8,15 @@ Two things get extracted:
   id and a new variant needs no code change -- it lands in its category's type
   table automatically, including for runtime spawning.
 
+  Department upgrades, from UpgradeData.xml. Upgrades are real CUpgrade
+  entries authored in the data editor, one per level, following
+
+      <Sephirot>_Upg<line>_<level>[_Ally]
+
+  so Malkuth_Upg2_1 and Malkuth_Upg2_1_Ally are the owner's and the allies'
+  version of the same step. Splitting the id here means the script side stays
+  generic: it never names an upgrade, it only knows the shape of the name.
+
   Editor regions, from Regions. Same story as groups: the file is plain XML
   carrying both the name typed in the editor and the id the engine knows the
   region by, so the ids get read here instead of transcribed. Regions are how
@@ -30,6 +39,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 MAP = ROOT / "LobotomyShiphold.SC2Map"
 UNIT_DATA = MAP / "Base.SC2Data" / "GameData" / "UnitData.xml"
+UPGRADE_DATA = MAP / "Base.SC2Data" / "GameData" / "UpgradeData.xml"
 OBJECTS = MAP / "Objects"
 REGIONS = MAP / "Regions"
 OUT = ROOT / "src" / "galaxy" / "05_objects_gen.galaxy"
@@ -114,6 +124,34 @@ def read_groups() -> list[tuple[str, list[int]]]:
     return sorted(groups)
 
 
+UPGRADE_RE = re.compile(r"^([A-Za-z]+)_Upg(\d+)_(\d+)(_Ally)?$")
+
+
+def read_upgrades() -> list[dict]:
+    """Department upgrades, split into department / line / level / ally."""
+    if not UPGRADE_DATA.is_file():
+        return []
+
+    upgrades = []
+    for upgrade in ET.parse(UPGRADE_DATA).getroot().iter("CUpgrade"):
+        uid = upgrade.get("id", "")
+        m = UPGRADE_RE.match(uid)
+        if not m:
+            # Not everything in the catalog has to be a department upgrade.
+            continue
+        upgrades.append(
+            {
+                "id": uid,
+                "dept": m.group(1),
+                "line": f"{m.group(1)}_Upg{m.group(2)}",
+                "level": int(m.group(3)),
+                "ally": bool(m.group(4)),
+            }
+        )
+
+    return sorted(upgrades, key=lambda u: (u["line"], u["level"], u["ally"]))
+
+
 def read_regions() -> list[tuple[str, int]]:
     """Editor regions, as (name, id).
 
@@ -149,6 +187,7 @@ def build() -> str:
     categories = read_categories()
     groups = read_groups()
     regions = read_regions()
+    upgrades = read_upgrades()
 
     out = [HEADER]
     fills: list[str] = []
@@ -246,6 +285,27 @@ def build() -> str:
         "}\n"
     )
 
+    known = {u["id"] for u in upgrades}
+    out.append(
+        "\n// Department upgrades, split out of their ids. The ally variant is\n"
+        "// resolved here so the script never has to build a name by hand.\n"
+        f"const int c_deptUpgradeCount = {len(upgrades)};\n"
+        f"string[{max(len(upgrades), 1)}] gvg_deptUpgradeId;\n"
+        f"string[{max(len(upgrades), 1)}] gvg_deptUpgradeLine;\n"
+        f"string[{max(len(upgrades), 1)}] gvg_deptUpgradeAlly;\n"
+        f"int[{max(len(upgrades), 1)}] gvg_deptUpgradeLevel;\n"
+        f"bool[{max(len(upgrades), 1)}] gvg_deptUpgradeIsAlly;\n"
+    )
+    for i, u in enumerate(upgrades):
+        ally = f'{u["id"]}_Ally'
+        fills.append(
+            f'    gvg_deptUpgradeId[{i}] = "{u["id"]}";\n'
+            f'    gvg_deptUpgradeLine[{i}] = "{u["line"]}";\n'
+            f'    gvg_deptUpgradeAlly[{i}] = "{ally if ally in known else ""}";\n'
+            f'    gvg_deptUpgradeLevel[{i}] = {u["level"]};\n'
+            f'    gvg_deptUpgradeIsAlly[{i}] = {"true" if u["ally"] else "false"};'
+        )
+
     out.append(
         "\n// Editor regions, by the name typed in the editor.\n"
         f"const int c_regionCount = {len(regions)};\n"
@@ -281,17 +341,18 @@ def build() -> str:
     return "".join(out)
 
 
-def generate() -> tuple[Path, dict[str, list[str]], list[tuple[str, list[int]]], list[tuple[str, int]]]:
+def generate():
     categories = read_categories()
     groups = read_groups()
     regions = read_regions()
+    upgrades = read_upgrades()
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(build(), encoding="utf-8")
-    return OUT, categories, groups, regions
+    return OUT, categories, groups, regions, upgrades
 
 
 if __name__ == "__main__":
-    path, cats, grps, regs = generate()
+    path, cats, grps, regs, upgs = generate()
     print(f"generated {path.relative_to(ROOT)}")
     for name, types in cats.items():
         print(f"  {name}: {', '.join(types)}")
@@ -299,3 +360,6 @@ if __name__ == "__main__":
         print(f"  group '{name}': {len(ids)} objects")
     for name, rid in regs:
         print(f"  region '{name}': id {rid}")
+    for u in upgs:
+        print(f"  upgrade {u['id']}: line {u['line']} lv{u['level']}"
+              + (" (ally)" if u["ally"] else ""))

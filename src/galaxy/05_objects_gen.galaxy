@@ -952,6 +952,15 @@ unitgroup ObjectsGen_Group (string name) {
     return found;
 }
 
+// Department upgrades, split out of their ids. The ally variant is
+// resolved here so the script never has to build a name by hand.
+const int c_deptUpgradeCount = 2;
+string[2] gvg_deptUpgradeId;
+string[2] gvg_deptUpgradeLine;
+string[2] gvg_deptUpgradeAlly;
+int[2] gvg_deptUpgradeLevel;
+bool[2] gvg_deptUpgradeIsAlly;
+
 // Editor regions, by the name typed in the editor.
 const int c_regionCount = 1;
 string[1] gvg_regionNames;
