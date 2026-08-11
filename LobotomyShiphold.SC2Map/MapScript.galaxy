@@ -979,6 +979,28 @@ unitgroup ObjectsGen_Group (string name) {
     return found;
 }
 
+// Editor regions, by the name typed in the editor.
+const int c_regionCount = 0;
+string[1] gvg_regionNames;
+int[1] gvg_regionIds;
+
+//--------------------------------------------------------------------------------------------------
+// The editor region of that name, or an empty region if there is none.
+// Empty rather than null so callers can use the result unconditionally.
+//--------------------------------------------------------------------------------------------------
+region ObjectsGen_Region (string name) {
+    int i;
+
+    i = 0;
+    while (i < c_regionCount) {
+        if (gvg_regionNames[i] == name) {
+            return RegionFromId(gvg_regionIds[i]);
+        }
+        i = i + 1;
+    }
+    return RegionEmpty();
+}
+
 //--------------------------------------------------------------------------------------------------
 // src/galaxy/10_registry.galaxy
 //--------------------------------------------------------------------------------------------------
@@ -1225,19 +1247,22 @@ void Downable_RestoreRepaired (unitgroup down, string downPrefix, string upPrefi
 // outer layer, but only your own failure to hold the inner layer touches what
 // you are actually worth.
 //
-// The inner layer is a unit: Lob_Core_Basic, one per player. Expressing it as a
-// unit rather than a region gets four things from one object -- where the rest
-// hall is, whether it is still held, an owner, and eventually the command card
-// that department and fortification upgrades hang off. Baseline 3.2 already
-// lists a department core as inner-layer content, so this is not an invention.
+// Two separate things, deliberately not one:
 //
-// Losing it is reversible, per 3.2, so it uses the same disable-not-destroy
-// mechanic devices do: the core morphs to Lob_CoreDown_Basic and stays there
-// until somebody repairs it.
+//   The core is a unit, Lob_Core_Basic. It answers "is the inner layer still
+//   held", it has an owner, and it is what department and fortification
+//   upgrades will hang their command card off. Losing it is reversible per 3.2,
+//   so it goes down exactly the way a device does, via 18_downable.galaxy.
 //
-// What is here is the state and one consequence -- rest hall recovery. The
-// department framework that keys off Sector_InnerHeld is the next system, not
-// this one.
+//   The rest hall is a region, drawn in the editor. A rest hall is a room with
+//   walls, and no arrangement of circles around a unit is that shape. It is
+//   also not fixed: department upgrades are expected to change how far the
+//   rest hall reaches, so what the script tests against is a region built at
+//   runtime that starts as a copy of the drawn one and can be added to.
+//
+// Binding is by containment rather than by a name-to-player convention: the
+// rest hall region a player owns is the one their core stands in. Renumbering
+// players or renaming regions cannot desynchronise that.
 //
 // Numbered early on purpose. Galaxy needs a declaration before its use and the
 // modules concatenate in filename order, so anything other systems query has to
@@ -1247,13 +1272,22 @@ void Downable_RestoreRepaired (unitgroup down, string downPrefix, string upPrefi
 const string c_coreUpPrefix = "Lob_Core_";
 const string c_coreDownPrefix = "Lob_CoreDown_";
 
-// How far from the core still counts as being in the rest hall. Deliberately
-// generous: this is meant to be a room you are in, not a tile you stand on.
-const fixed c_restHallRadius = 12.0;
+// Editor regions whose name starts with this are rest halls.
+const string c_restHallRegionPrefix = "resthall";
+
+// Used only when no rest hall region has been drawn yet, so that the system
+// works before the editor side lands rather than being inert. A room-shaped
+// region should replace it; this is a stand-in, not a fallback worth keeping.
+const fixed c_restHallFallbackRadius = 12.0;
 
 const fixed c_sectorPeriod = 1.0;
 
 const string c_restHallBuff = "Lob_RestHall_Recovery";
+
+// One composed rest hall per player slot. Built at init and mutated in place by
+// Sector_RestHallExtend, so a department upgrade changes the region rather than
+// changing any code that reads it.
+region[16] gvg_restHall;
 
 trigger gt_coreFatal;
 trigger gt_sectorTick;
@@ -1261,9 +1295,9 @@ trigger gt_sectorTick;
 //--------------------------------------------------------------------------------------------------
 // Whether this player still holds their inner layer.
 //
-// The question is asked of the world rather than of a flag, so there is nothing
-// that can drift: a held core is a Lob_Core_ unit owned by them existing, and a
-// lost one is a Lob_CoreDown_ unit in its place.
+// Asked of the world rather than of a flag, so there is nothing that can drift:
+// a held core is a Lob_Core_ unit they own existing, and a lost one is a
+// Lob_CoreDown_ unit standing in its place.
 //--------------------------------------------------------------------------------------------------
 bool Sector_InnerHeld (int player) {
     unitgroup cores;
@@ -1286,36 +1320,63 @@ bool Sector_InnerHeld (int player) {
 }
 
 //--------------------------------------------------------------------------------------------------
-// Whether a unit is inside its owner's rest hall, with that rest hall intact.
-//
-// A downed core does not shelter anybody: the room is still there, but the
-// thing that made it a rest hall is not. That is the whole point of 3.2.
+// A player's core, held or downed. Null if they have none placed at all.
 //--------------------------------------------------------------------------------------------------
-bool Sector_InRestHall (unit which) {
+unit Sector_AnyCore (int player) {
     unitgroup cores;
     unit core;
     int count;
     int i;
 
-    if (which == null) {
-        return false;
-    }
-
     cores = ObjectsGen_ScanCore();
+    UnitGroupAddUnitGroup(cores, ObjectsGen_ScanCoreDown());
     count = UnitGroupCount(cores, c_unitCountAlive);
 
     i = 1;
     while (i <= count) {
         core = UnitGroupUnit(cores, i);
-        if (core != null
-            && UnitGetOwner(core) == UnitGetOwner(which)
-            && DistanceBetweenPoints(UnitGetPosition(core), UnitGetPosition(which))
-               <= c_restHallRadius) {
-            return true;
+        if (core != null && UnitGetOwner(core) == player) {
+            return core;
         }
         i = i + 1;
     }
-    return false;
+    return null;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Widens a player's rest hall. This is the hook department upgrades use; the
+// region is mutated in place, so everything already testing against it follows
+// with no further wiring.
+//--------------------------------------------------------------------------------------------------
+void Sector_RestHallExtend (int player, region extra) {
+    if (player < 1 || player > 15) {
+        return;
+    }
+    RegionAddRegion(gvg_restHall[player], extra);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is standing in its owner's rest hall, with that rest hall
+// still held.
+//
+// A downed core does not shelter anybody: the room is still there, but the
+// thing that made it a rest hall is not. That is the point of 3.2, and it is
+// why this asks about the core as well as about the geometry.
+//--------------------------------------------------------------------------------------------------
+bool Sector_InRestHall (unit which) {
+    int owner;
+
+    if (which == null) {
+        return false;
+    }
+    owner = UnitGetOwner(which);
+    if (owner < 1 || owner > 15) {
+        return false;
+    }
+    if (!Sector_InnerHeld(owner)) {
+        return false;
+    }
+    return RegionContainsPoint(gvg_restHall[owner], UnitGetPosition(which));
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -1356,8 +1417,8 @@ bool Sector_CoreFatal_Func (bool testConds, bool runActions) {
 // Restores repaired cores, and keeps rest hall recovery matched to who is
 // actually standing in one.
 //
-// Applied and removed rather than left on, so the buff icon on the character is
-// an honest readout of whether the room is doing anything for them.
+// Applied and removed rather than left on, so the buff icon on the unit is an
+// honest readout of whether the room is doing anything for them right now.
 //--------------------------------------------------------------------------------------------------
 bool Sector_Tick_Func (bool testConds, bool runActions) {
     unitgroup people;
@@ -1395,7 +1456,49 @@ bool Sector_Tick_Func (bool testConds, bool runActions) {
     return true;
 }
 
+//--------------------------------------------------------------------------------------------------
+// Gives each player the drawn region their core stands in, composed into a
+// region this module owns so upgrades can widen it later.
+//--------------------------------------------------------------------------------------------------
+void Sector_BuildRestHalls () {
+    unit core;
+    region drawn;
+    int player;
+    int i;
+    bool matched;
+
+    player = 1;
+    while (player <= 15) {
+        gvg_restHall[player] = RegionEmpty();
+        core = Sector_AnyCore(player);
+
+        if (core != null) {
+            matched = false;
+            i = 0;
+            while (i < c_regionCount) {
+                if (StringSub(gvg_regionNames[i], 1, StringLength(c_restHallRegionPrefix))
+                    == c_restHallRegionPrefix) {
+                    drawn = RegionFromId(gvg_regionIds[i]);
+                    if (RegionContainsPoint(drawn, UnitGetPosition(core))) {
+                        RegionAddRegion(gvg_restHall[player], drawn);
+                        matched = true;
+                    }
+                }
+                i = i + 1;
+            }
+
+            if (!matched) {
+                RegionAddCircle(gvg_restHall[player], true,
+                                UnitGetPosition(core), c_restHallFallbackRadius);
+            }
+        }
+        player = player + 1;
+    }
+}
+
 void Sector_Init () {
+    Sector_BuildRestHalls();
+
     gt_coreFatal = TriggerCreate("Sector_CoreFatal_Func");
     TriggerAddEventUnitDamaged(gt_coreFatal, null, c_unitDamageTypeAny, c_unitDamageFatal, null);
 
@@ -1688,7 +1791,8 @@ void Workers_Init () {
 //
 // What is left is dispatch -- pointing idle miners at the pile -- and the
 // greybox readout. Throughput is tuned on the pile's own CBehaviorResource:
-// HarvestTime, HarvestAmount, IdealHarvesterCount. Those get designed directly.
+// HarvestTime against HarvestAmount. (IdealHarvesterCount is display only and
+// changes no yield.) Those get designed directly.
 // Where the pile sits is a spatial question and should stay one; deriving the
 // rate from the walk would tie two decisions together that want to move apart.
 //

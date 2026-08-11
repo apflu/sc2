@@ -23,8 +23,9 @@
          Capacity is far above anything a session will reach, because the cap
          is not a design number, how fast debris fills it is.
 
-         IdealHarvesterCount is what makes miner headcount mean something, via
-         the engine's own saturation curve rather than a rate constant of mine. -->
+         IdealHarvesterCount is display only, a suggestion shown in the UI; it
+         does not change yield. Throughput is HarvestTime against HarvestAmount,
+         and those are the two numbers to design. -->
     <CBehaviorResource id="Lob_Pile_Ore">
         <InfoIcon value="Assets\Textures\icon-mineral.dds"/>
         <Capacity value="100000"/>

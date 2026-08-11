@@ -44,12 +44,14 @@ def main() -> int:
 
     # Regenerate the editor-derived tables first, so a rebuild always reflects
     # whatever was last saved in the editor.
-    _, categories, groups = gen_objects.generate()
+    _, categories, groups, regions = gen_objects.generate()
     print("generated src/galaxy/05_objects_gen.galaxy")
     for name, types in categories.items():
         print(f"  {name}: {', '.join(types)}")
     for name, ids in groups:
         print(f"  group '{name}': {len(ids)} objects")
+    for name, rid in regions:
+        print(f"  region '{name}': id {rid}")
 
     # The editor wires its own generated scripts into MapScript.galaxy (an
     # include plus an init call). This build rewrites that file wholesale, so

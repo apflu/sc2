@@ -10,7 +10,8 @@
 //
 // What is left is dispatch -- pointing idle miners at the pile -- and the
 // greybox readout. Throughput is tuned on the pile's own CBehaviorResource:
-// HarvestTime, HarvestAmount, IdealHarvesterCount. Those get designed directly.
+// HarvestTime against HarvestAmount. (IdealHarvesterCount is display only and
+// changes no yield.) Those get designed directly.
 // Where the pile sits is a spatial question and should stay one; deriving the
 // rate from the walk would tie two decisions together that want to move apart.
 //

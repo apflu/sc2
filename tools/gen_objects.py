@@ -8,6 +8,12 @@ Two things get extracted:
   id and a new variant needs no code change -- it lands in its category's type
   table automatically, including for runtime spawning.
 
+  Editor regions, from Regions. Same story as groups: the file is plain XML
+  carrying both the name typed in the editor and the id the engine knows the
+  region by, so the ids get read here instead of transcribed. Regions are how
+  a room reaches the script -- a rest hall is a shape with walls, and no
+  arrangement of circles around a unit is that shape.
+
   Object groups, from Objects. The editor assigns placed objects random ids
   that cannot be chosen by hand, so binding to them by convention is out; but
   the file is plain XML, so the ids can just be read here instead of being
@@ -25,6 +31,7 @@ ROOT = Path(__file__).resolve().parent.parent
 MAP = ROOT / "LobotomyShiphold.SC2Map"
 UNIT_DATA = MAP / "Base.SC2Data" / "GameData" / "UnitData.xml"
 OBJECTS = MAP / "Objects"
+REGIONS = MAP / "Regions"
 OUT = ROOT / "src" / "galaxy" / "05_objects_gen.galaxy"
 
 PREFIX = "Lob_"
@@ -107,6 +114,31 @@ def read_groups() -> list[tuple[str, list[int]]]:
     return sorted(groups)
 
 
+def read_regions() -> list[tuple[str, int]]:
+    """Editor regions, as (name, id).
+
+    The file only exists once at least one region has been drawn, so its
+    absence is normal rather than an error: the tables come out empty and the
+    lookups return an empty region, which leaves anything built on regions
+    inert instead of broken.
+    """
+    if not REGIONS.is_file():
+        return []
+
+    regions = []
+    for region in ET.parse(REGIONS).getroot().iter("region"):
+        rid = region.get("id")
+        name_el = region.find("name")
+        if rid is None or name_el is None:
+            continue
+        # Same trailing-whitespace trap as group names.
+        name = (name_el.get("value") or "").strip()
+        if name:
+            regions.append((name, int(rid)))
+
+    return sorted(regions)
+
+
 def emit_string_array(name: str, values: list[str]) -> str:
     """Galaxy wants a literal array length and has no initialisers, so the
     length is emitted inline and the fill happens in the init function."""
@@ -116,6 +148,7 @@ def emit_string_array(name: str, values: list[str]) -> str:
 def build() -> str:
     categories = read_categories()
     groups = read_groups()
+    regions = read_regions()
 
     out = [HEADER]
     fills: list[str] = []
@@ -213,21 +246,56 @@ def build() -> str:
         "}\n"
     )
 
+    out.append(
+        "\n// Editor regions, by the name typed in the editor.\n"
+        f"const int c_regionCount = {len(regions)};\n"
+        f"string[{max(len(regions), 1)}] gvg_regionNames;\n"
+        f"int[{max(len(regions), 1)}] gvg_regionIds;\n"
+    )
+    fills.extend(
+        f'    gvg_regionNames[{i}] = "{n}";\n    gvg_regionIds[{i}] = {rid};'
+        for i, (n, rid) in enumerate(regions)
+    )
+
+    out.append(
+        "\n//----------------------------------------------------------------"
+        "----------------------------------\n"
+        "// The editor region of that name, or an empty region if there is none.\n"
+        "// Empty rather than null so callers can use the result unconditionally.\n"
+        "//----------------------------------------------------------------"
+        "----------------------------------\n"
+        "region ObjectsGen_Region (string name) {\n"
+        "    int i;\n"
+        "\n"
+        "    i = 0;\n"
+        "    while (i < c_regionCount) {\n"
+        "        if (gvg_regionNames[i] == name) {\n"
+        "            return RegionFromId(gvg_regionIds[i]);\n"
+        "        }\n"
+        "        i = i + 1;\n"
+        "    }\n"
+        "    return RegionEmpty();\n"
+        "}\n"
+    )
+
     return "".join(out)
 
 
-def generate() -> tuple[Path, dict[str, list[str]], list[tuple[str, list[int]]]]:
+def generate() -> tuple[Path, dict[str, list[str]], list[tuple[str, list[int]]], list[tuple[str, int]]]:
     categories = read_categories()
     groups = read_groups()
+    regions = read_regions()
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(build(), encoding="utf-8")
-    return OUT, categories, groups
+    return OUT, categories, groups, regions
 
 
 if __name__ == "__main__":
-    path, cats, grps = generate()
+    path, cats, grps, regs = generate()
     print(f"generated {path.relative_to(ROOT)}")
     for name, types in cats.items():
         print(f"  {name}: {', '.join(types)}")
     for name, ids in grps:
         print(f"  group '{name}': {len(ids)} objects")
+    for name, rid in regs:
+        print(f"  region '{name}': id {rid}")

@@ -29,9 +29,14 @@ P0 只做能验证这一条的最小集，其余一律推后。
 
 **矿脉堆是真的可采集节点。**之前是矿工站在原地、脚本把数字从变量搬进玩家账户——那是在宣称一件没有发生过的工作。现在 `Lob_Pile_Ore` 是个 mineral field（`RemoveWhenEmpty` 关掉，所以采空了也不会消失，还能被后续残骸续上），`Lob_Recycler_Basic` 是 drop-off，矿工走过去、装载、走回来，**引擎结算**。
 
-脚本只剩派工。**产能的调参面是 `Lob_Pile_Ore` 的 `HarvestTime` / `HarvestAmount` / `IdealHarvesterCount`**，直接设计这三个数，不要去算搬运距离——摆放是空间设计的事，产能是数值设计的事，把后者变成前者的函数只会让两边都动不了。
+脚本只剩派工。**产能的调参面是 `Lob_Pile_Ore` 的 `HarvestTime` 与 `HarvestAmount`**，直接设计这两个数（`IdealHarvesterCount` 只是 UI 上的建议显示，不影响实际收益），不要去算搬运距离——摆放是空间设计的事，产能是数值设计的事，把后者变成前者的函数只会让两边都动不了。
 
-**内层是一个单位，不是一块区域。**`Lob_Core_Basic` 一人一个，摆在内层。用单位而不是 region 表达，一个对象同时给出四样东西：休息室在哪、还守没守住、归谁、以及之后部门与工事升级要挂的命令卡。基线 §3.2 本来就把"部门核心"列为内层内容。
+**核心是单位，休息室是 region，两者刻意分开。**
+
+- `Lob_Core_Basic`（单位）回答"内层还守没守住"、归谁所有、以及之后部门与工事升级要挂的命令卡。基线 §3.2 本来就把"部门核心"列为内层内容。
+- **主休息室是编辑器里画出来的 region**。休息室是个有墙的房间，绕着单位摆圆圈永远不是那个形状。而且它**不是固定的**——部门升级会改变作用范围，所以脚本实际测的是一个**运行时合成的 region**：初始是画出来那个的副本，之后可以被 `Sector_RestHallExtend()` 加进新形状。
+
+绑定靠**包含关系**，不靠"名字里写玩家编号"的约定：谁的核心站在哪个 region 里，那个 region 就是谁的休息室。改玩家槽位或改名都不会让两边对不上。
 
 失守可逆（§3.2），所以它用的是**和设备完全相同**的失能机制——核心变成 `Lob_CoreDown_Basic`，修好变回来。两者共用 `18_downable.galaxy`。
 
@@ -141,7 +146,7 @@ power=3/3 (1/1 devices online)
 - `Lob_Hero_Rifle`：20 伤害 / 1.0 秒 / 射程 5 = 20 DPS
 - `Lob_Debris_Normal` `LifeMax` = 600，`LifeArmor` = 0
 - 每块残骸产出 120 点矿脉堆额度（`c_oreCreditPerDebris`）
-- 矿工采集 5 点 / 2.786 秒，理想矿工数 2（`Lob_Pile_Ore` 的 `CBehaviorResource`，数据层）
+- 矿工采集 5 点 / 2.786 秒（`Lob_Pile_Ore` 的 `CBehaviorResource`，数据层）
 - 每个在线设备每 3 秒产 3 点电（`c_powerPerDevicePerTick`），血量低于 50% 停产
 - 每 45 秒一波虫子，每个入口 `3 + 波次数` 只跳虫（`c_waveInterval` / `c_waveBaseSize`）
 
@@ -218,7 +223,7 @@ power=3/3 (1/1 devices online)
 - `Lob_Hero_Rifle`：20 伤害 / 1.0 秒 / 射程 5 = 20 DPS
 - `Lob_Debris_Normal` `LifeMax` = 600，`LifeArmor` = 0
 - 每块残骸产出 120 点矿脉堆额度（`c_oreCreditPerDebris`）
-- 矿工采集 5 点 / 2.786 秒，理想矿工数 2（`Lob_Pile_Ore` 的 `CBehaviorResource`，数据层）
+- 矿工采集 5 点 / 2.786 秒（`Lob_Pile_Ore` 的 `CBehaviorResource`，数据层）
 - 每个在线设备每 3 秒产 3 点电（`c_powerPerDevicePerTick`），血量低于 50% 停产
 - 每 45 秒一波虫子，每个入口 `3 + 波次数` 只跳虫（`c_waveInterval` / `c_waveBaseSize`）
 

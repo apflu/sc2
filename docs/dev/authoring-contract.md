@@ -7,7 +7,8 @@
 | 通道 | 表达什么 | 预放对象 | 运行时生成 |
 |------|---------|:-------:|:---------:|
 | **单位类型** `Lob_Debris_Normal` | 这东西**是什么** | ✅ | ✅ |
-| **编辑器 group** `debris` | 属于**哪个具名子集**（扇区、初始簇） | ✅ | ✗ |
+| **编辑器 group** `debris` | 属于**哪个具名子集**（初始簇） | ✅ | ✗ |
+| **编辑器 region** `resthall_a` | **一块地方**（房间、走廊、扇区范围） | — | — |
 
 **代码里不出现任何编辑器 ID**——ID 由 `tools/gen_objects.py` 在构建时从地图文件里解析，不需要人工搬运。
 
@@ -154,6 +155,33 @@ Scope[Lob_Hero_Agent, Unit] Unable to create unit actor
 
 **XML 注释里不能出现 `--`**。这是 XML 规范本身的限制，不是 SC2 的。写中文破折号或者改标点。构建时 `gen_objects.py` 会解析 `UnitData.xml`，所以这类错误至少会在构建时炸出来，而不是留到游戏里。
 
-## 扇区划分（P0.5+）
+## Region
 
-用 **group** 来划，不用编辑器 Region——Region 只能靠 `RegionFromId`，会把 ID 账本问题带回来，而 group 有名字，且名字由我们自己定。
+**房间用 region 画，不要用"绕着单位摆圆圈"去近似。**主休息室是有墙的房间，圆形永远不是那个形状。
+
+早先这份文档写着"不用 Region，因为只能靠 `RegionFromId`，会把 ID 账本问题带回来"。**那条已作废**：`Regions` 也是纯 XML，
+
+```xml
+<region id="1">
+    <name value="resthall_a"/>
+    <shape type="circle">…</shape>
+</region>
+```
+
+名字和 id 都在里面，所以和 group 完全一样——构建时解析，代码里只出现名字。`ObjectsGen_Region("resthall_a")` 直接返回 region，查不到就返回空 region（不是 null），调用方不用判空。
+
+`Regions` 文件**要画了第一个 region 才会出现**，没有不算错误：表为空、查询返回空 region，建立在上面的东西保持惰性而不是报错。
+
+### 命名
+
+前缀有语义。目前：
+
+| 前缀 | 用途 | 谁读 |
+|---|---|---|
+| `resthall*` | 主休息室 | `19_sector.galaxy` |
+
+**归属靠包含关系判定，不靠名字里写玩家编号。**谁的核心站在哪个 `resthall*` 里，那个 region 就是谁的休息室。
+
+### 范围会变
+
+部门升级会改变休息室的作用范围，所以脚本测的**不是**画出来那个 region 本身，而是一个运行时合成的 region：初始加入画出来的那个，之后 `Sector_RestHallExtend(player, extra)` 往上叠。画出来的形状是起点，不是终点。
