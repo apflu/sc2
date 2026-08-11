@@ -198,28 +198,24 @@
              deciding what those should be. -->
         <LifeStart value="600"/>
         <LifeMax value="600"/>
-        <LifeArmor value="0"/>
         <LifeArmorName value="Unit/LifeArmorName/HardenedMaterial"/>
         <Footprint value="Footprint4x4ContourDestructibleRock"/>
         <MinimapRadius value="2.5"/>
         <EditorCategories value="ObjectType:Destructible,ObjectFamily:Melee"/>
     </CUnit>
-    <!-- The player character.
-
-         Parented rather than flattened: everything not listed here is a
-         Marine, so this entry reads as a diff against one. Marine's ability
-         list is stop/attack/move/Stimpack, so Repair swaps straight into
-         index 3 and its button into card slot 5, and the character ends up
-         with no harvest and no build. The only things that can want it are
-         the three P0 is testing, which is what makes "the player is busy"
-         have exactly one explanation.
-
-         Intended target is RaynorCommando, which is already almost this unit;
-         it needs a campaign dependency the map does not have yet. See
-         docs/dev/authoring-contract.md.
-
-         Death costs only time, handled in src/galaxy/15_hero.galaxy, because
-         that is a design rule rather than a data one. -->
+    <!-- The player character.-->
+    <!--         Parented rather than flattened: everything not listed here is a-->
+    <!--         Marine, so this entry reads as a diff against one. Marine's ability-->
+    <!--         list is stop/attack/move/Stimpack, so Repair swaps straight into-->
+    <!--         index 3 and its button into card slot 5, and the character ends up-->
+    <!--         with no harvest and no build. The only things that can want it are-->
+    <!--         the three P0 is testing, which is what makes "the player is busy"-->
+    <!--         have exactly one explanation.-->
+    <!--         Intended target is RaynorCommando, which is already almost this unit;-->
+    <!--         it needs a campaign dependency the map does not have yet. See-->
+    <!--         docs/dev/authoring-contract.md.-->
+    <!--         Death costs only time, handled in src/galaxy/15_hero.galaxy, because-->
+    <!--         that is a design rule rather than a data one. -->
     <CUnit id="Lob_Hero_Agent" parent="Marine">
         <FlagArray index="Hero" value="1"/>
         <LifeStart value="250"/>
@@ -233,11 +229,18 @@
         <Speed value="3"/>
         <Food value="0"/>
         <AbilArray index="3" Link="Repair"/>
-        <AbilArray index="4" Link="Lob_Debug_Haste"/>
+        <AbilArray Link="Lob_Debug_Haste"/>
         <WeaponArray index="0" Link="Lob_Hero_Rifle"/>
-        <CardLayouts>
+        <CardLayouts index="0">
             <LayoutButtons index="5" Face="Repair" Type="AbilCmd" AbilCmd="Repair,Execute" Row="1" Column="0"/>
-            <LayoutButtons index="6" Face="Lob_Debug_Haste" Type="AbilCmd" AbilCmd="Lob_Debug_Haste,Execute" Row="2" Column="4"/>
+            <LayoutButtons Face="Lob_Debug_Haste" Type="AbilCmd" AbilCmd="Lob_Debug_Haste,Execute" Row="2" Column="0"/>
+        </CardLayouts>
+        <CardLayouts>
+            <LayoutButtons Row="0" Column="0"/>
+            <LayoutButtons Row="0" Column="0"/>
+            <LayoutButtons Row="0" Column="0"/>
+            <LayoutButtons Row="0" Column="0"/>
+            <LayoutButtons Row="0" Column="0"/>
         </CardLayouts>
         <EditorCategories value="ObjectType:Hero,ObjectFamily:Campaign"/>
     </CUnit>
