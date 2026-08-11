@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <terrain version="115">
     <heightMap tileSet="KorhalPlatformEx2" uvtiling="12.000000 12.000000 0.000000 0.000000 " dim="129 129 " offset="0.000000 0.000000 0.000000 " scale="1.000000e+00 1.000000e+00 1.000000e+00 ">
-        <vertData quantizeBias="1.000000e+00" quantizeScale="1.525902e-04" standardHeight="8.000000e+00" name="t3HeightMap"/>
+        <cliffSetList num="1">
+            <cliffSet i="0" name="KorhalPlatformEx2"/>
+        </cliffSetList>
+        <vertData quantizeBias="8.000000e+00" quantizeScale="2.594034e-04" standardHeight="8.000000e+00" name="t3HeightMap"/>
         <masks name="t3TextureMasks"/>
         <textureSetList num="8">
             <textureSet i="0" name="KorhalPlatformEx2"/>
@@ -337,6 +340,83 @@
             <blockTextureSet i="254" tileSet="0"/>
             <blockTextureSet i="255" tileSet="0"/>
         </blockTextureSetList>
-        <cliffCellList num="4096" numOccupied="0"/>
+        <cliffCellList num="4096" numOccupied="76">
+            <cc i="2193" f="1" cid="0" cvar="0"/>
+            <cc i="2194" f="1" cid="0" cvar="2"/>
+            <cc i="2195" f="1" cid="0" cvar="2"/>
+            <cc i="2196" f="1" cid="0" cvar="3"/>
+            <cc i="2197" f="1" cid="0" cvar="2"/>
+            <cc i="2198" f="1" cid="0" cvar="2"/>
+            <cc i="2199" f="1" cid="0" cvar="2"/>
+            <cc i="2200" f="1" cid="0" cvar="2"/>
+            <cc i="2201" f="1" cid="0" cvar="2"/>
+            <cc i="2202" f="1" cid="0" cvar="1"/>
+            <cc i="2203" f="1" cid="0" cvar="0"/>
+            <cc i="2204" f="1" cid="0" cvar="0"/>
+            <cc i="2257" f="1" cid="0" cvar="2"/>
+            <cc i="2258" f="1" cid="0" cvar="0"/>
+            <cc i="2259" f="1" cid="0" cvar="3"/>
+            <cc i="2260" f="1" cid="0" cvar="0"/>
+            <cc i="2261" f="1" cid="0" cvar="1"/>
+            <cc i="2262" f="1" cid="0" cvar="1"/>
+            <cc i="2263" f="1" cid="0" cvar="3"/>
+            <cc i="2264" f="1" cid="0" cvar="0"/>
+            <cc i="2265" f="1" cid="0" cvar="2"/>
+            <cc i="2266" f="1" cid="0" cvar="2"/>
+            <cc i="2267" f="1" cid="0" cvar="0"/>
+            <cc i="2268" f="1" cid="0" cvar="0"/>
+            <cc i="2321" f="1" cid="0" cvar="1"/>
+            <cc i="2322" f="1" cid="0" cvar="3"/>
+            <cc i="2331" f="1" cid="0" cvar="1"/>
+            <cc i="2332" f="1" cid="0" cvar="3"/>
+            <cc i="2385" f="1" cid="0" cvar="2"/>
+            <cc i="2386" f="1" cid="0" cvar="0"/>
+            <cc i="2395" f="1" cid="0" cvar="1"/>
+            <cc i="2396" f="1" cid="0" cvar="3"/>
+            <cc i="2449" f="1" cid="0" cvar="2"/>
+            <cc i="2450" f="1" cid="0" cvar="3"/>
+            <cc i="2459" f="1" cid="0" cvar="1"/>
+            <cc i="2460" f="1" cid="0" cvar="2"/>
+            <cc i="2513" f="1" cid="0" cvar="3"/>
+            <cc i="2514" f="1" cid="0" cvar="2"/>
+            <cc i="2523" f="1" cid="0" cvar="1"/>
+            <cc i="2524" f="1" cid="0" cvar="2"/>
+            <cc i="2577" f="1" cid="0" cvar="0"/>
+            <cc i="2578" f="1" cid="0" cvar="0"/>
+            <cc i="2587" f="1" cid="0" cvar="0"/>
+            <cc i="2588" f="1" cid="0" cvar="2"/>
+            <cc i="2641" f="1" cid="0" cvar="3"/>
+            <cc i="2642" f="1" cid="0" cvar="0"/>
+            <cc i="2651" f="1" cid="0" cvar="3"/>
+            <cc i="2652" f="1" cid="0" cvar="2"/>
+            <cc i="2705" f="1" cid="0" cvar="3"/>
+            <cc i="2706" f="1" cid="0" cvar="1"/>
+            <cc i="2715" f="1" cid="0" cvar="2"/>
+            <cc i="2716" f="1" cid="0" cvar="0"/>
+            <cc i="2769" f="1" cid="0" cvar="2"/>
+            <cc i="2770" f="1" cid="0" cvar="3"/>
+            <cc i="2779" f="1" cid="0" cvar="1"/>
+            <cc i="2780" f="1" cid="0" cvar="1"/>
+            <cc i="2833" f="1" cid="0" cvar="0"/>
+            <cc i="2834" f="1" cid="0" cvar="0"/>
+            <cc i="2835" f="1" cid="0" cvar="2"/>
+            <cc i="2836" f="1" cid="0" cvar="1"/>
+            <cc i="2837" f="1" cid="0" cvar="0"/>
+            <cc i="2838" f="1" cid="0" cvar="0"/>
+            <cc i="2840" f="1" cid="0" cvar="0"/>
+            <cc i="2841" f="1" cid="0" cvar="0"/>
+            <cc i="2842" f="1" cid="0" cvar="1"/>
+            <cc i="2843" f="1" cid="0" cvar="0"/>
+            <cc i="2844" f="1" cid="0" cvar="0"/>
+            <cc i="2898" f="1" cid="0" cvar="0"/>
+            <cc i="2899" f="1" cid="0" cvar="0"/>
+            <cc i="2900" f="1" cid="0" cvar="2"/>
+            <cc i="2901" f="1" cid="0" cvar="0"/>
+            <cc i="2902" f="1" cid="0" cvar="0"/>
+            <cc i="2904" f="1" cid="0" cvar="0"/>
+            <cc i="2905" f="1" cid="0" cvar="2"/>
+            <cc i="2906" f="1" cid="0" cvar="0"/>
+            <cc i="2907" f="1" cid="0" cvar="0"/>
+        </cliffCellList>
     </heightMap>
 </terrain>

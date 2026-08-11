@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Regions>
+    <region id="1">
+        <name value="resthall1"/>
+        <shape type="rect">
+            <quad value="37.903,72.6037,54.14,87.78"/>
+        </shape>
+    </region>
+</Regions>
