@@ -155,6 +155,30 @@ Scope[Lob_Hero_Agent, Unit] Unable to create unit actor
 
 **XML 注释里不能出现 `--`**。这是 XML 规范本身的限制，不是 SC2 的。写中文破折号或者改标点。构建时 `gen_objects.py` 会解析 `UnitData.xml`，所以这类错误至少会在构建时炸出来，而不是留到游戏里。
 
+### Attribute = 危险等级
+
+五个危险等级就是五个原生 attribute。不另建字段、不另建表：
+
+| 等级 | Attribute | Galaxy | 编辑器 |
+|---|---|---|---|
+| Zayin | `Biological` | `c_unitAttributeBiological` | |
+| Teth | `Light` | `c_unitAttributeLight` | |
+| HE | `Armored` | `c_unitAttributeArmored` | |
+| WAW | `Psionic` | `c_unitAttributePsionic` | |
+| Aleph | `User1` | `c_unitAttributeUser1` | 该槽位显示名为 "Map Object" |
+
+显示名已经在 Text Editor 里改过，所以单位面板、tooltip、武器的加成行全都直接写 "HE" 而不是 "Armored"，一行脚本都不用。情报部 lv2 要的"头顶标注危险等级"、控制部 lv2/lv3 的"HE 级以下 / Aleph 级以下"准入，在代码侧都退化成 `Risk_Of()` 加一个比较——见 `src/galaxy/06_risk.galaxy`。
+
+**代价是这五个 attribute 从此只有这一个含义。**任何不是异想体的东西都不能带它们，否则它会读出一个自己没有的等级。已经清掉的：
+
+- `Lob_Device_Basic` / `Lob_Core_Basic` / `Lob_Debris_Normal` 原本带 `Armored`（＝HE）
+- `Lob_SCV_*` 原本带 `Light` + `Biological`（＝Teth + Zayin）
+- `Lob_Hero_Agent` 从 `Marine` 继承 `Light` + `Biological`，用 `value="0"` 显式关掉
+
+还空着的、可以照常用本义的：`Mechanical`、`Structure`、`Robotic`、`Massive`、`Hover`、`Heroic`、`Summoned`、`MapBoss`、`User2-4`。
+
+注意这也会改变原版武器的属性加成落在谁身上——"对 Armored +X" 现在是"对 HE +X"。这是个特性，不是副作用，但摆武器数值的时候要记着。
+
 ## Region
 
 **房间用 region 画，不要用"绕着单位摆圆圈"去近似。**主休息室是有墙的房间，圆形永远不是那个形状。

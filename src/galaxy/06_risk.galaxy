@@ -1,0 +1,100 @@
+//--------------------------------------------------------------------------------------------------
+// Risk levels.
+//
+// The five Lobotomy risk grades are five stock unit attributes. Nothing is
+// computed or stored: an abnormality's grade is one checkbox on its CUnit, and
+// asking for it is a native call against the unit type.
+//
+//     Zayin  = Biological
+//     Teth   = Light
+//     HE     = Armored
+//     WAW    = Psionic
+//     Aleph  = User1        (the editor labels this slot "Map Object")
+//
+// The attribute names are renamed in the text editor, so the unit panel, the
+// tooltip and the damage-bonus lines all read "HE" rather than "Armored"
+// without a line of script. Information Team lv2 wants an overhead readout of
+// exactly this, and Control Team lv2/lv3 gate cross-department work on "below
+// HE" / "below Aleph"; both are Risk_Of and a comparison.
+//
+// The cost of the reuse is that these five attributes now mean only this.
+// Anything of ours that is not an abnormality must carry none of them, or it
+// reads as a grade it does not have -- our devices were Armored and our
+// employees were Light + Biological, and both had to come off. Mechanical,
+// Structure, Robotic, Massive, Hover, Heroic, Summoned, MapBoss and User2-4 are
+// still free for their ordinary meanings.
+//
+// An unrated unit is c_riskNone, which is not the same as "Unknown" in the
+// Information Team sense. Unknown is about what a player has observed; this is
+// about what the unit is.
+//--------------------------------------------------------------------------------------------------
+
+const int c_riskNone = -1;
+const int c_riskZayin = 0;
+const int c_riskTeth = 1;
+const int c_riskHE = 2;
+const int c_riskWAW = 3;
+const int c_riskAleph = 4;
+const int c_riskCount = 5;
+
+//--------------------------------------------------------------------------------------------------
+// The attribute a grade is stored in.
+//--------------------------------------------------------------------------------------------------
+int Risk_Attribute (int level) {
+    if (level == c_riskZayin) { return c_unitAttributeBiological; }
+    if (level == c_riskTeth) { return c_unitAttributeLight; }
+    if (level == c_riskHE) { return c_unitAttributeArmored; }
+    if (level == c_riskWAW) { return c_unitAttributePsionic; }
+    if (level == c_riskAleph) { return c_unitAttributeUser1; }
+    return c_unitAttributeNone;
+}
+
+string Risk_Name (int level) {
+    if (level == c_riskZayin) { return "Zayin"; }
+    if (level == c_riskTeth) { return "Teth"; }
+    if (level == c_riskHE) { return "HE"; }
+    if (level == c_riskWAW) { return "WAW"; }
+    if (level == c_riskAleph) { return "Aleph"; }
+    return "";
+}
+
+//--------------------------------------------------------------------------------------------------
+// A unit type's grade, or c_riskNone.
+//
+// Searched downwards so that a unit mistakenly carrying two grades reads as the
+// higher one. Being told something is more dangerous than it is fails safe;
+// being told it is less does not.
+//--------------------------------------------------------------------------------------------------
+int Risk_OfType (string unitType) {
+    int level;
+
+    level = c_riskAleph;
+    while (level >= c_riskZayin) {
+        if (UnitTypeTestAttribute(unitType, Risk_Attribute(level))) {
+            return level;
+        }
+        level = level - 1;
+    }
+    return c_riskNone;
+}
+
+int Risk_Of (unit which) {
+    if (which == null) {
+        return c_riskNone;
+    }
+    return Risk_OfType(UnitGetType(which));
+}
+
+//--------------------------------------------------------------------------------------------------
+// The containment-permission test, in the form the department doc states it:
+// "below HE" is Risk_AtMost(u, c_riskTeth).
+//
+// Unrated units never pass. A rule written about abnormalities should not
+// quietly also apply to a crate.
+//--------------------------------------------------------------------------------------------------
+bool Risk_AtMost (unit which, int level) {
+    int actual;
+
+    actual = Risk_Of(which);
+    return actual != c_riskNone && actual <= level;
+}

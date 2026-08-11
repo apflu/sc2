@@ -51,7 +51,6 @@
         <Collide index="RoachBurrow" value="1"/>
         <Collide index="ForceField" value="1"/>
         <Collide index="Small" value="1"/>
-        <Attributes index="Armored" value="1"/>
         <Attributes index="Mechanical" value="1"/>
         <Attributes index="Structure" value="1"/>
         <LifeStart value="850"/>
@@ -148,7 +147,6 @@
         <Collide index="Ground" value="1"/>
         <Collide index="Structure" value="1"/>
         <Collide index="Small" value="1"/>
-        <Attributes index="Armored" value="1"/>
         <Attributes index="Mechanical" value="1"/>
         <Attributes index="Structure" value="1"/>
         <LifeStart value="1500"/>
@@ -189,7 +187,6 @@
         <Collide index="RoachBurrow" value="1"/>
         <Collide index="ForceField" value="1"/>
         <Collide index="Small" value="1"/>
-        <Attributes index="Armored" value="1"/>
         <Attributes index="Structure" value="1"/>
         <!-- Greybox tuning. 2000 health behind 3 armor meant a worker SCV spent
              25 minutes on one pile, which makes the clearing loop impossible to
@@ -228,6 +225,11 @@
         <LifeRegenRate value="1"/>
         <Speed value="3"/>
         <Food value="0"/>
+        <!-- Light and Biological are risk levels here (Teth / Zayin), not body
+             types. Marine carries both; an employee is not an abnormality, so
+             they come back off. See docs/dev/authoring-contract.md. -->
+        <Attributes index="Light" value="0"/>
+        <Attributes index="Biological" value="0"/>
         <AbilArray index="3" Link="Repair"/>
         <AbilArray Link="Lob_Debug_Haste"/>
         <WeaponArray index="0" Link="Lob_Hero_Rifle"/>
@@ -257,8 +259,6 @@
         <Collide index="Small" value="1"/>
         <DefaultAcquireLevel value="Defensive"/>
         <Response value="Flee"/>
-        <Attributes index="Light" value="1"/>
-        <Attributes index="Biological" value="1"/>
         <Attributes index="Mechanical" value="1"/>
         <LifeStart value="45"/>
         <LifeMax value="45"/>
@@ -349,8 +349,6 @@
         <Collide index="Small" value="1"/>
         <DefaultAcquireLevel value="Defensive"/>
         <Response value="Flee"/>
-        <Attributes index="Light" value="1"/>
-        <Attributes index="Biological" value="1"/>
         <Attributes index="Mechanical" value="1"/>
         <LifeStart value="45"/>
         <LifeMax value="45"/>
@@ -441,8 +439,6 @@
         <Collide index="Small" value="1"/>
         <DefaultAcquireLevel value="Defensive"/>
         <Response value="Flee"/>
-        <Attributes index="Light" value="1"/>
-        <Attributes index="Biological" value="1"/>
         <Attributes index="Mechanical" value="1"/>
         <LifeStart value="45"/>
         <LifeMax value="45"/>
