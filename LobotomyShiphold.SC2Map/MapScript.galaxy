@@ -1011,6 +1011,69 @@ region ObjectsGen_Region (string name) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// src/galaxy/07_buffs.galaxy
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// Conditional buffs.
+//
+// The one primitive behind every effect that has to be able to stop.
+//
+// SC2 upgrades do not unwind. The level counter can be decremented -- Blizzard
+// does it for flag-only upgrades -- but the EffectArray data modifications an
+// upgrade applies are not reverted by taking the level away, and nothing in the
+// stock data relies on them being. So an upgrade is the right home for a
+// permanent fact and the wrong home for anything conditional.
+//
+// That splits department effects in two, and the split is a placement decision
+// rather than a label on the upgrade:
+//
+//   Never turns off  -> EffectArray on the CUpgrade. No script at all.
+//   Can turn off     -> a CBehaviorBuff, applied and removed through here.
+//
+// Baseline 7.3 needs the second kind: while a player's inner layer is lost the
+// effects that run on installations stop, and the pure numbers keep working.
+// Anything that has to obey that rule is a behavior, and the upgrade beside it
+// is only the record that it was bought.
+//
+// Applying and removing rather than leaving it on also means the buff icon on
+// the unit is an honest readout of what is actually helping right now.
+//--------------------------------------------------------------------------------------------------
+
+//--------------------------------------------------------------------------------------------------
+// Brings one unit's buff into line with whether it should have it.
+//--------------------------------------------------------------------------------------------------
+void Buffs_Set (unit who, string behaviorId, bool wanted) {
+    bool held;
+
+    if (who == null || !UnitIsAlive(who)) {
+        return;
+    }
+
+    held = UnitHasBehavior2(who, behaviorId);
+    if (wanted && !held) {
+        UnitBehaviorAdd(who, behaviorId, who, 1);
+    }
+    else if (!wanted && held) {
+        UnitBehaviorRemove(who, behaviorId, 1);
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// The same for a whole group, where every member gets the same answer.
+//--------------------------------------------------------------------------------------------------
+void Buffs_SetGroup (unitgroup who, string behaviorId, bool wanted) {
+    int count;
+    int i;
+
+    count = UnitGroupCount(who, c_unitCountAlive);
+    i = 1;
+    while (i <= count) {
+        Buffs_Set(UnitGroupUnit(who, i), behaviorId, wanted);
+        i = i + 1;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
 // src/galaxy/08_downable.galaxy
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
@@ -1291,8 +1354,6 @@ bool Sector_Tick_Func (bool testConds, bool runActions) {
     unit who;
     int count;
     int i;
-    bool sheltered;
-    bool buffed;
 
     if (!runActions) {
         return true;
@@ -1307,16 +1368,7 @@ bool Sector_Tick_Func (bool testConds, bool runActions) {
     i = 1;
     while (i <= count) {
         who = UnitGroupUnit(people, i);
-        if (who != null && UnitIsAlive(who)) {
-            sheltered = Sector_InRestHall(who);
-            buffed = UnitHasBehavior2(who, c_restHallBuff);
-            if (sheltered && !buffed) {
-                UnitBehaviorAdd(who, c_restHallBuff, who, 1);
-            }
-            else if (!sheltered && buffed) {
-                UnitBehaviorRemove(who, c_restHallBuff, 1);
-            }
-        }
+        Buffs_Set(who, c_restHallBuff, Sector_InRestHall(who));
         i = i + 1;
     }
     return true;
@@ -1439,10 +1491,17 @@ void Registry_Init () {
 //   highest numbered step the player actually holds, so a step granted out of
 //   order still reads correctly.
 //
-// Suspension while the inner layer is lost (baseline 7.3) is NOT here yet. It
-// needs each upgrade classified as running on installations or on numbers, and
-// there is no field carrying that yet -- see docs/design/p0-scope.md. Guessing
-// a marker now would be inventing convention the design has not asked for.
+// Suspension while the inner layer is lost (baseline 7.3) needs no marker on
+// the upgrade, because it is decided by where the effect is put rather than by
+// what the upgrade is labelled. SC2 upgrades do not unwind: the level counter
+// can be decremented, but the EffectArray modifications are not taken back. So
+// an effect that must be able to stop is a CBehaviorBuff driven through
+// 07_buffs.galaxy, and the upgrade next to it is only the record that it was
+// bought. An effect that never stops can be EffectArray and needs no script.
+//
+// That also makes the upgrade cheap to consult, which is the point of using
+// them: a trigger asks Dept_Holds and gets an answer without bookkeeping, and
+// the research goes through the stock alert and tech tree UI for free.
 //--------------------------------------------------------------------------------------------------
 
 const int c_deptNone = -1;

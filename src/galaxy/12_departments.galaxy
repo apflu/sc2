@@ -26,10 +26,17 @@
 //   highest numbered step the player actually holds, so a step granted out of
 //   order still reads correctly.
 //
-// Suspension while the inner layer is lost (baseline 7.3) is NOT here yet. It
-// needs each upgrade classified as running on installations or on numbers, and
-// there is no field carrying that yet -- see docs/design/p0-scope.md. Guessing
-// a marker now would be inventing convention the design has not asked for.
+// Suspension while the inner layer is lost (baseline 7.3) needs no marker on
+// the upgrade, because it is decided by where the effect is put rather than by
+// what the upgrade is labelled. SC2 upgrades do not unwind: the level counter
+// can be decremented, but the EffectArray modifications are not taken back. So
+// an effect that must be able to stop is a CBehaviorBuff driven through
+// 07_buffs.galaxy, and the upgrade next to it is only the record that it was
+// bought. An effect that never stops can be EffectArray and needs no script.
+//
+// That also makes the upgrade cheap to consult, which is the point of using
+// them: a trigger asks Dept_Holds and gets an answer without bookkeeping, and
+// the research goes through the stock alert and tech tree UI for free.
 //--------------------------------------------------------------------------------------------------
 
 const int c_deptNone = -1;
