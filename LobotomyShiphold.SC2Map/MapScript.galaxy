@@ -18,17 +18,26 @@ include "TriggerLibs/NativeLib"
 // its use and modules are concatenated in filename order.
 //--------------------------------------------------------------------------------------------------
 
-// P0 is single player. The map's default slots are 1 = the player, 2 = Hostile.
-const int c_p0Player = 1;
-const int c_p0Zerg = 2;
+// Slots, read out of the map's own MapInfo rather than remembered: the player
+// records carry their race id in slot order, and they read
+//
+//     1-6  Terr          the six players
+//     7    Zerg          the swarm
+//     8    Abnormality   whatever is loose
+//
+// The zerg used to be slot 2, which is now a player, so anything still saying 2
+// would have been spawning waves for a teammate.
+//
+// Slot 8 is its own race because a loose abnormality has to be hostile to the
+// zerg as well as to everybody else -- design 5.1 makes releasing an easy one
+// to meet a wave a real tactic, and that is an alliance setting rather than
+// anything script can arrange.
+const int c_zergPlayer = 7;
+const int c_abnoPlayer = 8;
 
-// Loose abnormalities. A third slot, and it has to be hostile to the zerg as
-// well as to the players -- design 5.1 makes releasing an easy one to meet a
-// wave a real tactic, and that is an alliance setting in the map's player
-// properties, not something script can arrange. Until that slot is configured
-// in the editor, a breached abnormality will simply be on nobody's side of the
-// fight it was meant to join.
-const int c_abnoPlayer = 3;
+// Still single player for the parts of P0 that have not been made per-player
+// yet: the character, the economy readout. Not a claim about the map.
+const int c_p0Player = 1;
 
 //--------------------------------------------------------------------------------------------------
 // src/galaxy/05_objects_gen.galaxy
@@ -3639,7 +3648,7 @@ bool Waves_Spawn_Func (bool testConds, bool runActions) {
             c_waveBaseSize + gv_waveNumber,
             c_waveUnitType,
             c_unitCreateIgnorePlacement,
-            c_p0Zerg,
+            c_zergPlayer,
             where,
             270.0
         );

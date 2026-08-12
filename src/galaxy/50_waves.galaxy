@@ -62,7 +62,7 @@ bool Waves_Spawn_Func (bool testConds, bool runActions) {
             c_waveBaseSize + gv_waveNumber,
             c_waveUnitType,
             c_unitCreateIgnorePlacement,
-            c_p0Zerg,
+            c_zergPlayer,
             where,
             270.0
         );
