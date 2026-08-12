@@ -3924,34 +3924,59 @@ bool Work_IsBusy (unit emp) {
 // docs/usr/containment.md nobody can enter, and standing at the door doing
 // nothing visible is the placeholder that document asks for.
 //--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// Why this employee cannot work this abnormality, or "" if they can.
+//
+// A reason rather than a bare false. A player who presses a button and gets
+// nothing has hit the same bug as a developer who cannot tell which check
+// refused, and one string fixes both.
+//--------------------------------------------------------------------------------------------------
+string Work_Refusal (unit abno, unit emp) {
+    int cell;
+
+    if (emp == null || !UnitIsAlive(emp)) {
+        return "no employee";
+    }
+    if (Work_IsBusy(emp)) {
+        return "already working";
+    }
+    if (gv_workCount >= c_workMax) {
+        return "too many works at once";
+    }
+    if (abno == null) {
+        return "no abnormality at that door";
+    }
+    if (AbnoGen_IndexOf(abno) < 0) {
+        return "that unit has no abnormality document";
+    }
+
+    cell = Cont_SlotOf(abno);
+    if (cell < 0) {
+        return "that abnormality is not in the cell registry";
+    }
+    // A dropped door is exactly and only this: you cannot work on it. That is
+    // the whole consequence for an abnormality that does not escape.
+    if (!Cont_DoorIsUp(abno)) {
+        return "the door is down";
+    }
+    if (Cont_State(abno) != c_cellContained) {
+        return "it is not in its cell";
+    }
+    if (GameGetMissionTime() < gvg_workReadyAt[cell]) {
+        return "still on work cooldown";
+    }
+    return "";
+}
+
 bool Work_Begin (unit abno, unit emp, int work) {
     int cell;
     int index;
 
-    if (emp == null || abno == null || !UnitIsAlive(emp) || Work_IsBusy(emp)) {
+    if (Work_Refusal(abno, emp) != "") {
         return false;
     }
-    if (gv_workCount >= c_workMax) {
-        return false;
-    }
-
     index = AbnoGen_IndexOf(abno);
     cell = Cont_SlotOf(abno);
-    if (index < 0 || cell < 0) {
-        return false;
-    }
-
-    // A dropped door is exactly and only this: you cannot work on it. That is
-    // the whole consequence for an abnormality that does not escape.
-    if (!Cont_DoorIsUp(abno)) {
-        return false;
-    }
-    if (Cont_State(abno) != c_cellContained) {
-        return false;
-    }
-    if (GameGetMissionTime() < gvg_workReadyAt[cell]) {
-        return false;
-    }
 
     gvg_workEmp[gv_workCount] = emp;
     gvg_workAbno[gv_workCount] = abno;
@@ -4103,7 +4128,10 @@ void Work_RollBox (int slot) {
 bool Work_Cast_Func (bool testConds, bool runActions) {
     unit emp;
     unit door;
+    unit abno;
     int slot;
+    int owner;
+    string why;
 
     if (!runActions) {
         return true;
@@ -4111,22 +4139,53 @@ bool Work_Cast_Func (bool testConds, bool runActions) {
 
     emp = EventUnit();
     door = EventUnitAbilityOtherUnit();
-    if (!ObjectsGen_IsEmp(emp) || !Cont_IsDoor(door)) {
+    owner = UnitGetOwner(emp);
+
+    // Registered on every stage and filtered here, rather than on Complete
+    // alone. Which stage a prepare-time ability actually reaches is the open
+    // question when nothing happens at all, and a handler that reports what it
+    // heard answers it in one cast rather than one round trip.
+    //
+    // To chat rather than the subtitle area, because several stages fire for
+    // one cast and the subtitle only ever shows the last of them.
+    UIDisplayMessage(PlayerGroupSingle(owner), c_messageAreaChat,
+                     StringToText("work: ability stage "
+                                  + IntToString(EventUnitAbilityStage())));
+    if (EventUnitAbilityStage() != c_unitAbilStageComplete) {
+        return true;
+    }
+
+    if (!ObjectsGen_IsEmp(emp)) {
+        return true;
+    }
+    if (!Cont_IsDoor(door)) {
+        UIDisplayMessage(PlayerGroupSingle(owner), c_messageAreaSubtitle,
+                         StringToText("work: that is not a containment door"));
         return true;
     }
 
     slot = 0;
     while (slot < gv_cellCount) {
         if (Cont_DoorAt(gvg_cellHome[slot]) == door) {
-            if (!Work_Begin(gvg_cellAbno[slot], emp, Work_DefaultOf(UnitGetOwner(emp)))) {
-                UIDisplayMessage(PlayerGroupSingle(UnitGetOwner(emp)),
-                                 c_messageAreaSubtitle,
-                                 StringToText("cannot work that right now"));
+            abno = gvg_cellAbno[slot];
+            why = Work_Refusal(abno, emp);
+            if (why != "") {
+                UIDisplayMessage(PlayerGroupSingle(owner), c_messageAreaSubtitle,
+                                 StringToText("work: " + why));
+                return true;
             }
+            Work_Begin(abno, emp, Work_DefaultOf(owner));
+            UIDisplayMessage(
+                PlayerGroupSingle(owner), c_messageAreaSubtitle,
+                StringToText(gvg_abnoName[AbnoGen_IndexOf(abno)] + ": "
+                             + Work_Name(Work_DefaultOf(owner)) + " started"));
             return true;
         }
         slot = slot + 1;
     }
+
+    UIDisplayMessage(PlayerGroupSingle(owner), c_messageAreaSubtitle,
+                     StringToText("work: no cell is registered at that door"));
     return true;
 }
 
@@ -4195,7 +4254,7 @@ void Work_Init () {
 
     gt_workCast = TriggerCreate("Work_Cast_Func");
     TriggerAddEventUnitAbility(gt_workCast, null, AbilityCommand(c_workAbil, 0),
-                               c_unitAbilStageComplete, true);
+                               c_unitAbilStageAll, true);
 }
 
 //--------------------------------------------------------------------------------------------------
