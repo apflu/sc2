@@ -20,3 +20,4 @@ Unit/EditorPrefix/O_03_03=Abn -
 Unit/EditorSuffix/ContainGateHorizontal=(Straight Horizontal)
 Unit/EditorSuffix/Lob_Debris_Normal=- 4x4
 Unit/EditorSuffix/Lob_Marker_Spawn=(Terran Large)
+Validator/Name/IsContainmentGate=IsContainmentGate
