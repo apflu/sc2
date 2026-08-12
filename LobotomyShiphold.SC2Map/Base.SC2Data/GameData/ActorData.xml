@@ -31,6 +31,26 @@
             <Image value="Assets\Textures\Wireframe-Terran-DestructibleGate.dds"/>
         </Wireframe>
     </CActorUnit>
+    <CActorUnit id="GateControlUnit2" parent="GenericUnitStandardNoAutoSoundLinks" unitName="ContainGateControl">
+        <On Terms="ActorCreation" Send="Create SoundEmitter Doodad_AvernusGateControlStand"/>
+        <Model value="GateControlUnit"/>
+        <BuildModel value="GateControlUnit"/>
+        <DeathArray index="Normal" ModelLink="AvernusGateControlDeath" SoundLink="Terran_ExplosionLarge"/>
+        <PlacementModel value="GateControlUnit"/>
+        <BarOffset value="120"/>
+        <BarWidth value="140"/>
+        <GroupIcon>
+            <Image value="Assets\Textures\Wireframe-terran-gatecontrol.dds"/>
+        </GroupIcon>
+        <HighlightTooltip value="Unit/Name/GateControlUnit2"/>
+        <NameOffset value="120"/>
+        <StatusBarFlags index="Duration" value="0"/>
+        <UnitFlags index="ShowBlobShadow" value="0"/>
+        <UnitIcon value="Assets\Textures\Wireframe-terran-gatecontrol.dds"/>
+        <Wireframe>
+            <Image value="Assets\Textures\Wireframe-terran-gatecontrol.dds"/>
+        </Wireframe>
+    </CActorUnit>
     <CActorUnit id="Lob_Marker_Spawn" parent="GenericUnitStandardNoAutoSoundLinks" unitName="Lob_Marker_Spawn">
         <Model value="Beacon_Terran"/>
         <BuildModel value="Beacon_Terran"/>

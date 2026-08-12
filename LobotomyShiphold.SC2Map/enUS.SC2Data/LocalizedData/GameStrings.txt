@@ -54,6 +54,7 @@ MapInfo/Player09/Name=Hostile
 Race/Name/Abnormality=Abnormality
 Unit/Name/0_00_00=Standard Training-Dummy Rabbit
 Unit/Name/ContainGate=Containment Gate
+Unit/Name/ContainGateControl=Containment Gate Control
 Unit/Name/DestructibleGateDiagonalBLUR=Gate
 Unit/Name/Lob_CoreDown_Basic=Rest Hall Core (lost)
 Unit/Name/Lob_Core_Basic=Rest Hall Core
