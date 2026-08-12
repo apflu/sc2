@@ -34,14 +34,22 @@ Button/Tooltip/Lob_Device_Basic=Contains upgrades for Terran infantry and struct
 Button/Tooltip/Lob_Emp_Basic=An employee. Send them to work an abnormality; the four stats grow from the work itself.<n/><n/><c val="ffff8a">They do not come back.</c>
 Button/Tooltip/Lob_Hero_Agent=Your character. Clears debris, repairs devices, and holds the line -- one pair of hands for all three.
 Button/Tooltip/Lob_SCV_Miner=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
-Button/Tooltip/Lob_SCV_Unassigned2=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
 Button/Tooltip/Lob_SCV_Unassigned=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
+Button/Tooltip/Lob_SCV_Unassigned2=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
 DocInfo/DescLong=Completely devoid of any description whatsoever.
 DocInfo/DescShort=Any
 DocInfo/Name=Just Another StarCraft II Map
 MapInfo/Player00/Name=Neutral
 MapInfo/Player01/Name=Player 1
-MapInfo/Player02/Name=Hostile
+MapInfo/Player02/Name=Player 2
+MapInfo/Player03/Name=Player 3
+MapInfo/Player04/Name=Player 4
+MapInfo/Player05/Name=Player 5
+MapInfo/Player06/Name=Player 6
+MapInfo/Player07/Name=Player 7
+MapInfo/Player08/Name=Player 8
+MapInfo/Player09/Name=Hostile
+Race/Name/Abnormality=Abnormality
 Unit/Name/Lob_CoreDown_Basic=Rest Hall Core (lost)
 Unit/Name/Lob_Core_Basic=Rest Hall Core
 Unit/Name/Lob_Debris_4x4HighlightTooltip=Attack this to destroy it
