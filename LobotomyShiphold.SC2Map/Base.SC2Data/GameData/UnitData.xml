@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Catalog>
     <CUnit id="ContainGateHorizontal">
-        <Name value="Unit/Name/DestructibleGateDiagonalBLUR"/>
+        <Name value="Unit/Name/ContainGate"/>
         <Description value="Button/Tooltip/DestructibleGateDiagonalBLUR"/>
         <DeathRevealRadius value="3"/>
         <ReviveType value="DestructibleGateDiagonalBLUR"/>
@@ -642,7 +642,7 @@
     </CUnit>
     <CUnit id="O_03_03">
         <DeathRevealRadius value="3"/>
-        <Race value="Prot"/>
+        <Race value="Abnormality"/>
         <Mob value="Multiplayer"/>
         <FlagArray index="Movable" value="0"/>
         <FlagArray index="PreventDestroy" value="1"/>
@@ -707,5 +707,6 @@
         <Mob value="Multiplayer"/>
         <Attributes index="Light" value="1"/>
         <Attributes index="Biological" value="0"/>
+        <Race value="Abnormality"/>
     </CUnit>
 </Catalog>

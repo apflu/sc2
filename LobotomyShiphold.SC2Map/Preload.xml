@@ -2,6 +2,7 @@
 <Preload>
 <Actor id="SYSTEM_ActorConfig"/>
 <Terrain id="KorhalPlatformEx2"/>
+<Unit id="ContainGateHorizontal"/>
 <Unit id="Lob_Marker_Spawn"/>
 <Unit id="Lob_Device_Basic"/>
 <Unit id="Lob_Pile_Ore" Variations="0"/>
@@ -11,4 +12,5 @@
 <Unit id="Lob_Hero_Agent"/>
 <Unit id="Lob_SCV_Miner"/>
 <Unit id="Lob_SCV_Worker"/>
+<Unit id="O_03_03"/>
 </Preload>
