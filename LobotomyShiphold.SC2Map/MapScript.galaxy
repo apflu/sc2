@@ -4138,7 +4138,12 @@ bool Work_Cast_Func (bool testConds, bool runActions) {
     }
 
     emp = EventUnit();
-    door = EventUnitAbilityOtherUnit();
+    // EventUnitTargetUnit, not EventUnitAbilityOtherUnit. They sit two lines
+    // apart in the natives file under the same heading, and the second one is
+    // for abilities that involve a third party rather than for the thing you
+    // clicked: it came back null here, so every cast landed on "that is not a
+    // containment door".
+    door = EventUnitTargetUnit();
     owner = UnitGetOwner(emp);
 
     // Registered on every stage and filtered here, rather than on Complete
@@ -4160,7 +4165,8 @@ bool Work_Cast_Func (bool testConds, bool runActions) {
     }
     if (!Cont_IsDoor(door)) {
         UIDisplayMessage(PlayerGroupSingle(owner), c_messageAreaSubtitle,
-                         StringToText("work: that is not a containment door"));
+                         StringToText("work: not a containment door ("
+                                      + UnitGetType(door) + ")"));
         return true;
     }
 
