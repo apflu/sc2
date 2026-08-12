@@ -235,7 +235,16 @@ Structure  Hover  Heroic  Summoned  User1  MapBoss
 | 自律 Temperance | `Lob_Attr_Temperance` | 工作速度（还不存在） |
 | 正义 Justice | `Lob_Attr_Justice` | 攻速 |
 
-**它自己会显示。**`core.sc2mod/base.sc2data/UI/Layout/UI/InfoPaneHero.SC2Layout` 里有 `AttributeLabel1..5`，锚在面板右半边，专门给这个用。显示名读 `Behavior/PrimaryName/<id>`，tooltip 读 `Behavior/PrimaryTooltip/<id>`（见 core 的 `CBehaviorAttribute default` 条目）。**不需要自己画 UI。**
+**它自己会显示。**`core.sc2mod/base.sc2data/UI/Layout/UI/InfoPaneHero.SC2Layout` 里有 `AttributeLabel1..5`，锚在面板右半边，专门给这个用。**不需要自己画 UI。**
+
+**但文本要写四条键，不是两条。**`CBehaviorAttribute` 有两组名字：
+
+| 键 | 来自 | 面板上用的是这组 |
+|---|---|---|
+| `Behavior/Name/<id>` / `Behavior/Tooltip/<id>` | `CBehavior` 基类默认值 | ✅ |
+| `Behavior/PrimaryName/<id>` / `Behavior/PrimaryTooltip/<id>` | `CBehaviorAttribute` 额外字段 | 未确认何时生效 |
+
+只写 Primary 那组的话，面板上会**原样显示键名**（`Behavior/Name/Lob_Attr_...`）。Primary 那组大概是给"主属性"用的——War3 把 `AttributeStrPrimary` 和 `AttributeStrSecondary` 做成了两个 behavior，所以那边的主/副是靠挂哪个来分的。四条都写着，代价为零。
 
 **等级用一条 veterancy，`Lob_Rank`。**英雄面板的等级读数是**单位上所有 veterancy 等级的求和**——所以单位只挂一条时，那条的等级就是面板等级，那条的经验条就是升级进度。而员工等级本来就是求和，两边天然一致。
 
