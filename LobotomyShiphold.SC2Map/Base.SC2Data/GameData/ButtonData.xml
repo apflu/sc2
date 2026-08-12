@@ -15,4 +15,7 @@
     <CButton id="Lob_Obs_4">
         <Icon value="Assets\Textures\btn-upgrade-terran-infantryweaponslevel1.dds"/>
     </CButton>
+    <CButton id="Interact">
+        <Icon value="Assets\Textures\btn-ability-terran-holdfire.dds"/>
+    </CButton>
 </Catalog>

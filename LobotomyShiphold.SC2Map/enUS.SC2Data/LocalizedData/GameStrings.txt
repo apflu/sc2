@@ -1,4 +1,4 @@
-﻿Abil/Name/Interact=Interact
+﻿Abil/Name/Interact=Work
 Abil/Name/Lob_Obs_1=Basic Information
 Abil/Name/Lob_Obs_2=Work Preferences
 Abil/Name/Lob_Obs_3=Management Tips
@@ -21,12 +21,14 @@ Behavior/Tooltip/Lob_Attr_Justice=Attack speed. Raised by working abnormalities.
 Behavior/Tooltip/Lob_Attr_Prudence=Mental resilience. Raised by working abnormalities.<n/><n/>I &lt;30&gt; II &lt;45&gt; III &lt;65&gt; IV &lt;85&gt; V &lt;100&gt; EX
 Behavior/Tooltip/Lob_Attr_Temperance=Work speed. Raised by working abnormalities.<n/><n/>I &lt;30&gt; II &lt;45&gt; III &lt;65&gt; IV &lt;85&gt; V &lt;100&gt; EX
 Behavior/Tooltip/Lob_Rank=Employee rank, from the sum of the four attribute levels.
+Button/Name/Interact=Work
 Button/Name/Lob_Debug_Haste=DEBUG: Haste
 Button/Name/Lob_Obs_1=Basic Information
 Button/Name/Lob_Obs_2=Work Preferences
 Button/Name/Lob_Obs_3=Management Tips
 Button/Name/Lob_Obs_4=Escape Information
 Button/Tooltip/Critter0_00_00=Automaton 2000. The utility bot of choice.
+Button/Tooltip/Interact=Send this employee to work the abnormality behind that door.
 Button/Tooltip/Lob_CoreDown_Basic=Inner layer lost. Repair it to bring your sector back.
 Button/Tooltip/Lob_Core_Basic=The heart of your inner layer. Department passives and rest hall recovery run off it.
 Button/Tooltip/Lob_Debris_Normal=Barrier that can be destroyed to allow access to new areas.
@@ -40,8 +42,8 @@ Button/Tooltip/Lob_Obs_2=Not yet observed.
 Button/Tooltip/Lob_Obs_3=Not yet observed.
 Button/Tooltip/Lob_Obs_4=Not yet observed.
 Button/Tooltip/Lob_SCV_Miner=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
-Button/Tooltip/Lob_SCV_Unassigned=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
 Button/Tooltip/Lob_SCV_Unassigned2=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
+Button/Tooltip/Lob_SCV_Unassigned=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
 Button/Tooltip/O_03_03=O-03-03<n/><n/><c val="FFE303">Detector</c>
 DocInfo/DescLong=Completely devoid of any description whatsoever.
 DocInfo/DescShort=Any

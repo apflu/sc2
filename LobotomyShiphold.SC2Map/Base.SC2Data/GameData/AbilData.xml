@@ -1,8 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Catalog>
-    <CAbilInteract id="Interact">
+    <!-- Sending an employee to work.
+
+         Effect-Target rather than Interact, and the whole of it is PrepTime:
+         the ability does nothing, it just takes a moment and can be aimed at a
+         containment door. 14_work.galaxy hears the cast complete and starts the
+         work; the cast bar is the "短暂读条" docs/usr/containment.md asks for,
+         and it is the engine drawing it rather than anything of ours.
+
+         The previous version read the employee's order queue and inferred
+         intent from an order pointed at a door. That worked and was wrong: it
+         made every move order near a cell ambiguous, it could not show a cast
+         bar, and it had no way to refuse. A real ability has TargetFilters and
+         a validator for that, and picks up the right-click behaviour later from
+         SmartCast without any of this changing.
+
+         Uninterruptible is deliberately NOT set. Walking away has to cancel it,
+         because "the wave arrived, pull them out" is a decision the player is
+         supposed to be able to make. -->
+    <CAbilEffectTarget id="Interact">
         <EditorCategories value="AbilityorEffectType:Units"/>
-    </CAbilInteract>
+        <Effect value="Lob_Nothing"/>
+        <PrepTime value="1"/>
+        <Range value="2"/>
+        <Arc value="360"/>
+        <TargetFilters value="Structure,Visible;Self"/>
+        <ValidatorArray value="IsContainmentGate"/>
+        <CmdButtonArray index="Execute" DefaultButtonFace="Interact"/>
+    </CAbilEffectTarget>
     <!-- Debug only. No cost, no cooldown, recastable to refresh. -->
     <CAbilEffectInstant id="Lob_Debug_Haste">
         <Flags index="Transient" value="1"/>
@@ -28,25 +53,21 @@
     <CAbilEffectInstant id="Lob_Obs_1">
         <EditorCategories value="AbilityorEffectType:Units"/>
         <Effect value="Lob_Nothing"/>
-        <Cost/>
         <CmdButtonArray index="Execute" DefaultButtonFace="Lob_Obs_1"/>
     </CAbilEffectInstant>
     <CAbilEffectInstant id="Lob_Obs_2">
         <EditorCategories value="AbilityorEffectType:Units"/>
         <Effect value="Lob_Nothing"/>
-        <Cost/>
         <CmdButtonArray index="Execute" DefaultButtonFace="Lob_Obs_2"/>
     </CAbilEffectInstant>
     <CAbilEffectInstant id="Lob_Obs_3">
         <EditorCategories value="AbilityorEffectType:Units"/>
         <Effect value="Lob_Nothing"/>
-        <Cost/>
         <CmdButtonArray index="Execute" DefaultButtonFace="Lob_Obs_3"/>
     </CAbilEffectInstant>
     <CAbilEffectInstant id="Lob_Obs_4">
         <EditorCategories value="AbilityorEffectType:Units"/>
         <Effect value="Lob_Nothing"/>
-        <Cost/>
         <CmdButtonArray index="Execute" DefaultButtonFace="Lob_Obs_4"/>
     </CAbilEffectInstant>
 </Catalog>

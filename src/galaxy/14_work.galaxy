@@ -29,9 +29,7 @@
 //   employee's SP, and there is no SP. The roll is made and the damage is
 //   counted so that adding SP later is one line rather than a redesign.
 //
-//   Observation level is always 0. The bonuses are parsed and the formulas read
-//   them, but nothing tracks what a player has observed yet.
-//
+
 // Both formulas are from docs/usr/mechanism.md and neither is invented:
 //
 //     speed   = base * (1 + (observationBonus + Temperance) / 100)
@@ -57,9 +55,6 @@ const int c_workCount = 4;
 const int c_resultBad = 0;
 const int c_resultNormal = 1;
 const int c_resultGood = 2;
-
-// How close an employee has to be to the door to be working at it.
-const fixed c_workReach = 3.0;
 
 // TUNING, and the only invented number in this file. Stat gained per completed
 // work, by result. Design 2.2 requires that work be the thing that grows an
@@ -116,7 +111,10 @@ int gv_energy;
 int gv_energyGoal;
 bool gv_energySubmitted;
 
+const string c_workAbil = "Interact";
+
 trigger gt_workTick;
+trigger gt_workCast;
 
 string Work_Name (int work) {
     if (work < 0 || work >= c_workCount) {
@@ -254,7 +252,7 @@ bool Work_IsBusy (unit emp) {
 // docs/usr/containment.md nobody can enter, and standing at the door doing
 // nothing visible is the placeholder that document asks for.
 //--------------------------------------------------------------------------------------------------
-bool Work_Begin (unit emp, unit abno, int work) {
+bool Work_Begin (unit abno, unit emp, int work) {
     int cell;
     int index;
 
@@ -291,9 +289,9 @@ bool Work_Begin (unit emp, unit abno, int work) {
     gvg_workNextBox[gv_workCount] = GameGetMissionTime() + Work_BoxInterval(emp, index);
     gv_workCount = gv_workCount + 1;
 
-    UnitIssueOrder(emp, OrderTargetingPoint(AbilityCommand("stop", 0),
-                                            UnitGetPosition(emp)),
-                   c_orderQueueReplace);
+    // Order, not OrderTargetingPoint: stop takes no target, and handing it one
+    // is a trigger error rather than a no-op.
+    UnitIssueOrder(emp, Order(AbilityCommand("stop", 0)), c_orderQueueReplace);
     return true;
 }
 
@@ -414,46 +412,50 @@ void Work_RollBox (int slot) {
 }
 
 //--------------------------------------------------------------------------------------------------
-// Turns "sent to the door" into work.
+// The work ability, cast and finished.
 //
-// No new ability and no new button: an order targeting a door is already an
-// unambiguous statement of intent, and UnitOrder plus OrderGetTargetUnit can
-// read it. The proper order UI will replace the reading, not the meaning.
+// The ability is Interact: an Effect-Target that does nothing and takes a
+// second, aimed at a containment door. The engine draws the cast bar, the
+// TargetFilters and the validator decide what can be aimed at, and this hears
+// the cast complete.
+//
+// The first version read the employee's order queue and inferred intent from an
+// order pointed at a door. It worked, and it was wrong in three ways at once:
+// every move order near a cell became ambiguous, there was no cast bar to show,
+// and there was no way to refuse a target. Right-click will come back later
+// through SmartCast on this same ability, without any of this changing.
+//
+// Complete rather than Execute, so walking away during the cast really does
+// cancel it -- which is the point of the cast having a length at all.
 //--------------------------------------------------------------------------------------------------
-void Work_CheckOrders () {
-    unitgroup all;
+bool Work_Cast_Func (bool testConds, bool runActions) {
     unit emp;
     unit door;
-    unit abno;
-    int count;
-    int i;
     int slot;
 
-    all = ObjectsGen_ScanEmp();
-    count = UnitGroupCount(all, c_unitCountAlive);
-
-    i = 1;
-    while (i <= count) {
-        emp = UnitGroupUnit(all, i);
-        if (emp != null && UnitIsAlive(emp) && !Work_IsBusy(emp)
-            && UnitOrderCount(emp) > 0) {
-            door = OrderGetTargetUnit(UnitOrder(emp, 0));
-            if (Cont_IsDoor(door)
-                && DistanceBetweenPoints(UnitGetPosition(emp),
-                                         UnitGetPosition(door)) <= c_workReach) {
-                slot = 0;
-                while (slot < gv_cellCount) {
-                    abno = gvg_cellAbno[slot];
-                    if (Cont_DoorAt(gvg_cellHome[slot]) == door) {
-                        Work_Begin(emp, abno, Work_DefaultOf(UnitGetOwner(emp)));
-                        slot = gv_cellCount;
-                    }
-                    slot = slot + 1;
-                }
-            }
-        }
-        i = i + 1;
+    if (!runActions) {
+        return true;
     }
+
+    emp = EventUnit();
+    door = EventUnitAbilityOtherUnit();
+    if (!ObjectsGen_IsEmp(emp) || !Cont_IsDoor(door)) {
+        return true;
+    }
+
+    slot = 0;
+    while (slot < gv_cellCount) {
+        if (Cont_DoorAt(gvg_cellHome[slot]) == door) {
+            if (!Work_Begin(gvg_cellAbno[slot], emp, Work_DefaultOf(UnitGetOwner(emp)))) {
+                UIDisplayMessage(PlayerGroupSingle(UnitGetOwner(emp)),
+                                 c_messageAreaSubtitle,
+                                 StringToText("cannot work that right now"));
+            }
+            return true;
+        }
+        slot = slot + 1;
+    }
+    return true;
 }
 
 bool Work_Tick_Func (bool testConds, bool runActions) {
@@ -486,7 +488,6 @@ bool Work_Tick_Func (bool testConds, bool runActions) {
         slot = slot - 1;
     }
 
-    Work_CheckOrders();
     return true;
 }
 
@@ -519,4 +520,8 @@ void Work_Init () {
 
     gt_workTick = TriggerCreate("Work_Tick_Func");
     TriggerAddEventTimePeriodic(gt_workTick, c_workTick, c_timeGame);
+
+    gt_workCast = TriggerCreate("Work_Cast_Func");
+    TriggerAddEventUnitAbility(gt_workCast, null, AbilityCommand(c_workAbil, 0),
+                               c_unitAbilStageComplete, true);
 }
