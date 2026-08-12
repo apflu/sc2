@@ -15,12 +15,23 @@
     <!-- Deliberately empty. An ability has to point at an effect; this one's
          whole job is to be pressable so a trigger can hear it. -->
     <CEffectSet id="Lob_Nothing"/>
-    <!-- The same, plus the one thing the ability could not carry itself: which
-         targets are legal. CAbilEffectTarget has no ValidatorArray field, so for
-         that class the check belongs on the effect it fires. Separate from
-         Lob_Nothing because the encyclopedia buttons share that one and must not
-         inherit a rule about doors. -->
-    <CEffectSet id="Lob_WorkCheck">
+    <!-- What the work ability fires, and why it is not a CEffectSet.
+
+         An Effect-Target ability takes its target type FROM ITS EFFECT. An empty
+         CEffectSet points at nothing, so there was nothing to derive a unit
+         target from and pressing the button never entered targeting mode — no
+         cursor, nothing to click. ModifyUnit acts on a unit by definition, so
+         the ability becomes a unit-target ability, and modifying none of that
+         unit's fields is a perfectly good way to change nothing.
+
+         It also carries the validator, which the ability could not:
+         ValidatorArray is a field of CAbilBehavior, CAbilMorph, CAbilInteract
+         and CAbilRevive, and not of CAbilEffectTarget.
+
+         Separate from Lob_Nothing because the four encyclopedia buttons point at
+         that one — they are instant and want no target at all, which is exactly
+         why an empty set suits them and not this. -->
+    <CEffectModifyUnit id="Lob_WorkCheck">
         <ValidatorArray value="IsContainmentGate"/>
-    </CEffectSet>
+    </CEffectModifyUnit>
 </Catalog>
