@@ -20,9 +20,18 @@
 // The cost of the reuse is that these five attributes now mean only this.
 // Anything of ours that is not an abnormality must carry none of them, or it
 // reads as a grade it does not have -- our devices were Armored and our
-// employees were Light + Biological, and both had to come off. Mechanical,
-// Structure, Robotic, Massive, Hover, Heroic, Summoned, MapBoss and User2-4 are
-// still free for their ordinary meanings.
+// employees were Light + Biological, and both had to come off.
+//
+// And it is most of the budget. The attribute set is closed at thirteen and the
+// engine will not take a fourteenth: Light, Armored, Biological, Mechanical,
+// Robotic, Psionic, Massive, Structure, Hover, Heroic, Summoned, User1, MapBoss.
+// There is no User2. Five are spent here, Mechanical and Structure are in use,
+// and every one of the rest already means something to stock abilities and
+// filters. So this is the last tag that goes in an attribute; anything else we
+// need to say about a unit type has to find another home.
+//
+// An attribute is also a bare flag with no payload, so nothing that needs a
+// value can live here either.
 //
 // An unrated unit is c_riskNone, which is not the same as "Unknown" in the
 // Information Team sense. Unknown is about what a player has observed; this is
