@@ -38,6 +38,54 @@ include "TriggerLibs/NativeLib"
 """
 
 
+DEF_RE = re.compile(
+    r"^(?:void|bool|int|fixed|string|unit|unitgroup|point|region|text|order|timer|trigger|"
+    r"playergroup|abilcmd|actor|bank|color|doodad|sound|wave)\s+(\w+)\s*\(", re.M)
+CALL_RE = re.compile(r"\b(\w+)\s*\(")
+
+
+def check_forward_refs(text: str) -> None:
+    """Refuse to emit a script that calls one of our functions before defining it.
+
+    Galaxy needs a declaration before its use and the modules are concatenated in
+    filename order, so a call sitting above its own definition is a compile
+    error -- and the compiler reports it as "invalid argument list" AT THE CALL
+    SITE, which reads like a signature problem and sends you looking in the wrong
+    place entirely. It has cost four debugging rounds, every one of them a block
+    that moved or a call that crossed a module boundary.
+
+    Only our own functions are checked. A native or library call is declared long
+    before any of this and is indistinguishable here from a call to something
+    that does not exist at all -- which is a different mistake, and one the
+    compiler names clearly.
+    """
+    stripped = re.sub(r"//[^\n]*", "", text)
+
+    # Where each function's name appears in its own definition. Both passes run
+    # over the same stripped text so the offsets are comparable, and the
+    # definition's own name would otherwise look like the first call to it.
+    defined_at = {}
+    heads = set()
+    for m in DEF_RE.finditer(stripped):
+        heads.add(m.start(1))
+        defined_at.setdefault(m.group(1), m.start(1))
+
+    bad = []
+    for m in CALL_RE.finditer(stripped):
+        at = defined_at.get(m.group(1))
+        if at is not None and m.start(1) < at and m.start(1) not in heads:
+            bad.append((text.count("\n", 0, m.start(1)) + 1, m.group(1)))
+
+    seen = set()
+    unique = [b for b in bad if not (b[1] in seen or seen.add(b[1]))]
+    if unique:
+        raise SystemExit(
+            "forward reference: called before it is defined, which Galaxy reports\n"
+            'as "invalid argument list" at the call site:\n'
+            + "\n".join(f"  MapScript.galaxy line {line}: {name}" for line, name in unique)
+        )
+
+
 def main() -> int:
     if not SRC.is_dir():
         print(f"error: no source directory at {SRC}", file=sys.stderr)
@@ -111,6 +159,7 @@ def main() -> int:
     parts.extend(f"    {name}();\n" for name in inits)
     parts.append("}\n")
 
+    check_forward_refs("".join(parts))
     OUT.write_text("".join(parts), encoding="utf-8")
 
     print(f"built {OUT.relative_to(ROOT)}")

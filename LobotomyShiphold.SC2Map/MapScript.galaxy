@@ -3819,6 +3819,47 @@ void Work_SetDefault (int player, int work) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// Seconds per box attempt.
+//
+// speed = base * (1 + (observation + Temperance) / 100), and the time for a
+// whole work is boxes/speed -- which is why Temperance is felt as the length of
+// the queue at a cell rather than as anything visible during one work.
+//--------------------------------------------------------------------------------------------------
+fixed Work_BoxInterval (unit emp, int index) {
+    fixed speed;
+
+    speed = gvg_abnoBoxSpeed[index]
+            * (1.0 + IntToFixed(AbnoGen_ObsSpeed(index, Cont_ObservationOf(emp, index))
+                                + Emp_Stat(emp, c_statTemperance)) / 100.0);
+    if (speed <= 0.0) {
+        return 1.0;
+    }
+    return 1.0 / speed;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Percent chance for one box.
+//
+// Bonuses first, then the cap, then penalties. There are no penalties yet, but
+// the order is the mechanic rather than an implementation detail: capping
+// before them is what makes a penalty permanently lower the best case, and what
+// guarantees the 5% failure that no amount of preparation removes.
+//--------------------------------------------------------------------------------------------------
+int Work_SuccessChance (unit emp, int index, int work) {
+    int chance;
+    int obs;
+
+    obs = Cont_ObservationOf(emp, index);
+    chance = AbnoGen_Pref(index, work, Emp_StatLevel(emp, Work_Stat(work)))
+             + AbnoGen_ObsSuccess(index, obs) / c_workSuccessPerPercent;
+
+    if (chance > c_workSuccessCap) {
+        chance = c_workSuccessCap;
+    }
+    return chance;
+}
+
+//--------------------------------------------------------------------------------------------------
 // Energy, and the end of the game.
 //
 // Boxes pay twice: once into the player's private stock for that abnormality's
@@ -4013,47 +4054,6 @@ void Work_Finish (int slot) {
                      + ")"));
 
     Work_Drop(slot);
-}
-
-//--------------------------------------------------------------------------------------------------
-// Seconds per box attempt.
-//
-// speed = base * (1 + (observation + Temperance) / 100), and the time for a
-// whole work is boxes/speed -- which is why Temperance is felt as the length of
-// the queue at a cell rather than as anything visible during one work.
-//--------------------------------------------------------------------------------------------------
-fixed Work_BoxInterval (unit emp, int index) {
-    fixed speed;
-
-    speed = gvg_abnoBoxSpeed[index]
-            * (1.0 + IntToFixed(AbnoGen_ObsSpeed(index, Cont_ObservationOf(emp, index))
-                                + Emp_Stat(emp, c_statTemperance)) / 100.0);
-    if (speed <= 0.0) {
-        return 1.0;
-    }
-    return 1.0 / speed;
-}
-
-//--------------------------------------------------------------------------------------------------
-// Percent chance for one box.
-//
-// Bonuses first, then the cap, then penalties. There are no penalties yet, but
-// the order is the mechanic rather than an implementation detail: capping
-// before them is what makes a penalty permanently lower the best case, and what
-// guarantees the 5% failure that no amount of preparation removes.
-//--------------------------------------------------------------------------------------------------
-int Work_SuccessChance (unit emp, int index, int work) {
-    int chance;
-    int obs;
-
-    obs = Cont_ObservationOf(emp, index);
-    chance = AbnoGen_Pref(index, work, Emp_StatLevel(emp, Work_Stat(work)))
-             + AbnoGen_ObsSuccess(index, obs) / c_workSuccessPerPercent;
-
-    if (chance > c_workSuccessCap) {
-        chance = c_workSuccessCap;
-    }
-    return chance;
 }
 
 //--------------------------------------------------------------------------------------------------
