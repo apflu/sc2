@@ -1,20 +1,28 @@
-﻿Behavior/Name/Lob_Attr_Fortitude=Fortitude 勇气
-Behavior/Name/Lob_Attr_Justice=Justice 正义
-Behavior/Name/Lob_Attr_Prudence=Prudence 谨慎
-Behavior/Name/Lob_Attr_Temperance=Temperance 自律
+﻿Behavior/Name/Lob_Attr_Fortitude=Fortitude
+Behavior/Name/Lob_Attr_Justice=Justice
+Behavior/Name/Lob_Attr_Prudence=Prudence
+Behavior/Name/Lob_Attr_Temperance=Temperance
+Behavior/Name/Lob_Point_Fortitude=Fortitude point
+Behavior/Name/Lob_Point_Justice=Justice point
+Behavior/Name/Lob_Point_Prudence=Prudence point
+Behavior/Name/Lob_Point_Temperance=Temperance point
 Behavior/Name/Lob_Rank=Rank
-Behavior/PrimaryName/Lob_Attr_Fortitude=Fortitude 勇气
-Behavior/PrimaryName/Lob_Attr_Justice=Justice 正义
-Behavior/PrimaryName/Lob_Attr_Prudence=Prudence 谨慎
-Behavior/PrimaryName/Lob_Attr_Temperance=Temperance 自律
-Behavior/PrimaryTooltip/Lob_Attr_Fortitude=<c val="ffff8a">Fortitude 勇气</c><n/>Health. Raised by working abnormalities.<n/><n/>I &lt;30&gt; II &lt;45&gt; III &lt;65&gt; IV &lt;85&gt; V &lt;100&gt; EX
-Behavior/PrimaryTooltip/Lob_Attr_Justice=<c val="ffff8a">Justice 正义</c><n/>Attack speed. Raised by working abnormalities.<n/><n/>I &lt;30&gt; II &lt;45&gt; III &lt;65&gt; IV &lt;85&gt; V &lt;100&gt; EX
-Behavior/PrimaryTooltip/Lob_Attr_Prudence=<c val="ffff8a">Prudence 谨慎</c><n/>Mental resilience. Raised by working abnormalities.<n/><n/>I &lt;30&gt; II &lt;45&gt; III &lt;65&gt; IV &lt;85&gt; V &lt;100&gt; EX
-Behavior/PrimaryTooltip/Lob_Attr_Temperance=<c val="ffff8a">Temperance 自律</c><n/>Work speed. Raised by working abnormalities.<n/><n/>I &lt;30&gt; II &lt;45&gt; III &lt;65&gt; IV &lt;85&gt; V &lt;100&gt; EX
-Behavior/Tooltip/Lob_Attr_Fortitude=<c val="ffff8a">Fortitude 勇气</c><n/>Health. Raised by working abnormalities.<n/><n/>I &lt;30&gt; II &lt;45&gt; III &lt;65&gt; IV &lt;85&gt; V &lt;100&gt; EX
-Behavior/Tooltip/Lob_Attr_Justice=<c val="ffff8a">Justice 正义</c><n/>Attack speed. Raised by working abnormalities.<n/><n/>I &lt;30&gt; II &lt;45&gt; III &lt;65&gt; IV &lt;85&gt; V &lt;100&gt; EX
-Behavior/Tooltip/Lob_Attr_Prudence=<c val="ffff8a">Prudence 谨慎</c><n/>Mental resilience. Raised by working abnormalities.<n/><n/>I &lt;30&gt; II &lt;45&gt; III &lt;65&gt; IV &lt;85&gt; V &lt;100&gt; EX
-Behavior/Tooltip/Lob_Attr_Temperance=<c val="ffff8a">Temperance 自律</c><n/>Work speed. Raised by working abnormalities.<n/><n/>I &lt;30&gt; II &lt;45&gt; III &lt;65&gt; IV &lt;85&gt; V &lt;100&gt; EX
+Behavior/PrimaryName/Lob_Attr_Fortitude=Fortitude
+Behavior/PrimaryName/Lob_Attr_Justice=Justice
+Behavior/PrimaryName/Lob_Attr_Prudence=Prudence
+Behavior/PrimaryName/Lob_Attr_Temperance=Temperance
+Behavior/PrimaryTooltip/Lob_Attr_Fortitude=Health. Raised by working abnormalities.<n/><n/>I &lt;30&gt; II &lt;45&gt; III &lt;65&gt; IV &lt;85&gt; V &lt;100&gt; EX
+Behavior/PrimaryTooltip/Lob_Attr_Justice=Attack speed. Raised by working abnormalities.<n/><n/>I &lt;30&gt; II &lt;45&gt; III &lt;65&gt; IV &lt;85&gt; V &lt;100&gt; EX
+Behavior/PrimaryTooltip/Lob_Attr_Prudence=Mental resilience. Raised by working abnormalities.<n/><n/>I &lt;30&gt; II &lt;45&gt; III &lt;65&gt; IV &lt;85&gt; V &lt;100&gt; EX
+Behavior/PrimaryTooltip/Lob_Attr_Temperance=Work speed. Raised by working abnormalities.<n/><n/>I &lt;30&gt; II &lt;45&gt; III &lt;65&gt; IV &lt;85&gt; V &lt;100&gt; EX
+Behavior/Tooltip/Lob_Attr_Fortitude=Health. Raised by working abnormalities.<n/><n/>I &lt;30&gt; II &lt;45&gt; III &lt;65&gt; IV &lt;85&gt; V &lt;100&gt; EX
+Behavior/Tooltip/Lob_Attr_Justice=Attack speed. Raised by working abnormalities.<n/><n/>I &lt;30&gt; II &lt;45&gt; III &lt;65&gt; IV &lt;85&gt; V &lt;100&gt; EX
+Behavior/Tooltip/Lob_Attr_Prudence=Mental resilience. Raised by working abnormalities.<n/><n/>I &lt;30&gt; II &lt;45&gt; III &lt;65&gt; IV &lt;85&gt; V &lt;100&gt; EX
+Behavior/Tooltip/Lob_Attr_Temperance=Work speed. Raised by working abnormalities.<n/><n/>I &lt;30&gt; II &lt;45&gt; III &lt;65&gt; IV &lt;85&gt; V &lt;100&gt; EX
+Behavior/Tooltip/Lob_Point_Fortitude=One point of Fortitude. Hidden; the attribute above is the readout.
+Behavior/Tooltip/Lob_Point_Justice=One point of Justice. Hidden; the attribute above is the readout.
+Behavior/Tooltip/Lob_Point_Prudence=One point of Prudence. Hidden; the attribute above is the readout.
+Behavior/Tooltip/Lob_Point_Temperance=One point of Temperance. Hidden; the attribute above is the readout.
 Behavior/Tooltip/Lob_Rank=Employee rank, from the sum of the four attribute levels.
 Button/Name/Lob_Debug_Haste=DEBUG: Haste
 Button/Tooltip/Lob_CoreDown_Basic=Inner layer lost. Repair it to bring your sector back.

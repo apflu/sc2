@@ -52,56 +52,103 @@
     <!-- ============================================================
          Employee stats.
 
-         Four CBehaviorAttribute, one per stat. The engine already has this
-         exact concept: a unit's attribute points ARE the behavior's stack
-         count, MaxPoints caps them, the per-point Modification is the effect,
-         and the InfoPaneHero layout in core reserves AttributeLabel1..5 down
-         the right-hand side of the hero pane to display them. War3's
-         STR/AGI/INT are these; so is anything else that has ever shown a named
-         number on a unit panel without custom UI.
+         Two behaviors per stat, because the engine splits the job in two and
+         the split is not optional:
 
-         This replaces four CBehaviorVeterancy, which was the wrong home. The
-         XP natives do address a veterancy by name, so four curves on one unit
-         did work — but the hero pane SUMS the levels of every veterancy a unit
-         carries, so four fresh stats read as "level 4, 0/120" instead of as
-         four stats. The aggregate was never a bug to route around; it is the
-         panel doing what it is for. So the sum belongs to rank, below, and the
-         stats move to the catalog built for stats.
+           CBehaviorAttribute  displays the stat and carries its per-point
+                               effect. core's InfoPaneHero layout reserves
+                               AttributeLabel1..5 down the right of the hero
+                               pane to draw exactly these, named from
+                               Behavior/Name and Behavior/Tooltip. MaxPoints
+                               caps it. War3's STR/AGI/INT are this catalog.
 
-         MaxPoints is 100 so EX is representable. Galaxy still clamps to 99 by
-         default, which is what keeps EX behind whatever ends up lifting it.
+           CBehaviorBuff       holds the points. An attribute's point total is
+                               NOT its own stack count; points arrive only
+                               through some other behavior's
+                               Modification/AttributeChangeArray. So one
+                               stackable hidden buff per stat, worth one point
+                               per stack, and the stack count is the stat.
 
-         Modification is empty on all four. Fortitude is life, Justice is attack
-         speed, Temperance is work speed, Prudence is SP; the first two have
-         engine-side homes today and the other two do not exist yet, and a
-         number invented here would be balance hidden in the last place anyone
-         would look. When they land, they land here, per point, no script.
+         That second half is the correction. Reading and writing the attribute
+         behavior directly looked right and does nothing: UnitBehaviorCount on
+         it answered 0 before and after, because there was no channel from the
+         script to the points at all. Blizzard's own case is starcoop's
+         AbathurPropArmor, fed by BiomassBuff1/10/100 carrying Points 1/10/100.
 
-         Nothing moves a stat except an explicit call: points are stack counts,
-         so there is no passive gain to switch off. Training Team lv2 ("对虫潮
-         造成伤害时也同时被动提高属性") becomes a trigger that adds points,
-         which is the honest shape for it anyway.
+         MaxPoints and MaxStackCount are both 100 so EX is representable.
+         Galaxy still clamps to 99, which is what keeps EX behind whatever ends
+         up lifting it.
+
+         Modification is empty on all four attributes. Fortitude is life,
+         Justice is attack speed, Temperance is work speed, Prudence is SP; the
+         first two have engine-side homes today and the other two do not exist
+         yet, and a number invented here would be balance hidden in the last
+         place anyone would look. When they land, they land here, per point, no
+         script.
+
+         Icons are all from the Void (Mod) dependency chain. Two of the
+         originals were campaign-only assets, which the map cannot resolve.
          ============================================================ -->
     <CBehaviorAttribute id="Lob_Attr_Fortitude">
         <EditorCategories value="AbilityorEffectType:Units"/>
         <MaxPoints value="100"/>
-        <InfoIcon value="Assets\Textures\btn-ability-terran-defensivematrix.dds"/>
+        <InfoIcon value="Assets\Textures\btn-upgrade-terran-infantryarmorlevel1.dds"/>
     </CBehaviorAttribute>
+    <CBehaviorBuff id="Lob_Point_Fortitude">
+        <EditorCategories value="AbilityorEffectType:Units"/>
+        <MaxStackCount value="100"/>
+        <BehaviorFlags index="Permanent" value="1"/>
+        <BehaviorFlags index="EnabledWhileDead" value="1"/>
+        <InfoFlags index="Hidden" value="1"/>
+        <Modification>
+            <AttributeChangeArray Attribute="Lob_Attr_Fortitude" Points="1"/>
+        </Modification>
+    </CBehaviorBuff>
     <CBehaviorAttribute id="Lob_Attr_Prudence">
         <EditorCategories value="AbilityorEffectType:Units"/>
         <MaxPoints value="100"/>
         <InfoIcon value="Assets\Textures\btn-ability-terran-battlefieldawareness.dds"/>
     </CBehaviorAttribute>
+    <CBehaviorBuff id="Lob_Point_Prudence">
+        <EditorCategories value="AbilityorEffectType:Units"/>
+        <MaxStackCount value="100"/>
+        <BehaviorFlags index="Permanent" value="1"/>
+        <BehaviorFlags index="EnabledWhileDead" value="1"/>
+        <InfoFlags index="Hidden" value="1"/>
+        <Modification>
+            <AttributeChangeArray Attribute="Lob_Attr_Prudence" Points="1"/>
+        </Modification>
+    </CBehaviorBuff>
     <CBehaviorAttribute id="Lob_Attr_Temperance">
         <EditorCategories value="AbilityorEffectType:Units"/>
         <MaxPoints value="100"/>
         <InfoIcon value="Assets\Textures\btn-ability-terran-holdfire.dds"/>
     </CBehaviorAttribute>
+    <CBehaviorBuff id="Lob_Point_Temperance">
+        <EditorCategories value="AbilityorEffectType:Units"/>
+        <MaxStackCount value="100"/>
+        <BehaviorFlags index="Permanent" value="1"/>
+        <BehaviorFlags index="EnabledWhileDead" value="1"/>
+        <InfoFlags index="Hidden" value="1"/>
+        <Modification>
+            <AttributeChangeArray Attribute="Lob_Attr_Temperance" Points="1"/>
+        </Modification>
+    </CBehaviorBuff>
     <CBehaviorAttribute id="Lob_Attr_Justice">
         <EditorCategories value="AbilityorEffectType:Units"/>
         <MaxPoints value="100"/>
-        <InfoIcon value="Assets\Textures\btn-ability-terran-ignorearmor.dds"/>
+        <InfoIcon value="Assets\Textures\btn-upgrade-terran-infantryweaponslevel1.dds"/>
     </CBehaviorAttribute>
+    <CBehaviorBuff id="Lob_Point_Justice">
+        <EditorCategories value="AbilityorEffectType:Units"/>
+        <MaxStackCount value="100"/>
+        <BehaviorFlags index="Permanent" value="1"/>
+        <BehaviorFlags index="EnabledWhileDead" value="1"/>
+        <InfoFlags index="Hidden" value="1"/>
+        <Modification>
+            <AttributeChangeArray Attribute="Lob_Attr_Justice" Points="1"/>
+        </Modification>
+    </CBehaviorBuff>
 
     <!-- Employee rank, as the unit's one veterancy.
 

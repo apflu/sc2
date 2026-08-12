@@ -226,7 +226,18 @@ Structure  Hover  Heroic  Summoned  User1  MapBoss
 
 ### 员工属性 = CBehaviorAttribute，等级 = 一条 veterancy
 
-**属性点数就是 behavior 的层数。**`CBehaviorAttribute` 是引擎里现成的这个概念：`UnitBehaviorCount` 读点数，`UnitBehaviorAdd`/`Remove` 改点数，`MaxPoints` 是上限，**每点的效果写在 `Modification` 里**。War3 的 STR/AGI/INT 就是这个目录。
+**每项属性要两个 behavior**，因为引擎把"显示"和"存储"分开了，而且这个分法绕不过去：
+
+| behavior | 干什么 |
+|---|---|
+| `CBehaviorAttribute`（`Lob_Attr_*`） | **显示**在面板右侧，`MaxPoints` 是上限，**每一点的效果写在它的 `Modification` 里** |
+| `CBehaviorBuff`（`Lob_Point_*`） | **存点数**：可堆叠、隐藏、每层 `Modification/AttributeChangeArray Points="1"`，**层数就是属性值** |
+
+**属性的点数不是它自己的层数**，也没有任何 native 能写它——点数只能通过**别的 behavior** 的 `Modification/AttributeChangeArray` 进来。直接对 `Lob_Attr_*` 调 `UnitBehaviorAdd` 是静默无效的：读回来永远是 0，因为脚本到点数之间根本没有通道。
+
+暴雪自己的例子是 starcoop 的 `AbathurPropArmor`，由 `BiomassBuff1` / `10` / `100` 三个可堆叠 buff 分别喂 1 / 10 / 100 点。
+
+Galaxy 侧只读写 `Lob_Point_*`，从不碰 `Lob_Attr_*`。War3 的 STR/AGI/INT 用的就是这个目录。
 
 | 属性 | behavior | 落到引擎的哪里 |
 |---|---|---|
@@ -235,7 +246,11 @@ Structure  Hover  Heroic  Summoned  User1  MapBoss
 | 自律 Temperance | `Lob_Attr_Temperance` | 工作速度（还不存在） |
 | 正义 Justice | `Lob_Attr_Justice` | 攻速 |
 
-**它自己会显示。**`core.sc2mod/base.sc2data/UI/Layout/UI/InfoPaneHero.SC2Layout` 里有 `AttributeLabel1..5`，锚在面板右半边，专门给这个用。**不需要自己画 UI。**
+**它自己会显示。**`core.sc2mod/base.sc2data/UI/Layout/UI/InfoPaneHero.SC2Layout` 里有 `AttributeLabel1..5`，锚在面板右半边，专门给这个用。**不需要自己画 UI，也不要去动 UI。**
+
+**文本只写一种语言。**`enUS.SC2Data/LocalizedData/` 就写英文；中文要另开 `zhCN` 目录，不是把两种语言塞进同一个标签。面板给属性行留的宽度很窄（`InfoPaneHeroAttribute` 字高 18，起点在面板中线右侧 60），混写会截断。
+
+**图标必须来自 `Void (Mod)` 依赖链**（`mods/{core,liberty,swarm,void}.sc2mod`）。`campaigns/*.sc2campaign` 和 `mods/starcoop` 里的贴图这张图解析不了——`btn-ability-terran-defensivematrix.dds` 和 `btn-ability-terran-ignorearmor.dds` 就这么进来过一次。挑图标前先 grep 那四个 mod 的 `ButtonData.xml`。
 
 **但文本要写四条键，不是两条。**`CBehaviorAttribute` 有两组名字：
 
