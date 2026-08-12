@@ -246,6 +246,42 @@
         </CardLayouts>
         <EditorCategories value="ObjectType:Hero,ObjectFamily:Campaign"/>
     </CUnit>
+    <!-- An employee.
+
+         The individual the player sends to work an abnormality. Parented off
+         Marine for the same reason the character is: everything not listed
+         here is a Marine, so the entry reads as a diff.
+
+         Unarmed. Training Team lv1 grants "npc文职人员也获得自卫武器", which
+         only means anything if the default is no weapon; the department upgrade
+         puts one back through an EffectArray row and needs no script.
+
+         Light and Biological come off because they are risk grades here, not
+         body types — see docs/dev/authoring-contract.md. An employee is not an
+         abnormality.
+
+         The four stats are the four veterancy behaviors below. Nothing in
+         Galaxy stores a stat; 11_employee.galaxy only moves the XP.
+
+         Permanent death is the absence of code, not a rule: nothing respawns
+         these. That is deliberate (agents-and-abnormalities.md 2.6) and it is
+         what Central Command's replenishment is priced against. -->
+    <CUnit id="Lob_Emp_Basic" parent="Marine">
+        <LifeStart value="120"/>
+        <LifeMax value="120"/>
+        <LifeArmor value="0"/>
+        <LifeRegenRate value="0"/>
+        <Speed value="2.75"/>
+        <Food value="0"/>
+        <Attributes index="Light" value="0"/>
+        <Attributes index="Biological" value="0"/>
+        <WeaponArray index="0" Link=""/>
+        <BehaviorArray Link="Lob_Stat_Fortitude"/>
+        <BehaviorArray Link="Lob_Stat_Prudence"/>
+        <BehaviorArray Link="Lob_Stat_Temperance"/>
+        <BehaviorArray Link="Lob_Stat_Justice"/>
+        <EditorCategories value="ObjectType:Unit,ObjectFamily:Campaign"/>
+    </CUnit>
     <CUnit id="Lob_SCV_Unassigned">
         <DeathRevealRadius value="3"/>
         <Race value="Terr"/>

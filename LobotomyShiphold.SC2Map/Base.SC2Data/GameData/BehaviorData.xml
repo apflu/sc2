@@ -48,4 +48,92 @@
             <VitalRegenArray index="Life" value="12"/>
         </Modification>
     </CBehaviorBuff>
+
+    <!-- ============================================================
+         Employee stats.
+
+         The four stats are four CBehaviorVeterancy on the same unit. The XP
+         natives address a veterancy by behavior name, so one unit carries four
+         independent curves, each with its own level, its own per-level
+         Modification and its own UI. A work result is one UnitXPSetCurrentXP
+         call and the effect of levelling up needs no script at all — it is the
+         Modification rows below.
+
+         That is why the stat's effect belongs HERE and not in Galaxy. Fortitude
+         is life, Justice is attack speed, Temperance is work speed, Prudence is
+         SP; all four have engine-side homes, so src/galaxy/11_employee.galaxy
+         moves the number and never applies its consequence.
+
+         The Modification rows are deliberately empty for now. Two of the four
+         targets do not exist yet (there is no SP vital and no work ability),
+         and inventing numbers for the other two would put made-up balance in
+         the one place nobody would think to look for it later.
+
+         MinVeterancyXP is per-level, not cumulative — stock DehakaVeterancy
+         has 100 on every row and levels every 100 XP. So the increments below
+         are the differences of the design thresholds:
+
+             I  0    II 30    III 45    IV 65    V 85    EX 100
+                      +30       +15       +20      +20      +15
+
+         from docs/usr/quests_unlocks.md. Galaxy holds those same absolute
+         thresholds because the sum rule in agents-and-abnormalities.md 2.4 has
+         to be readable next to its justification; if one side is edited the
+         other must follow. The default cap is 99, so EX is unreachable until
+         something lifts it — that is the design, not an oversight.
+         ============================================================ -->
+    <CBehaviorVeterancy id="Lob_Stat_Fortitude">
+        <EditorCategories value="AbilityorEffectType:Units"/>
+        <VeterancyLevelArray/>
+        <VeterancyLevelArray MinVeterancyXP="30"/>
+        <VeterancyLevelArray MinVeterancyXP="15"/>
+        <VeterancyLevelArray MinVeterancyXP="20"/>
+        <VeterancyLevelArray MinVeterancyXP="20"/>
+        <VeterancyLevelArray MinVeterancyXP="15"/>
+    </CBehaviorVeterancy>
+    <CBehaviorVeterancy id="Lob_Stat_Prudence">
+        <EditorCategories value="AbilityorEffectType:Units"/>
+        <VeterancyLevelArray/>
+        <VeterancyLevelArray MinVeterancyXP="30"/>
+        <VeterancyLevelArray MinVeterancyXP="15"/>
+        <VeterancyLevelArray MinVeterancyXP="20"/>
+        <VeterancyLevelArray MinVeterancyXP="20"/>
+        <VeterancyLevelArray MinVeterancyXP="15"/>
+    </CBehaviorVeterancy>
+    <CBehaviorVeterancy id="Lob_Stat_Temperance">
+        <EditorCategories value="AbilityorEffectType:Units"/>
+        <VeterancyLevelArray/>
+        <VeterancyLevelArray MinVeterancyXP="30"/>
+        <VeterancyLevelArray MinVeterancyXP="15"/>
+        <VeterancyLevelArray MinVeterancyXP="20"/>
+        <VeterancyLevelArray MinVeterancyXP="20"/>
+        <VeterancyLevelArray MinVeterancyXP="15"/>
+    </CBehaviorVeterancy>
+    <CBehaviorVeterancy id="Lob_Stat_Justice">
+        <EditorCategories value="AbilityorEffectType:Units"/>
+        <VeterancyLevelArray/>
+        <VeterancyLevelArray MinVeterancyXP="30"/>
+        <VeterancyLevelArray MinVeterancyXP="15"/>
+        <VeterancyLevelArray MinVeterancyXP="20"/>
+        <VeterancyLevelArray MinVeterancyXP="20"/>
+        <VeterancyLevelArray MinVeterancyXP="15"/>
+    </CBehaviorVeterancy>
+
+    <!-- Employee rank, I to V.
+         A readout, not an effect: rank is the sum of the four stat levels and
+         is therefore derived, so nothing here may modify anything. Its job is
+         to put the rank on the unit's buff bar and in its tooltip without a
+         line of custom UI, and to give a data-side hook to anything that wants
+         to key off rank later.
+         Applied and removed through 07_buffs.galaxy like everything else that
+         has to be able to stop, which matters here because Training Team can
+         push a stat back DOWN and the rank has to follow it down. -->
+    <CBehaviorBuff id="Lob_Rank_1">
+        <Alignment value="Neutral"/>
+        <InfoIcon value="Assets\Textures\btn-unit-terran-scv.dds"/>
+    </CBehaviorBuff>
+    <CBehaviorBuff id="Lob_Rank_2" parent="Lob_Rank_1"/>
+    <CBehaviorBuff id="Lob_Rank_3" parent="Lob_Rank_1"/>
+    <CBehaviorBuff id="Lob_Rank_4" parent="Lob_Rank_1"/>
+    <CBehaviorBuff id="Lob_Rank_5" parent="Lob_Rank_1"/>
 </Catalog>

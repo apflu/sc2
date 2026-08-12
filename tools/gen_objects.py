@@ -54,11 +54,14 @@ INT32_MAX = 2**31 - 1
 # the predicate returns false, so unwritten content stays inert rather than
 # breaking the build.
 EXPECTED_CATEGORIES = [
+    "Cont",
+    "ContDown",
     "Core",
     "CoreDown",
     "Debris",
     "Device",
     "DeviceDown",
+    "Emp",
     "Hero",
     "Marker",
     "Pile",

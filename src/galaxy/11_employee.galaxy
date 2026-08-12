@@ -1,0 +1,358 @@
+//--------------------------------------------------------------------------------------------------
+// Employees.
+//
+// The half of the verb that carries a name. An abnormality on its own is a
+// mine with a plot; what makes it an abnormality is that there is a specific
+// person you decided to send, and a specific way you told them to work
+// (docs/design/agents-and-abnormalities.md 2.1). This module owns that person.
+// The cell and the work order are separate modules.
+//
+// Nothing here stores a stat. The four stats are four CBehaviorVeterancy on the
+// unit, and the XP natives address a veterancy by behavior name, so one unit
+// carries four independent curves with four independent levels. The value lives
+// in the engine, the effect of the value lives in the behavior's per-level
+// Modification, and this file only moves the number and reads it back.
+//
+// Two things it does own, because neither has an engine-side home:
+//
+//   The absolute thresholds. The data side needs per-level increments and this
+//   side needs absolutes, so they are stated in both and have to be edited
+//   together. Absolutes are kept here rather than derived because the rule they
+//   feed is a design invariant that has to be readable next to its reason.
+//
+//   The sum rule. Employee rank is the SUM of the four stat levels, not the
+//   minimum -- see Emp_Rank, where the reason is written down.
+//
+// Permanent death needs no code. Nothing respawns an employee, and that is the
+// whole of the death penalty; Central Command's replenishment is a separate
+// system priced against it.
+//--------------------------------------------------------------------------------------------------
+
+const int c_statFortitude = 0;   // 勇气 -- life
+const int c_statPrudence = 1;    // 谨慎 -- SP
+const int c_statTemperance = 2;  // 自律 -- work speed
+const int c_statJustice = 3;     // 正义 -- attack speed
+const int c_statCount = 4;
+
+// I II III IV V EX. EX is out of reach at the default cap and is meant to be.
+const int c_statLevelCount = 6;
+
+// I II III IV V. Rank stops at V; there is no rank EX.
+const int c_rankCount = 5;
+
+// The ceiling on one stat. 99 keeps EX (100) locked behind whatever ends up
+// lifting it, which is the only reason the sixth level exists at all.
+const int c_statCapDefault = 99;
+
+const fixed c_empPeriod = 2.0;
+
+string[4] gvg_statBehavior;
+string[4] gvg_statName;
+
+// Absolute XP at which each stat level starts. Mirrors the per-level
+// increments in BehaviorData.xml; edit both or neither.
+int[6] gvg_statLevelMin;
+
+// Sum of the four stat levels at which each rank starts.
+int[5] gvg_rankMin;
+
+string[5] gvg_rankBehavior;
+
+trigger gt_empTick;
+
+string Emp_StatBehavior (int stat) {
+    if (stat < 0 || stat >= c_statCount) {
+        return "";
+    }
+    return gvg_statBehavior[stat];
+}
+
+string Emp_StatName (int stat) {
+    if (stat < 0 || stat >= c_statCount) {
+        return "";
+    }
+    return gvg_statName[stat];
+}
+
+//--------------------------------------------------------------------------------------------------
+// The two calls that touch the engine's copy of a stat, and the only two.
+//
+// Everything else in the project goes through these, so if the XP natives turn
+// out to count within the current level rather than from zero, this pair is the
+// entire fix. That has not been seen in game yet -- MinVeterancyXP is per-level
+// in the stock data, which is what raises the question, and the read side is
+// not documented either way.
+//
+// Set rather than add even for increments, so the clamp has exactly one home.
+//--------------------------------------------------------------------------------------------------
+int Emp_RawGet (unit who, int stat) {
+    if (who == null || stat < 0 || stat >= c_statCount) {
+        return 0;
+    }
+    return FixedToInt(UnitXPGetCurrentXP(who, gvg_statBehavior[stat]));
+}
+
+void Emp_RawSet (unit who, int stat, int value) {
+    if (who == null || stat < 0 || stat >= c_statCount) {
+        return;
+    }
+    UnitXPSetCurrentXP(who, gvg_statBehavior[stat], IntToFixed(value));
+}
+
+//--------------------------------------------------------------------------------------------------
+// The ceiling on one stat for one employee.
+//
+// A function rather than the constant, because the thing that lifts it to 100
+// is a department upgrade and this is where it will read it. Until that upgrade
+// exists it is the constant, and callers do not have to change when it stops
+// being one.
+//--------------------------------------------------------------------------------------------------
+int Emp_StatCap (unit who) {
+    return c_statCapDefault;
+}
+
+int Emp_Stat (unit who, int stat) {
+    return Emp_RawGet(who, stat);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Moves a stat, clamped into [0, cap].
+//
+// Takes a signed delta on purpose. Training Team's job is "练得更可控", which
+// 2.4 spells out as being able to push a stat back down -- that is what turns a
+// mistrained employee from ruined into a delay. A separate lowering function
+// would be a second place for the clamp to be wrong.
+//--------------------------------------------------------------------------------------------------
+void Emp_StatAdd (unit who, int stat, int delta) {
+    int value;
+    int cap;
+
+    if (who == null || !UnitIsAlive(who)) {
+        return;
+    }
+
+    cap = Emp_StatCap(who);
+    value = Emp_RawGet(who, stat) + delta;
+    if (value < 0) {
+        value = 0;
+    }
+    if (value > cap) {
+        value = cap;
+    }
+    Emp_RawSet(who, stat, value);
+}
+
+//--------------------------------------------------------------------------------------------------
+// One stat's level, 1 (I) through 6 (EX).
+//
+// Derived from the value here rather than asked of UnitXPGetCurrentLevel. Not
+// because the native is wrong, but because the sum rule below has to agree with
+// the thresholds exactly, and one table that both read cannot disagree with
+// itself. The veterancy's own level array still earns its keep: it is what
+// carries the per-level Modification and the UI.
+//--------------------------------------------------------------------------------------------------
+int Emp_StatLevel (unit who, int stat) {
+    int value;
+    int level;
+    int i;
+
+    value = Emp_Stat(who, stat);
+    level = 1;
+    i = 2;
+    while (i <= c_statLevelCount) {
+        if (value >= gvg_statLevelMin[i - 1]) {
+            level = i;
+        }
+        i = i + 1;
+    }
+    return level;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Employee rank, 1 (I) through 5 (V).
+//
+// The sum of the four stat levels, and this must not be changed to the minimum.
+//
+// V requires a sum of 16, and V+V+V+I is 5+5+5+1 = 16: a three-stat specialist
+// with one stat left deliberately under 30 is still rank V. That is the whole
+// point. A batch of abnormalities require a stat to be no HIGHER than some
+// value (O-05-30, F-05-32, T-01-68, F-01-87, O-02-98), and Training Team's
+// challenge asks for every employee at rank V. Under a minimum rule, finishing
+// that challenge would leave the player with nobody able to work that batch --
+// a department's final reward would quietly close a whole class of content.
+// Under a sum rule the two do not collide, and "which three do I train" stays a
+// real choice.
+//
+// See docs/design/agents-and-abnormalities.md 2.4.
+//--------------------------------------------------------------------------------------------------
+int Emp_Rank (unit who) {
+    int sum;
+    int rank;
+    int i;
+
+    sum = 0;
+    i = 0;
+    while (i < c_statCount) {
+        sum = sum + Emp_StatLevel(who, i);
+        i = i + 1;
+    }
+
+    rank = 1;
+    i = 2;
+    while (i <= c_rankCount) {
+        if (sum >= gvg_rankMin[i - 1]) {
+            rank = i;
+        }
+        i = i + 1;
+    }
+    return rank;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Puts the rank on the unit, as the one buff that matches it.
+//
+// Removing the others rather than only adding the right one is what makes a
+// stat going down show up. Rank is derived, so it has to be able to fall.
+//--------------------------------------------------------------------------------------------------
+void Emp_SyncRank (unit who) {
+    int rank;
+    int i;
+
+    if (who == null || !UnitIsAlive(who)) {
+        return;
+    }
+
+    rank = Emp_Rank(who);
+    i = 1;
+    while (i <= c_rankCount) {
+        Buffs_Set(who, gvg_rankBehavior[i - 1], i == rank);
+        i = i + 1;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// One player's employees.
+//
+// A scan, not a roster. The units on the map are the roster, so there is no
+// list that can drift out of step with who is actually alive -- which is the
+// list that matters when the penalty for a mistake is that somebody is gone.
+//--------------------------------------------------------------------------------------------------
+unitgroup Emp_Of (int player) {
+    unitgroup all;
+    unitgroup mine;
+    unit who;
+    int count;
+    int i;
+
+    mine = UnitGroupEmpty();
+    all = ObjectsGen_ScanEmp();
+    count = UnitGroupCount(all, c_unitCountAlive);
+
+    i = 1;
+    while (i <= count) {
+        who = UnitGroupUnit(all, i);
+        if (who != null && UnitGetOwner(who) == player) {
+            UnitGroupAdd(mine, who);
+        }
+        i = i + 1;
+    }
+    return mine;
+}
+
+int Emp_CountOf (int player) {
+    return UnitGroupCount(Emp_Of(player), c_unitCountAlive);
+}
+
+//--------------------------------------------------------------------------------------------------
+// How many of a player's employees are at least this rank.
+//
+// Training Team's first two tasks are counts of exactly this shape, and its
+// challenge is "all of them at V", so the quest layer asks here rather than
+// walking employees itself.
+//--------------------------------------------------------------------------------------------------
+int Emp_CountAtRank (int player, int rank) {
+    unitgroup mine;
+    unit who;
+    int total;
+    int count;
+    int i;
+
+    mine = Emp_Of(player);
+    count = UnitGroupCount(mine, c_unitCountAlive);
+    total = 0;
+
+    i = 1;
+    while (i <= count) {
+        who = UnitGroupUnit(mine, i);
+        if (who != null && Emp_Rank(who) >= rank) {
+            total = total + 1;
+        }
+        i = i + 1;
+    }
+    return total;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Keeps every employee's rank buff matched to their stats.
+//
+// A tick rather than a hook on the work result, because a stat can also move
+// from a department upgrade, from Training Team pushing it down, and from the
+// Training Team core suppression lowering it as the meltdown level rises. One
+// place that reconciles beats four places that each remember to.
+//--------------------------------------------------------------------------------------------------
+bool Emp_Tick_Func (bool testConds, bool runActions) {
+    unitgroup all;
+    int count;
+    int i;
+
+    if (!runActions) {
+        return true;
+    }
+
+    all = ObjectsGen_ScanEmp();
+    count = UnitGroupCount(all, c_unitCountAlive);
+
+    i = 1;
+    while (i <= count) {
+        Emp_SyncRank(UnitGroupUnit(all, i));
+        i = i + 1;
+    }
+    return true;
+}
+
+void Employee_Init () {
+    gvg_statBehavior[c_statFortitude] = "Lob_Stat_Fortitude";
+    gvg_statBehavior[c_statPrudence] = "Lob_Stat_Prudence";
+    gvg_statBehavior[c_statTemperance] = "Lob_Stat_Temperance";
+    gvg_statBehavior[c_statJustice] = "Lob_Stat_Justice";
+
+    gvg_statName[c_statFortitude] = "Fortitude";
+    gvg_statName[c_statPrudence] = "Prudence";
+    gvg_statName[c_statTemperance] = "Temperance";
+    gvg_statName[c_statJustice] = "Justice";
+
+    // I II III IV V EX
+    gvg_statLevelMin[0] = 0;
+    gvg_statLevelMin[1] = 30;
+    gvg_statLevelMin[2] = 45;
+    gvg_statLevelMin[3] = 65;
+    gvg_statLevelMin[4] = 85;
+    gvg_statLevelMin[5] = 100;
+
+    // I II III IV V, against the sum of the four stat levels. The floor is 4
+    // (four stats at I), so rank I covers 4 and 5.
+    gvg_rankMin[0] = 0;
+    gvg_rankMin[1] = 6;
+    gvg_rankMin[2] = 9;
+    gvg_rankMin[3] = 12;
+    gvg_rankMin[4] = 16;
+
+    gvg_rankBehavior[0] = "Lob_Rank_1";
+    gvg_rankBehavior[1] = "Lob_Rank_2";
+    gvg_rankBehavior[2] = "Lob_Rank_3";
+    gvg_rankBehavior[3] = "Lob_Rank_4";
+    gvg_rankBehavior[4] = "Lob_Rank_5";
+
+    gt_empTick = TriggerCreate("Emp_Tick_Func");
+    TriggerAddEventTimePeriodic(gt_empTick, c_empPeriod, c_timeGame);
+}

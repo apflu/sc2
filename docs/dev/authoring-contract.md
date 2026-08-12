@@ -207,6 +207,34 @@ Structure  Hover  Heroic  Summoned  User1  MapBoss
 
 **编辑器侧具体挂在哪个字段上待定**，等真的开始录异想体时再定。在那之前不要为了"先有个地方放"而随便选一个通道——上一次凭空推导出 User2 就是这么来的。
 
+### 员工属性 = 四条 veterancy
+
+四项属性是**同一个单位上的四个 `CBehaviorVeterancy`**。XP 的 native 按 behavior 名字寻址，所以一个单位能挂四条互不干涉的曲线，各有各的等级、各有各的每级 `Modification`、各有各的 UI。
+
+| 属性 | behavior | 落到引擎的哪里 |
+|---|---|---|
+| 勇气 Fortitude | `Lob_Stat_Fortitude` | 生命 |
+| 谨慎 Prudence | `Lob_Stat_Prudence` | SP（还不存在） |
+| 自律 Temperance | `Lob_Stat_Temperance` | 工作速度（还不存在） |
+| 正义 Justice | `Lob_Stat_Justice` | 攻速 |
+
+**属性升级的效果写在 behavior 的 `Modification` 里，不写在 Galaxy 里。**`11_employee.galaxy` 只搬数字，从不施加数字的后果。目前四行 `Modification` 全是空的——四个落点有两个还不存在，而给另外两个编数值等于把杜撰的平衡塞进最没人会去翻的地方。
+
+**`MinVeterancyXP` 是每级增量，不是累计值**（原版 `DehakaVeterancy` 每行都是 100，即每 100 XP 升一级）。所以设计文档里的绝对阈值要换算成差分：
+
+```
+I  0    II 30    III 45    IV 65    V 85    EX 100
+         +30       +15       +20      +20      +15
+```
+
+**这套阈值在两边各写了一份**：数据侧是增量，Galaxy 侧是绝对值。改一边必须改另一边。Galaxy 侧留绝对值是因为"员工等级取属性等级之**和**"这条不变量必须和它的理由写在一起（`agents-and-abnormalities.md` §2.4），而两条规则读同一张表就不会自相矛盾。
+
+单项默认上限 99，所以 EX（100）默认够不着——这是设计，第六级的存在意义就是给某个升级去解锁。
+
+**员工的等级读数是 behavior，不是 UI。**`Lob_Rank_1..5` 通过 `07_buffs.galaxy` 挂上去，等级掉下来时也会跟着摘掉（培训部能把属性**调低**）。它不许带任何 `Modification`——等级是派生量。
+
+**永久死亡不需要代码**：没有任何东西复活员工。中央本部的补充速率就是照着这个定价的。
+
 ## Region
 
 **房间用 region 画，不要用"绕着单位摆圆圈"去近似。**主休息室是有墙的房间，圆形永远不是那个形状。
