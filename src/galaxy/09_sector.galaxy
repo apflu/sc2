@@ -193,8 +193,12 @@ bool Sector_Tick_Func (bool testConds, bool runActions) {
 
     Downable_RestoreRepaired(ObjectsGen_ScanCoreDown(), c_coreDownPrefix, c_coreUpPrefix);
 
+    // Everyone a rest hall is for. Employees were missing, which is the one
+    // group the room exists for -- SCVs and the character were getting it and
+    // the people whose SP it is supposed to restore were not.
     people = ObjectsGen_ScanHero();
     UnitGroupAddUnitGroup(people, ObjectsGen_ScanSCV());
+    UnitGroupAddUnitGroup(people, ObjectsGen_ScanEmp());
     count = UnitGroupCount(people, c_unitCountAlive);
 
     i = 1;

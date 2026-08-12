@@ -46,6 +46,13 @@
         <InfoIcon value="Assets\Textures\btn-ability-terran-scannersweep.dds"/>
         <Modification>
             <VitalRegenArray index="Life" value="12"/>
+            <!-- SP. The employee unit regenerates none on its own, on purpose:
+                 the design has SP coming back from the rest hall and from
+                 Welfare Team, not from standing anywhere. This is the first of
+                 those two, and without it the room did nothing for the people
+                 it exists for. Slower than life on purpose — a wound is a
+                 delay, a mind is the resource the whole loop spends. -->
+            <VitalRegenArray index="Energy" value="2"/>
         </Modification>
     </CBehaviorBuff>
 
