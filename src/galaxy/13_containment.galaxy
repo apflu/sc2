@@ -210,17 +210,109 @@ bool Cont_DoorIsUp (unit abno) {
 }
 
 //--------------------------------------------------------------------------------------------------
-// How far a player has observed an abnormality, 0 (unseen) to 4 (fully
-// unlocked).
+// The encyclopedia: what a player has extracted from an abnormality, and what
+// they have spent it on.
 //
-// Always 0 until the encyclopedia exists. It is a stub with a real signature
-// rather than a constant sprinkled through the callers, because every formula
-// that reads it -- work speed, work success, the name shown on the selection
-// screen, cross-department restrictions -- should be written against the real
-// question now and get the real answer later without being touched.
+// Both halves are per player AND per abnormality, and they must never pool.
+// Design 8.1 has PE-Boxes buying that one abnormality's observation and nothing
+// else, which is why there is no total anywhere here: an index that would let
+// one abnormality's boxes reach another simply does not exist.
+//
+// Observation level is a count of purchased sections, not four separate
+// achievements -- the source reads "(1 Section Unlocked)" through "(All Details
+// Unlocked)". Each section has its own price in that abnormality's own doc.
+//
+// Nothing is persisted yet. Design 8.4 has this in a bank read at init, and it
+// is the single most important thing in the bank; until then a game starts
+// knowing nothing, which is also what a first game looks like.
 //--------------------------------------------------------------------------------------------------
+const int c_obsMax = 4;
+
+// Flattened player * c_abnoCount + abnormality. Sized for 16 players against 64
+// abnormalities; c_abnoCount is generated, so passing 64 documents means these
+// have to grow with it.
+int[1024] gvg_obsBoxes;
+int[1024] gvg_obsLevel;
+
+int Cont_BoxIndex (int player, int abnoIndex) {
+    if (player < 1 || player > 15 || abnoIndex < 0 || abnoIndex >= c_abnoCount) {
+        return -1;
+    }
+    return player * c_abnoCount + abnoIndex;
+}
+
+int Cont_BoxesOf (int player, int abnoIndex) {
+    int i;
+
+    i = Cont_BoxIndex(player, abnoIndex);
+    if (i < 0) {
+        return 0;
+    }
+    return gvg_obsBoxes[i];
+}
+
+void Cont_AddBoxes (int player, int abnoIndex, int amount) {
+    int i;
+
+    i = Cont_BoxIndex(player, abnoIndex);
+    if (i < 0) {
+        return;
+    }
+    gvg_obsBoxes[i] = gvg_obsBoxes[i] + amount;
+}
+
+//--------------------------------------------------------------------------------------------------
+// How far a player has observed an abnormality, 0 (unseen) to 4 (fully known).
+//
+// Takes a unit rather than a player because every caller has one: the employee
+// working, the character standing at a panel. Whose knowledge applies is the
+// owner's, and asking it that way keeps the cross-department rule expressible --
+// Control Team lv2 turns on exactly the question "whose observation counts".
+//--------------------------------------------------------------------------------------------------
+int Cont_ObservationOfPlayer (int player, int abnoIndex) {
+    int i;
+
+    i = Cont_BoxIndex(player, abnoIndex);
+    if (i < 0) {
+        return 0;
+    }
+    return gvg_obsLevel[i];
+}
+
 int Cont_ObservationOf (unit who, int abnoIndex) {
-    return 0;
+    if (who == null) {
+        return 0;
+    }
+    return Cont_ObservationOfPlayer(UnitGetOwner(who), abnoIndex);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Buys the next section. Returns false if it is already fully known or the
+// boxes are not there.
+//--------------------------------------------------------------------------------------------------
+bool Cont_Observe (int player, int abnoIndex) {
+    int i;
+    int level;
+    int cost;
+
+    i = Cont_BoxIndex(player, abnoIndex);
+    if (i < 0) {
+        return false;
+    }
+
+    level = gvg_obsLevel[i];
+    if (level >= c_obsMax) {
+        return false;
+    }
+
+    cost = AbnoGen_ObsCost(abnoIndex, level);
+    if (gvg_obsBoxes[i] < cost) {
+        return false;
+    }
+
+    gvg_obsBoxes[i] = gvg_obsBoxes[i] - cost;
+    gvg_obsLevel[i] = level + 1;
+    return true;
 }
 
 //--------------------------------------------------------------------------------------------------

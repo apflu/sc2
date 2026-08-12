@@ -25,6 +25,9 @@ int[40] gvg_abnoPref;
 // five to the percent.
 int[10] gvg_abnoObsSpeed;
 int[10] gvg_abnoObsSuccess;
+// PE-Box price of each of the four sections, flattened:
+// abnormality * 4 + section. Observation level is how many are bought.
+int[8] gvg_abnoObsCost;
 
 void AbnoGen_Init () {
     gvg_abnoType[0] = "0_00_00";
@@ -46,6 +49,10 @@ void AbnoGen_Init () {
     gvg_abnoObsSuccess[3] = 0;
     gvg_abnoObsSpeed[4] = 0;
     gvg_abnoObsSuccess[4] = 0;
+    gvg_abnoObsCost[0] = 0;
+    gvg_abnoObsCost[1] = 0;
+    gvg_abnoObsCost[2] = 0;
+    gvg_abnoObsCost[3] = 0;
     gvg_abnoPref[0] = 50;
     gvg_abnoPref[1] = 50;
     gvg_abnoPref[2] = 50;
@@ -85,6 +92,10 @@ void AbnoGen_Init () {
     gvg_abnoObsSuccess[8] = 10;
     gvg_abnoObsSpeed[9] = 10;
     gvg_abnoObsSuccess[9] = 10;
+    gvg_abnoObsCost[4] = 8;
+    gvg_abnoObsCost[5] = 8;
+    gvg_abnoObsCost[6] = 8;
+    gvg_abnoObsCost[7] = 8;
     gvg_abnoPref[20] = 50;
     gvg_abnoPref[21] = 40;
     gvg_abnoPref[22] = 30;
@@ -196,4 +207,15 @@ int AbnoGen_ObsSuccess (int index, int obs) {
         obs = 4;
     }
     return gvg_abnoObsSuccess[index * 5 + obs];
+}
+
+//--------------------------------------------------------------------------------------------------
+// What the next observation section costs, in that abnormality's own
+// PE-Boxes. Zero once everything is bought.
+//--------------------------------------------------------------------------------------------------
+int AbnoGen_ObsCost (int index, int obs) {
+    if (index < 0 || index >= c_abnoCount || obs < 0 || obs >= 4) {
+        return 0;
+    }
+    return gvg_abnoObsCost[index * 4 + obs];
 }

@@ -225,7 +225,11 @@ void Debug_ReportCells (int player) {
         line = "cell " + IntToString(slot) + " " + gvg_abnoName[AbnoGen_IndexOf(abno)]
                + " [" + Risk_Name(Risk_Of(abno)) + "]"
                + " " + Debug_CellStateName(gvg_cellState[slot])
-               + " qlip=" + IntToString(Cont_Counter(abno));
+               + " qlip=" + IntToString(Cont_Counter(abno))
+               + " obs=" + IntToString(Cont_ObservationOfPlayer(player, AbnoGen_IndexOf(abno)))
+               + "/4 box=" + IntToString(Cont_BoxesOf(player, AbnoGen_IndexOf(abno)))
+               + "(next " + IntToString(AbnoGen_ObsCost(AbnoGen_IndexOf(abno),
+                     Cont_ObservationOfPlayer(player, AbnoGen_IndexOf(abno)))) + ")";
 
         if (door == null) {
             line = line + " door=none";
@@ -267,6 +271,30 @@ void Debug_Breach (int player, string slotWord) {
     }
 
     Cont_BeginEscape(gvg_cellAbno[slot]);
+    Debug_ReportCells(player);
+}
+
+//--------------------------------------------------------------------------------------------------
+// -obs <slot>
+//
+// Buys the next section of that abnormality's encyclopedia with the boxes this
+// player took out of it. Stands in for the panel's buttons, which cannot exist
+// as a generic unit -- see the module note in 13_containment.
+//--------------------------------------------------------------------------------------------------
+void Debug_Observe (int player, string word) {
+    int slot;
+    int index;
+
+    slot = Debug_Int(word, -1);
+    if (slot < 0 || slot >= gv_cellCount) {
+        Debug_Say(player, "obs: want a slot 0.." + IntToString(gv_cellCount - 1));
+        return;
+    }
+
+    index = AbnoGen_IndexOf(gvg_cellAbno[slot]);
+    if (!Cont_Observe(player, index)) {
+        Debug_Say(player, "obs: not enough boxes, or nothing left to learn");
+    }
     Debug_ReportCells(player);
 }
 
@@ -492,6 +520,7 @@ void Debug_Help (int player) {
     Debug_Say(player, "-work <type>            what a door-bound employee will do");
     Debug_Say(player, "-energy [n|submit]      the win condition");
     Debug_Say(player, "-sp <n>                 move the selected employees' SP");
+    Debug_Say(player, "-obs <slot>             buy the next encyclopedia section");
 }
 
 bool Debug_Chat_Func (bool testConds, bool runActions) {
@@ -543,6 +572,9 @@ bool Debug_Chat_Func (bool testConds, bool runActions) {
     }
     else if (StringEqual(command, "-breach", false)) {
         Debug_Breach(player, StringWord(message, 2));
+    }
+    else if (StringEqual(command, "-obs", false)) {
+        Debug_Observe(player, StringWord(message, 2));
     }
     else if (StringEqual(command, "-sp", false)) {
         Debug_SP(player, StringWord(message, 2));

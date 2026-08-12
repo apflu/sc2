@@ -69,6 +69,9 @@ int[40] gvg_abnoPref;
 // five to the percent.
 int[10] gvg_abnoObsSpeed;
 int[10] gvg_abnoObsSuccess;
+// PE-Box price of each of the four sections, flattened:
+// abnormality * 4 + section. Observation level is how many are bought.
+int[8] gvg_abnoObsCost;
 
 void AbnoGen_Init () {
     gvg_abnoType[0] = "0_00_00";
@@ -90,6 +93,10 @@ void AbnoGen_Init () {
     gvg_abnoObsSuccess[3] = 0;
     gvg_abnoObsSpeed[4] = 0;
     gvg_abnoObsSuccess[4] = 0;
+    gvg_abnoObsCost[0] = 0;
+    gvg_abnoObsCost[1] = 0;
+    gvg_abnoObsCost[2] = 0;
+    gvg_abnoObsCost[3] = 0;
     gvg_abnoPref[0] = 50;
     gvg_abnoPref[1] = 50;
     gvg_abnoPref[2] = 50;
@@ -129,6 +136,10 @@ void AbnoGen_Init () {
     gvg_abnoObsSuccess[8] = 10;
     gvg_abnoObsSpeed[9] = 10;
     gvg_abnoObsSuccess[9] = 10;
+    gvg_abnoObsCost[4] = 8;
+    gvg_abnoObsCost[5] = 8;
+    gvg_abnoObsCost[6] = 8;
+    gvg_abnoObsCost[7] = 8;
     gvg_abnoPref[20] = 50;
     gvg_abnoPref[21] = 40;
     gvg_abnoPref[22] = 30;
@@ -240,6 +251,17 @@ int AbnoGen_ObsSuccess (int index, int obs) {
         obs = 4;
     }
     return gvg_abnoObsSuccess[index * 5 + obs];
+}
+
+//--------------------------------------------------------------------------------------------------
+// What the next observation section costs, in that abnormality's own
+// PE-Boxes. Zero once everything is bought.
+//--------------------------------------------------------------------------------------------------
+int AbnoGen_ObsCost (int index, int obs) {
+    if (index < 0 || index >= c_abnoCount || obs < 0 || obs >= 4) {
+        return 0;
+    }
+    return gvg_abnoObsCost[index * 4 + obs];
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -3081,17 +3103,109 @@ bool Cont_DoorIsUp (unit abno) {
 }
 
 //--------------------------------------------------------------------------------------------------
-// How far a player has observed an abnormality, 0 (unseen) to 4 (fully
-// unlocked).
+// The encyclopedia: what a player has extracted from an abnormality, and what
+// they have spent it on.
 //
-// Always 0 until the encyclopedia exists. It is a stub with a real signature
-// rather than a constant sprinkled through the callers, because every formula
-// that reads it -- work speed, work success, the name shown on the selection
-// screen, cross-department restrictions -- should be written against the real
-// question now and get the real answer later without being touched.
+// Both halves are per player AND per abnormality, and they must never pool.
+// Design 8.1 has PE-Boxes buying that one abnormality's observation and nothing
+// else, which is why there is no total anywhere here: an index that would let
+// one abnormality's boxes reach another simply does not exist.
+//
+// Observation level is a count of purchased sections, not four separate
+// achievements -- the source reads "(1 Section Unlocked)" through "(All Details
+// Unlocked)". Each section has its own price in that abnormality's own doc.
+//
+// Nothing is persisted yet. Design 8.4 has this in a bank read at init, and it
+// is the single most important thing in the bank; until then a game starts
+// knowing nothing, which is also what a first game looks like.
 //--------------------------------------------------------------------------------------------------
+const int c_obsMax = 4;
+
+// Flattened player * c_abnoCount + abnormality. Sized for 16 players against 64
+// abnormalities; c_abnoCount is generated, so passing 64 documents means these
+// have to grow with it.
+int[1024] gvg_obsBoxes;
+int[1024] gvg_obsLevel;
+
+int Cont_BoxIndex (int player, int abnoIndex) {
+    if (player < 1 || player > 15 || abnoIndex < 0 || abnoIndex >= c_abnoCount) {
+        return -1;
+    }
+    return player * c_abnoCount + abnoIndex;
+}
+
+int Cont_BoxesOf (int player, int abnoIndex) {
+    int i;
+
+    i = Cont_BoxIndex(player, abnoIndex);
+    if (i < 0) {
+        return 0;
+    }
+    return gvg_obsBoxes[i];
+}
+
+void Cont_AddBoxes (int player, int abnoIndex, int amount) {
+    int i;
+
+    i = Cont_BoxIndex(player, abnoIndex);
+    if (i < 0) {
+        return;
+    }
+    gvg_obsBoxes[i] = gvg_obsBoxes[i] + amount;
+}
+
+//--------------------------------------------------------------------------------------------------
+// How far a player has observed an abnormality, 0 (unseen) to 4 (fully known).
+//
+// Takes a unit rather than a player because every caller has one: the employee
+// working, the character standing at a panel. Whose knowledge applies is the
+// owner's, and asking it that way keeps the cross-department rule expressible --
+// Control Team lv2 turns on exactly the question "whose observation counts".
+//--------------------------------------------------------------------------------------------------
+int Cont_ObservationOfPlayer (int player, int abnoIndex) {
+    int i;
+
+    i = Cont_BoxIndex(player, abnoIndex);
+    if (i < 0) {
+        return 0;
+    }
+    return gvg_obsLevel[i];
+}
+
 int Cont_ObservationOf (unit who, int abnoIndex) {
-    return 0;
+    if (who == null) {
+        return 0;
+    }
+    return Cont_ObservationOfPlayer(UnitGetOwner(who), abnoIndex);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Buys the next section. Returns false if it is already fully known or the
+// boxes are not there.
+//--------------------------------------------------------------------------------------------------
+bool Cont_Observe (int player, int abnoIndex) {
+    int i;
+    int level;
+    int cost;
+
+    i = Cont_BoxIndex(player, abnoIndex);
+    if (i < 0) {
+        return false;
+    }
+
+    level = gvg_obsLevel[i];
+    if (level >= c_obsMax) {
+        return false;
+    }
+
+    cost = AbnoGen_ObsCost(abnoIndex, level);
+    if (gvg_obsBoxes[i] < cost) {
+        return false;
+    }
+
+    gvg_obsBoxes[i] = gvg_obsBoxes[i] - cost;
+    gvg_obsLevel[i] = level + 1;
+    return true;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -3532,15 +3646,6 @@ int[16] gvg_workDefault;
 // Cooldown per cell, keyed the same way 13_containment keys its cells.
 fixed[32] gvg_workReadyAt;
 
-// PE-Boxes a player has drawn out of each abnormality. Per player AND per
-// abnormality on purpose: design 8.1 has these buying that abnormality's
-// encyclopedia and nothing else, so they must never pool.
-//
-// Flattened player * c_abnoCount + abnormality. Sized for 16 players against 64
-// abnormalities; c_abnoCount is generated, so passing 64 documents means this
-// number has to grow with it.
-int[1024] gvg_workBoxesOf;
-
 // Energy. The same amount as every box produced, into one pool for the whole
 // table, and the win condition is filling it. Not a wallet -- nothing is spent
 // out of it and no player's rate is affected by another's, so it does not touch
@@ -3577,20 +3682,6 @@ void Work_SetDefault (int player, int work) {
         return;
     }
     gvg_workDefault[player] = work;
-}
-
-//--------------------------------------------------------------------------------------------------
-// PE-Boxes one player has taken out of one abnormality.
-//
-// Flattened player * c_abnoCount + abnormality, which is the whole of the
-// storage: these never combine across abnormalities, so there is no total to
-// keep and no way to accidentally spend one abnormality's boxes on another.
-//--------------------------------------------------------------------------------------------------
-int Work_BoxesOf (int player, int abnoIndex) {
-    if (player < 1 || player > 15 || abnoIndex < 0 || abnoIndex >= c_abnoCount) {
-        return 0;
-    }
-    return gvg_workBoxesOf[player * c_abnoCount + abnoIndex];
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -3770,11 +3861,9 @@ void Work_Finish (int slot) {
     }
     Emp_StatAdd(emp, Work_Stat(gvg_workType[slot]), gain);
 
-    // Boxes pay twice, into two things that never mix.
-    if (owner >= 1 && owner <= 15 && index >= 0) {
-        gvg_workBoxesOf[owner * c_abnoCount + index] =
-            gvg_workBoxesOf[owner * c_abnoCount + index] + boxes;
-    }
+    // Boxes pay twice, into two things that never mix: this player's stock for
+    // this abnormality's encyclopedia, and the table's shared energy.
+    Cont_AddBoxes(owner, index, boxes);
     Work_AddEnergy(boxes);
 
     if (cell >= 0) {
@@ -4808,7 +4897,11 @@ void Debug_ReportCells (int player) {
         line = "cell " + IntToString(slot) + " " + gvg_abnoName[AbnoGen_IndexOf(abno)]
                + " [" + Risk_Name(Risk_Of(abno)) + "]"
                + " " + Debug_CellStateName(gvg_cellState[slot])
-               + " qlip=" + IntToString(Cont_Counter(abno));
+               + " qlip=" + IntToString(Cont_Counter(abno))
+               + " obs=" + IntToString(Cont_ObservationOfPlayer(player, AbnoGen_IndexOf(abno)))
+               + "/4 box=" + IntToString(Cont_BoxesOf(player, AbnoGen_IndexOf(abno)))
+               + "(next " + IntToString(AbnoGen_ObsCost(AbnoGen_IndexOf(abno),
+                     Cont_ObservationOfPlayer(player, AbnoGen_IndexOf(abno)))) + ")";
 
         if (door == null) {
             line = line + " door=none";
@@ -4850,6 +4943,30 @@ void Debug_Breach (int player, string slotWord) {
     }
 
     Cont_BeginEscape(gvg_cellAbno[slot]);
+    Debug_ReportCells(player);
+}
+
+//--------------------------------------------------------------------------------------------------
+// -obs <slot>
+//
+// Buys the next section of that abnormality's encyclopedia with the boxes this
+// player took out of it. Stands in for the panel's buttons, which cannot exist
+// as a generic unit -- see the module note in 13_containment.
+//--------------------------------------------------------------------------------------------------
+void Debug_Observe (int player, string word) {
+    int slot;
+    int index;
+
+    slot = Debug_Int(word, -1);
+    if (slot < 0 || slot >= gv_cellCount) {
+        Debug_Say(player, "obs: want a slot 0.." + IntToString(gv_cellCount - 1));
+        return;
+    }
+
+    index = AbnoGen_IndexOf(gvg_cellAbno[slot]);
+    if (!Cont_Observe(player, index)) {
+        Debug_Say(player, "obs: not enough boxes, or nothing left to learn");
+    }
     Debug_ReportCells(player);
 }
 
@@ -5075,6 +5192,7 @@ void Debug_Help (int player) {
     Debug_Say(player, "-work <type>            what a door-bound employee will do");
     Debug_Say(player, "-energy [n|submit]      the win condition");
     Debug_Say(player, "-sp <n>                 move the selected employees' SP");
+    Debug_Say(player, "-obs <slot>             buy the next encyclopedia section");
 }
 
 bool Debug_Chat_Func (bool testConds, bool runActions) {
@@ -5126,6 +5244,9 @@ bool Debug_Chat_Func (bool testConds, bool runActions) {
     }
     else if (StringEqual(command, "-breach", false)) {
         Debug_Breach(player, StringWord(message, 2));
+    }
+    else if (StringEqual(command, "-obs", false)) {
+        Debug_Observe(player, StringWord(message, 2));
     }
     else if (StringEqual(command, "-sp", false)) {
         Debug_SP(player, StringWord(message, 2));

@@ -127,6 +127,44 @@ def parse_observation(body: str) -> tuple[list[int], list[int]]:
     return speed, success
 
 
+# The four purchasable sections, in the order they unlock. Observation level is
+# simply how many of them a player has bought: the wiki's "(1 Section Unlocked)"
+# through "(All Details Unlocked)" is a count, not four different achievements.
+SECTIONS = [
+    ("Abnormality Basic Info", 1),
+    ("Abnormality Work Preferences", 4),   # one entry per work
+    ("Abnormality Management Tips", 0),    # counted from the numbered lines
+    ("Abnormality Escape Information", 1),
+]
+
+
+def parse_costs(text: str) -> list[int]:
+    """PE-Box cost of each section.
+
+    Every section states its own price in a "(Cost: N PE Boxes)" line, and says
+    "each" when that price is per entry rather than for the block. So the block
+    price is N times the number of entries, and the number of entries is either
+    fixed (four works, one basic info) or counted off the numbered lines.
+
+    Parsed rather than assumed because the prices are not uniform and are the
+    thing that decides how many works it takes to know an abnormality -- which
+    is the pace of the whole encyclopedia.
+    """
+    costs = []
+    for title, entries in SECTIONS:
+        body = section(text, title)
+        m = re.search(r"\(Cost:?\s*(?:\S*?\s*)?(\d+)", body)
+        if not m:
+            costs.append(0)
+            continue
+        each = re.search(r"\beach\b", body, re.I) is not None
+        count = entries
+        if count == 0:
+            count = len(re.findall(r"^\s*\d+\s", body, re.M)) or 1
+        costs.append(int(m.group(1)) * (count if each else 1))
+    return costs
+
+
 def parse(path: Path) -> dict:
     text = path.read_text(encoding="utf-8")
     lines = [l.strip() for l in text.splitlines() if l.strip()]
@@ -163,6 +201,7 @@ def parse(path: Path) -> dict:
         "normal_min": int(normal.group(1)) if normal else 0,
         "prefs": parse_prefs(section(text, "Abnormality Work Preferences")),
         "obs": parse_observation(section(text, "Observation Level")),
+        "costs": parse_costs(text),
     }
 
 
@@ -239,7 +278,10 @@ def build(entries: list[dict]) -> str:
                "// level. Work speed is a percentage of the base; work success is in points,\n"
                "// five to the percent.\n")
     out.append(f"int[{max(len(entries) * 5, 1)}] gvg_abnoObsSpeed;\n")
-    out.append(f"int[{max(len(entries) * 5, 1)}] gvg_abnoObsSuccess;\n\n")
+    out.append(f"int[{max(len(entries) * 5, 1)}] gvg_abnoObsSuccess;\n")
+    out.append("// PE-Box price of each of the four sections, flattened:\n"
+               "// abnormality * 4 + section. Observation level is how many are bought.\n")
+    out.append(f"int[{max(len(entries) * 4, 1)}] gvg_abnoObsCost;\n\n")
 
     for i, e in enumerate(entries):
         fills.append(f'    gvg_abnoType[{i}] = "{e["id"]}";')
@@ -255,6 +297,8 @@ def build(entries: list[dict]) -> str:
         for lvl in range(5):
             fills.append(f"    gvg_abnoObsSpeed[{i * 5 + lvl}] = {obs_speed[lvl]};")
             fills.append(f"    gvg_abnoObsSuccess[{i * 5 + lvl}] = {obs_success[lvl]};")
+        for sec in range(4):
+            fills.append(f"    gvg_abnoObsCost[{i * 4 + sec}] = {e['costs'][sec]};")
         for w, work in enumerate(WORKS):
             row = e["prefs"].get(work, [50] * 5)
             for lvl, pct in enumerate(row):
@@ -346,6 +390,16 @@ def build(entries: list[dict]) -> str:
         "        obs = 4;\n"
         "    }\n"
         "    return gvg_abnoObsSuccess[index * 5 + obs];\n"
+        "}\n\n"
+        "//--------------------------------------------------------------------------------------------------\n"
+        "// What the next observation section costs, in that abnormality's own\n"
+        "// PE-Boxes. Zero once everything is bought.\n"
+        "//--------------------------------------------------------------------------------------------------\n"
+        "int AbnoGen_ObsCost (int index, int obs) {\n"
+        "    if (index < 0 || index >= c_abnoCount || obs < 0 || obs >= 4) {\n"
+        "        return 0;\n"
+        "    }\n"
+        "    return gvg_abnoObsCost[index * 4 + obs];\n"
         "}\n"
     )
     return "".join(out)
@@ -370,6 +424,7 @@ if __name__ == "__main__":
             f"  {e['id']:<10} {grade:<6} qliphoth={counter:<3} "
             f"box={e['speed']}/s x{e['max_box']} good>={e['good_min']} "
             f"obs=+{e['obs'][0][4]}spd/+{e['obs'][1][4]}suc "
+            f"cost={'/'.join(str(c) for c in e['costs'])} "
             f"prefs={'yes' if e['prefs'] else 'MISSING'}  {e['name']}"
         )
     for note in notes:

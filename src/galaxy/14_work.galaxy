@@ -108,15 +108,6 @@ int[16] gvg_workDefault;
 // Cooldown per cell, keyed the same way 13_containment keys its cells.
 fixed[32] gvg_workReadyAt;
 
-// PE-Boxes a player has drawn out of each abnormality. Per player AND per
-// abnormality on purpose: design 8.1 has these buying that abnormality's
-// encyclopedia and nothing else, so they must never pool.
-//
-// Flattened player * c_abnoCount + abnormality. Sized for 16 players against 64
-// abnormalities; c_abnoCount is generated, so passing 64 documents means this
-// number has to grow with it.
-int[1024] gvg_workBoxesOf;
-
 // Energy. The same amount as every box produced, into one pool for the whole
 // table, and the win condition is filling it. Not a wallet -- nothing is spent
 // out of it and no player's rate is affected by another's, so it does not touch
@@ -153,20 +144,6 @@ void Work_SetDefault (int player, int work) {
         return;
     }
     gvg_workDefault[player] = work;
-}
-
-//--------------------------------------------------------------------------------------------------
-// PE-Boxes one player has taken out of one abnormality.
-//
-// Flattened player * c_abnoCount + abnormality, which is the whole of the
-// storage: these never combine across abnormalities, so there is no total to
-// keep and no way to accidentally spend one abnormality's boxes on another.
-//--------------------------------------------------------------------------------------------------
-int Work_BoxesOf (int player, int abnoIndex) {
-    if (player < 1 || player > 15 || abnoIndex < 0 || abnoIndex >= c_abnoCount) {
-        return 0;
-    }
-    return gvg_workBoxesOf[player * c_abnoCount + abnoIndex];
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -346,11 +323,9 @@ void Work_Finish (int slot) {
     }
     Emp_StatAdd(emp, Work_Stat(gvg_workType[slot]), gain);
 
-    // Boxes pay twice, into two things that never mix.
-    if (owner >= 1 && owner <= 15 && index >= 0) {
-        gvg_workBoxesOf[owner * c_abnoCount + index] =
-            gvg_workBoxesOf[owner * c_abnoCount + index] + boxes;
-    }
+    // Boxes pay twice, into two things that never mix: this player's stock for
+    // this abnormality's encyclopedia, and the table's shared energy.
+    Cont_AddBoxes(owner, index, boxes);
     Work_AddEnergy(boxes);
 
     if (cell >= 0) {
