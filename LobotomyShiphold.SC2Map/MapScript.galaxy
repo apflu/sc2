@@ -3117,6 +3117,19 @@ int Debug_StatFromWord (string word) {
     return c_debugStatBad;
 }
 
+//--------------------------------------------------------------------------------------------------
+// StringToInt raises a trigger error on an empty string rather than returning
+// zero, and StringWord returns an empty string for a word that was not typed.
+// So every optional argument has to come through here; -stat with no value and
+// -emp spawn with no count both hit it.
+//--------------------------------------------------------------------------------------------------
+int Debug_Int (string word, int fallback) {
+    if (word == "") {
+        return fallback;
+    }
+    return StringToInt(word);
+}
+
 string Debug_RankName (int rank) {
     if (rank == 1) { return "I"; }
     if (rank == 2) { return "II"; }
@@ -3270,6 +3283,10 @@ void Debug_SetStat (int player, string whichWord, string valueWord) {
         Debug_Say(player, "stat: want fort|prud|temp|just|all");
         return;
     }
+    if (valueWord == "") {
+        Debug_Say(player, "stat: want a value, or +n / -n to move it");
+        return;
+    }
 
     firstChar = StringSub(valueWord, 1, 1);
     relative = firstChar == "+" || firstChar == "-";
@@ -3277,7 +3294,7 @@ void Debug_SetStat (int player, string whichWord, string valueWord) {
         // StringToInt does not have to know what a leading + means.
         valueWord = StringSub(valueWord, 2, StringLength(valueWord));
     }
-    value = StringToInt(valueWord);
+    value = Debug_Int(valueWord, 0);
 
     mine = Debug_TargetEmployees(player);
     count = UnitGroupCount(mine, c_unitCountAlive);
@@ -3339,7 +3356,7 @@ bool Debug_Chat_Func (bool testConds, bool runActions) {
     }
     else if (StringEqual(command, "-emp", false)) {
         if (StringEqual(StringWord(message, 2), "spawn", false)) {
-            Debug_SpawnEmployees(player, StringToInt(StringWord(message, 3)));
+            Debug_SpawnEmployees(player, Debug_Int(StringWord(message, 3), 1));
         }
         else {
             Debug_ReportEmployees(player);

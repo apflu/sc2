@@ -1,0 +1,3 @@
+Scri: Trigger error occurred in 'Debug_Chat_Func': Unable to get 'int' (value:) from the parameter of "".
+
+Near line 3287 in Debug_SetStat() in MapScript.galaxy
