@@ -278,7 +278,25 @@ Structure  Hover  Heroic  Summoned  User1  MapBoss
 
 **还没解决的**：控制部跨部门准入引用的那个"危险"tag。它是标签不是数字，但 attribute 已经花完了——现在多了一个现成的去处（文档里加一节，生成器加几行）。
 
-## Region## Region
+### `natives.galaxy` 不是全集
+
+`~/SC2GameData/mods/core.sc2mod/base.sc2data/TriggerLibs/` 下还有一个 **`natives_missing.galaxy`**，里面另有 236 个 native。**只 grep `natives.galaxy` 就断言"这个 native 不存在"是错的**——这个错已经犯过两次，其中一次差点让整套图鉴 UI 走上"为每个异想体生成一个单位"的歪路。编辑器触发器列表里能看到的东西，一定在 `NativeLib.TriggerLib` 里有 `<Identifier>`。
+
+对本项目重要的几个：
+
+| native | 用处 |
+|---|---|
+| `UnitAbilityAdd` / `Remove` / `ChangeLink` | **运行时增删改单位的技能** |
+| `UnitSetInfoButtonTooltip(unit, key, text)` | **按单位实例改命令按钮的 tooltip** |
+| `UnitGetAttributePoint` / `UnitSetAttributePoint` | 直接读写属性点数，不需要载体 buff |
+| `DataTableInstance*` | 实例级数据表（"每单位挂任意数据"） |
+| `TriggerAddEventUnitSpendVital` | 消耗 vital 的事件 |
+| `UnitLootDropUnit` / `DropPoint` | 掉落（E.G.O 的落点） |
+| `BankBackup*` | 存档备份 |
+
+注：`UnitAbilityAdd` 自己的文档说明，运行时加的技能**没有命令按钮就没法施放**——要在技能的 `Command+` 里指定默认按钮，并勾上 "Use Default Button" 和 "Create Default Button"。
+
+## Region
 
 **房间用 region 画，不要用"绕着单位摆圆圈"去近似。**主休息室是有墙的房间，圆形永远不是那个形状。
 
