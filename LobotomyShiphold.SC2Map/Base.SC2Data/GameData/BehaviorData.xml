@@ -239,4 +239,16 @@
         <Alignment value="Negative"/>
         <InfoIcon value="Assets\Textures\btn-ability-terran-stimpack-color.dds"/>
     </CBehaviorBuff>
+
+    <!-- What the work ability applies, and it is nothing.
+
+         An Effect-Target ability needs an effect that unambiguously acts on a
+         unit, or the command never becomes a targeting command. Snipe uses
+         damage and Larva Swarm uses apply-behavior; this is the second shape,
+         with a behavior that does nothing for half a second. -->
+    <CBehaviorBuff id="Lob_Worked">
+        <EditorCategories value="AbilityorEffectType:Units"/>
+        <Duration value="0.5"/>
+        <InfoFlags index="Hidden" value="1"/>
+    </CBehaviorBuff>
 </Catalog>

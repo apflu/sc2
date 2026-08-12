@@ -15,23 +15,25 @@
     <!-- Deliberately empty. An ability has to point at an effect; this one's
          whole job is to be pressable so a trigger can hear it. -->
     <CEffectSet id="Lob_Nothing"/>
-    <!-- What the work ability fires, and why it is not a CEffectSet.
+    <!-- What the work ability fires.
 
-         An Effect-Target ability takes its target type FROM ITS EFFECT. An empty
-         CEffectSet points at nothing, so there was nothing to derive a unit
-         target from and pressing the button never entered targeting mode — no
-         cursor, nothing to click. ModifyUnit acts on a unit by definition, so
-         the ability becomes a unit-target ability, and modifying none of that
-         unit's fields is a perfectly good way to change nothing.
+         Apply-behavior, which is Larva Swarm's shape; Snipe uses damage. Either
+         is a real effect on a real unit, and that is the part that matters: an
+         Effect-Target ability whose effect does not unambiguously act on a unit
+         never becomes a targeting command, so pressing the button does nothing
+         and no cursor appears.
 
-         It also carries the validator, which the ability could not:
-         ValidatorArray is a field of CAbilBehavior, CAbilMorph, CAbilInteract
-         and CAbilRevive, and not of CAbilEffectTarget.
+         Two earlier attempts both had that failure. A CEffectSet with no members
+         points at nothing. A CEffectModifyUnit with no fields modifies nothing,
+         which turns out not to be the same as acting on something.
 
-         Separate from Lob_Nothing because the four encyclopedia buttons point at
-         that one — they are instant and want no target at all, which is exactly
-         why an empty set suits them and not this. -->
-    <CEffectModifyUnit id="Lob_WorkCheck">
-        <ValidatorArray value="IsContainmentGate"/>
-    </CEffectModifyUnit>
+         No validator here any more either. IsContainmentGate has a WhichUnit
+         field it does not set, so it was very likely testing the caster — an
+         employee, which is not a Structure — and failing, which makes the
+         ability unusable rather than the target illegal. TargetFilters does the
+         target check, and 14_work refuses anything that is not a door anyway.
+         It can come back once this works, with WhichUnit set to Target. -->
+    <CEffectApplyBehavior id="Lob_WorkCheck">
+        <Behavior value="Lob_Worked"/>
+    </CEffectApplyBehavior>
 </Catalog>

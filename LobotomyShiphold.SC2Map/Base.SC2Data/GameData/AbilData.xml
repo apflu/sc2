@@ -20,17 +20,10 @@
          supposed to be able to make. -->
     <CAbilEffectTarget id="Interact">
         <EditorCategories value="AbilityorEffectType:Units"/>
-        <!-- The effect is where both of the things this ability cannot state
-             itself end up: which targets are legal (CAbilEffectTarget has no
-             ValidatorArray field) and, less obviously, that there is a target at
-             all — the ability derives its target type from the effect, so a
-             ModifyUnit is what makes this a unit-target ability. -->
-        <Effect value="Lob_WorkCheck"/>
+        <Effect index="0" value="Lob_WorkCheck"/>
         <PrepTime value="1"/>
-        <!-- From the door's centre, and a door is a wall footprint, so 2 is
-             inside it. -->
+        <!-- Measured from the door's centre, and a door is a wall footprint. -->
         <Range value="4"/>
-        <Arc value="360"/>
         <TargetFilters value="Structure,Visible;Self"/>
         <CmdButtonArray index="Execute" DefaultButtonFace="Interact"/>
     </CAbilEffectTarget>
