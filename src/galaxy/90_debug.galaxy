@@ -253,6 +253,8 @@ void Debug_Help (int player) {
     Debug_Say(player, "-stat <s> <v>           set a stat; s = fort|prud|temp|just|all");
     Debug_Say(player, "-stat <s> +5 / -5       move it instead of setting it");
     Debug_Say(player, "-rank                   resync every rank buff");
+    Debug_Say(player, "-status                 the economy/power/sector readout");
+    Debug_Say(player, "-scan                   what the object tables can see");
 }
 
 bool Debug_Chat_Func (bool testConds, bool runActions) {
@@ -292,6 +294,12 @@ bool Debug_Chat_Func (bool testConds, bool runActions) {
     else if (StringEqual(command, "-rank", false)) {
         Emp_Tick_Func(false, true);
         Debug_ReportEmployees(player);
+    }
+    else if (StringEqual(command, "-status", false)) {
+        Debug_Say(player, Economy_StatusLine(player));
+    }
+    else if (StringEqual(command, "-scan", false)) {
+        Debug_Say(player, Registry_ScanLine());
     }
     return true;
 }

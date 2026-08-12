@@ -1689,19 +1689,24 @@ void Sector_Init () {
 // editor save, which is otherwise an invisible and very confusing state.
 //--------------------------------------------------------------------------------------------------
 
+// A function as well as a startup print, so the same check can be repeated on
+// demand from the debug console. Startup is when authoring mistakes show up,
+// but it is not the only time the answer is worth having -- and until the
+// periodic economy readout was taken off the subtitle area, this one was
+// usually overwritten before it could be read.
+string Registry_ScanLine () {
+    return "scan: hero=" + IntToString(UnitGroupCount(ObjectsGen_ScanHero(), c_unitCountAlive))
+           + " emp=" + IntToString(UnitGroupCount(ObjectsGen_ScanEmp(), c_unitCountAlive))
+           + " debris=" + IntToString(UnitGroupCount(ObjectsGen_ScanDebris(), c_unitCountAlive))
+           + " worker=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Worker(), c_unitCountAlive))
+           + " miner=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Miner(), c_unitCountAlive))
+           + " device=" + IntToString(UnitGroupCount(ObjectsGen_ScanDevice(), c_unitCountAlive))
+           + " | group(debris)=" + IntToString(UnitGroupCount(ObjectsGen_Group("debris"), c_unitCountAlive));
+}
+
 void Registry_Init () {
-    UIDisplayMessage(
-        PlayerGroupAll(),
-        c_messageAreaSubtitle,
-        StringToText(
-            "scan: hero=" + IntToString(UnitGroupCount(ObjectsGen_ScanHero(), c_unitCountAlive))
-            + " debris=" + IntToString(UnitGroupCount(ObjectsGen_ScanDebris(), c_unitCountAlive))
-            + " worker=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Worker(), c_unitCountAlive))
-            + " miner=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Miner(), c_unitCountAlive))
-            + " device=" + IntToString(UnitGroupCount(ObjectsGen_ScanDevice(), c_unitCountAlive))
-            + " | group(debris)=" + IntToString(UnitGroupCount(ObjectsGen_Group("debris"), c_unitCountAlive))
-        )
-    );
+    UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle,
+                     StringToText(Registry_ScanLine()));
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -2765,10 +2770,8 @@ void Workers_Init () {
 //--------------------------------------------------------------------------------------------------
 
 const fixed c_minerAssignPeriod = 2.0;
-const fixed c_statusPeriod = 5.0;
 
 trigger gt_minerAssign;
-trigger gt_status;
 
 //--------------------------------------------------------------------------------------------------
 // How much is sitting in the pile, across every pile there is.
@@ -2837,41 +2840,40 @@ bool Economy_MinerAssign_Func (bool testConds, bool runActions) {
 }
 
 //--------------------------------------------------------------------------------------------------
-// Greybox readout. P0 is about whether the loop pulls in three directions at
-// once, so the numbers that matter have to be visible without alt-tabbing to
-// read a log. Goes away once there is a real UI.
+// Greybox readout, on request.
+//
+// It used to print itself into the subtitle area every five seconds, back when
+// nothing else could report and the question P0 was asking -- does the loop
+// really pull in three directions at once -- could only be answered by watching
+// the numbers move. It answered it. What is left is a screen that cannot show
+// anything else, including the one-shot startup scan and every message a real
+// mechanic will want to send.
+//
+// So the line stays and the timer goes: 90_debug.galaxy prints this on -status.
+// Nothing is lost, because a number you can ask for at any moment is strictly
+// more than the same number arriving whether or not you wanted it.
+//
+// Device counts are still map-wide. They are the only thing here that is, and
+// pretending otherwise by taking a player argument for them would be worse than
+// saying so.
 //--------------------------------------------------------------------------------------------------
-bool Economy_Status_Func (bool testConds, bool runActions) {
-    if (!runActions) {
-        return true;
-    }
-
-    UIDisplayMessage(
-        PlayerGroupAll(),
-        c_messageAreaSubtitle,
-        StringToText(
-            "debris left=" + IntToString(UnitGroupCount(ObjectsGen_ScanDebris(), c_unitCountAlive))
-            + "  cleared=" + IntToString(gv_debrisCleared)
-            + "  pile=" + IntToString(Economy_PileContents())
-            + "  power=" + IntToString(PlayerGetPropertyInt(c_p0Player, c_playerPropSuppliesUsed))
-            + "/" + IntToString(PlayerGetPropertyInt(c_p0Player, c_playerPropSuppliesMade))
-            + " (" + IntToString(gv_devicesOnline) + "/" + IntToString(gv_devicesTotal)
-            + " devices online)"
-            + "  dept=" + Dept_NameOf(c_p0Player)
-            + "  inner=" + Sector_HeldText(c_p0Player)
-            + "  workers=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Worker(), c_unitCountAlive))
-            + "  miners=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Miner(), c_unitCountAlive))
-        )
-    );
-    return true;
+string Economy_StatusLine (int player) {
+    return "debris left=" + IntToString(UnitGroupCount(ObjectsGen_ScanDebris(), c_unitCountAlive))
+           + "  cleared=" + IntToString(gv_debrisCleared)
+           + "  pile=" + IntToString(Economy_PileContents())
+           + "  power=" + IntToString(PlayerGetPropertyInt(player, c_playerPropSuppliesUsed))
+           + "/" + IntToString(PlayerGetPropertyInt(player, c_playerPropSuppliesMade))
+           + " (" + IntToString(gv_devicesOnline) + "/" + IntToString(gv_devicesTotal)
+           + " devices online, map-wide)"
+           + "  dept=" + Dept_NameOf(player)
+           + "  inner=" + Sector_HeldText(player)
+           + "  workers=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Worker(), c_unitCountAlive))
+           + "  miners=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Miner(), c_unitCountAlive));
 }
 
 void Economy_Init () {
     gt_minerAssign = TriggerCreate("Economy_MinerAssign_Func");
     TriggerAddEventTimePeriodic(gt_minerAssign, c_minerAssignPeriod, c_timeGame);
-
-    gt_status = TriggerCreate("Economy_Status_Func");
-    TriggerAddEventTimePeriodic(gt_status, c_statusPeriod, c_timeGame);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -3226,6 +3228,8 @@ void Debug_Help (int player) {
     Debug_Say(player, "-stat <s> <v>           set a stat; s = fort|prud|temp|just|all");
     Debug_Say(player, "-stat <s> +5 / -5       move it instead of setting it");
     Debug_Say(player, "-rank                   resync every rank buff");
+    Debug_Say(player, "-status                 the economy/power/sector readout");
+    Debug_Say(player, "-scan                   what the object tables can see");
 }
 
 bool Debug_Chat_Func (bool testConds, bool runActions) {
@@ -3265,6 +3269,12 @@ bool Debug_Chat_Func (bool testConds, bool runActions) {
     else if (StringEqual(command, "-rank", false)) {
         Emp_Tick_Func(false, true);
         Debug_ReportEmployees(player);
+    }
+    else if (StringEqual(command, "-status", false)) {
+        Debug_Say(player, Economy_StatusLine(player));
+    }
+    else if (StringEqual(command, "-scan", false)) {
+        Debug_Say(player, Registry_ScanLine());
     }
     return true;
 }
