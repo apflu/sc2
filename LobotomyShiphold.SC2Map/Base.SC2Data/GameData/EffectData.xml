@@ -15,4 +15,12 @@
     <!-- Deliberately empty. An ability has to point at an effect; this one's
          whole job is to be pressable so a trigger can hear it. -->
     <CEffectSet id="Lob_Nothing"/>
+    <!-- The same, plus the one thing the ability could not carry itself: which
+         targets are legal. CAbilEffectTarget has no ValidatorArray field, so for
+         that class the check belongs on the effect it fires. Separate from
+         Lob_Nothing because the encyclopedia buttons share that one and must not
+         inherit a rule about doors. -->
+    <CEffectSet id="Lob_WorkCheck">
+        <ValidatorArray value="IsContainmentGate"/>
+    </CEffectSet>
 </Catalog>

@@ -1,7 +1,1 @@
-[8/12/2026 6:32:24 PM] Warning: XML: D:\workspace\sc2\LobotomyShiphold.SC2Map\Base.SC2Data\GameData\AbilData.xml(28,9) : Unable to write value: Minerals; reason: Core: invalid object type identification  Source: D:/workspace/sc2/LobotomyShiphold.SC2Map/  Entry: Lob_Obs_1  Scope: CAbilEffectInstant.SCost  Field: Cost[0].Resource[0]
-[8/12/2026 6:32:24 PM] Warning: XML: D:\workspace\sc2\LobotomyShiphold.SC2Map\Base.SC2Data\GameData\AbilData.xml(36,9) : Unable to write value: Minerals; reason: Core: invalid object type identification  Source: D:/workspace/sc2/LobotomyShiphold.SC2Map/  Entry: Lob_Obs_2  Scope: CAbilEffectInstant.SCost  Field: Cost[0].Resource[0]
-[8/12/2026 6:32:24 PM] Warning: XML: D:\workspace\sc2\LobotomyShiphold.SC2Map\Base.SC2Data\GameData\AbilData.xml(44,9) : Unable to write value: Minerals; reason: Core: invalid object type identification  Source: D:/workspace/sc2/LobotomyShiphold.SC2Map/  Entry: Lob_Obs_3  Scope: CAbilEffectInstant.SCost  Field: Cost[0].Resource[0]
-[8/12/2026 6:32:24 PM] Warning: XML: D:\workspace\sc2\LobotomyShiphold.SC2Map\Base.SC2Data\GameData\AbilData.xml(52,9) : Unable to write value: Minerals; reason: Core: invalid object type identification  Source: D:/workspace/sc2/LobotomyShiphold.SC2Map/  Entry: Lob_Obs_4  Scope: CAbilEffectInstant.SCost  Field: Cost[0].Resource[0]
-
-
-Scri: Trigger error occurred in 'Work_Tick_Func': Skill command 'stop(0) Target: 44.739,72.5996' should not have a target. Near line 3968 in Work_Begin() in MapScript.galaxy
+[8/12/2026 6:59:35 PM] Warning: XML: D:\workspace\sc2\LobotomyShiphold.SC2Map\Base.SC2Data\GameData\AbilData.xml(28,9) : Unable to find field ValidatorArray  Source: D:\workspace\sc2\LobotomyShiphold.SC2Map\  Entry: Interact  Scope: CAbilEffectTarget
