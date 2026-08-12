@@ -186,6 +186,32 @@ def emit_string_array(name: str, values: list[str]) -> str:
     return f"const int c_{name}Count = {len(values)};\nstring[{max(len(values), 1)}] gvg_{name};\n"
 
 
+FILL_RE = re.compile(r"^\s*(gvg_\w+)\[", re.M)
+
+
+def check_fills(declared: list[tuple[str, int]], text: str) -> None:
+    """Refuse to emit a table that has rows but no assignments.
+
+    Galaxy has no array initialisers, so every generated table is a declaration
+    up top and a run of assignments in ObjectsGen_Init, with nothing connecting
+    the two. A table whose rows never got emitted is not a compile error -- it
+    is a null string handed to StringLength at runtime, which is a crash a long
+    way from its cause, or worse, an empty string compared against and silently
+    matching nothing.
+
+    Driven off the row counts rather than the declared lengths, because an empty
+    table is declared at length 1 anyway (Galaxy rejects a zero-length array)
+    and the two cases are indistinguishable in the text.
+    """
+    filled = set(FILL_RE.findall(text))
+    missing = sorted({name for name, rows in declared if rows > 0 and name not in filled})
+    if missing:
+        raise SystemExit(
+            "generator bug: declared but never filled in ObjectsGen_Init: "
+            + ", ".join(missing)
+        )
+
+
 def build() -> str:
     categories = read_categories()
     groups = read_groups()
@@ -194,10 +220,12 @@ def build() -> str:
 
     out = [HEADER]
     fills: list[str] = []
+    declared: list[tuple[str, int]] = []
 
     out.append("// Unit types, by the category segment of their id.\n")
     for category, types in categories.items():
         out.append(emit_string_array(f"types{category}", types))
+        declared.append((f"gvg_types{category}", len(types)))
         fills.extend(f'    gvg_types{category}[{i}] = "{t}";' for i, t in enumerate(types))
     out.append("\n")
 
@@ -209,6 +237,12 @@ def build() -> str:
     out.append(f"int[{max(len(groups), 1)}] gvg_groupFirst;\n")
     out.append(f"int[{max(len(groups), 1)}] gvg_groupSize;\n")
     out.append(f"int[{max(len(members), 1)}] gvg_groupMembers;\n\n")
+    declared += [
+        ("gvg_groupNames", len(groups)),
+        ("gvg_groupFirst", len(groups)),
+        ("gvg_groupSize", len(groups)),
+        ("gvg_groupMembers", len(members)),
+    ]
 
     cursor = 0
     for i, (name, ids) in enumerate(groups):
@@ -217,10 +251,6 @@ def build() -> str:
         fills.append(f"    gvg_groupSize[{i}] = {len(ids)};")
         cursor += len(ids)
     fills.extend(f"    gvg_groupMembers[{i}] = {oid};" for i, oid in enumerate(members))
-
-    out.append("void ObjectsGen_Init () {\n")
-    out.append("\n".join(fills) + ("\n" if fills else ""))
-    out.append("}\n\n")
 
     # One scan per category. Galaxy has no array parameters, so a shared helper
     # taking a type table is not expressible -- emit the loop per category.
@@ -299,6 +329,13 @@ def build() -> str:
         f"int[{max(len(upgrades), 1)}] gvg_deptUpgradeLevel;\n"
         f"bool[{max(len(upgrades), 1)}] gvg_deptUpgradeIsAlly;\n"
     )
+    declared += [
+        ("gvg_deptUpgradeId", len(upgrades)),
+        ("gvg_deptUpgradeLine", len(upgrades)),
+        ("gvg_deptUpgradeAlly", len(upgrades)),
+        ("gvg_deptUpgradeLevel", len(upgrades)),
+        ("gvg_deptUpgradeIsAlly", len(upgrades)),
+    ]
     for i, u in enumerate(upgrades):
         ally = f'{u["id"]}_Ally'
         fills.append(
@@ -315,6 +352,7 @@ def build() -> str:
         f"string[{max(len(regions), 1)}] gvg_regionNames;\n"
         f"int[{max(len(regions), 1)}] gvg_regionIds;\n"
     )
+    declared += [("gvg_regionNames", len(regions)), ("gvg_regionIds", len(regions))]
     fills.extend(
         f'    gvg_regionNames[{i}] = "{n}";\n    gvg_regionIds[{i}] = {rid};'
         for i, (n, rid) in enumerate(regions)
@@ -341,6 +379,22 @@ def build() -> str:
         "}\n"
     )
 
+    # Emitted last, after every table above has contributed its fills.
+    #
+    # It used to sit in the middle, right after the unit-type and group tables,
+    # which meant the upgrade and region fills appended below it were collected
+    # into a list nobody read again. The region table then declared a count of 1
+    # over an array of nulls, and the first StringLength on it took the map
+    # down; the upgrade table failed silently, which was worse.
+    #
+    # Position is the fix. A fill added anywhere in build() is now emitted by
+    # construction, and check_fills below refuses to write a file where one is
+    # not.
+    out.append("void ObjectsGen_Init () {\n")
+    out.append("\n".join(fills) + ("\n" if fills else ""))
+    out.append("}\n")
+
+    check_fills(declared, "".join(out))
     return "".join(out)
 
 

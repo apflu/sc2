@@ -67,40 +67,6 @@ int[1] gvg_groupFirst;
 int[1] gvg_groupSize;
 int[2] gvg_groupMembers;
 
-void ObjectsGen_Init () {
-    gvg_typesCore[0] = "Lob_Core_Basic";
-    gvg_typesCoreDown[0] = "Lob_CoreDown_Basic";
-    gvg_typesCoreDown_Basic[0] = "Lob_CoreDown_Basic";
-    gvg_typesCore_Basic[0] = "Lob_Core_Basic";
-    gvg_typesDebris[0] = "Lob_Debris_Normal";
-    gvg_typesDebris_Normal[0] = "Lob_Debris_Normal";
-    gvg_typesDevice[0] = "Lob_Device_Basic";
-    gvg_typesDeviceDown[0] = "Lob_DeviceDown_Basic";
-    gvg_typesDeviceDown_Basic[0] = "Lob_DeviceDown_Basic";
-    gvg_typesDevice_Basic[0] = "Lob_Device_Basic";
-    gvg_typesEmp[0] = "Lob_Emp_Basic";
-    gvg_typesEmp_Basic[0] = "Lob_Emp_Basic";
-    gvg_typesHero[0] = "Lob_Hero_Agent";
-    gvg_typesHero_Agent[0] = "Lob_Hero_Agent";
-    gvg_typesMarker[0] = "Lob_Marker_Spawn";
-    gvg_typesMarker_Spawn[0] = "Lob_Marker_Spawn";
-    gvg_typesPile[0] = "Lob_Pile_Ore";
-    gvg_typesPile_Ore[0] = "Lob_Pile_Ore";
-    gvg_typesRecycler[0] = "Lob_Recycler_Basic";
-    gvg_typesRecycler_Basic[0] = "Lob_Recycler_Basic";
-    gvg_typesSCV[0] = "Lob_SCV_Miner";
-    gvg_typesSCV[1] = "Lob_SCV_Unassigned";
-    gvg_typesSCV[2] = "Lob_SCV_Worker";
-    gvg_typesSCV_Miner[0] = "Lob_SCV_Miner";
-    gvg_typesSCV_Unassigned[0] = "Lob_SCV_Unassigned";
-    gvg_typesSCV_Worker[0] = "Lob_SCV_Worker";
-    gvg_groupNames[0] = "debris";
-    gvg_groupFirst[0] = 0;
-    gvg_groupSize[0] = 2;
-    gvg_groupMembers[0] = 982629277;
-    gvg_groupMembers[1] = 1070187309;
-}
-
 //--------------------------------------------------------------------------------------------------
 // Every live Cont unit on the map, whichever variant and whoever owns it.
 // Works for runtime-spawned units too, unlike anything keyed on placed ids.
@@ -1143,4 +1109,49 @@ region ObjectsGen_Region (string name) {
         i = i + 1;
     }
     return RegionEmpty();
+}
+void ObjectsGen_Init () {
+    gvg_typesCore[0] = "Lob_Core_Basic";
+    gvg_typesCoreDown[0] = "Lob_CoreDown_Basic";
+    gvg_typesCoreDown_Basic[0] = "Lob_CoreDown_Basic";
+    gvg_typesCore_Basic[0] = "Lob_Core_Basic";
+    gvg_typesDebris[0] = "Lob_Debris_Normal";
+    gvg_typesDebris_Normal[0] = "Lob_Debris_Normal";
+    gvg_typesDevice[0] = "Lob_Device_Basic";
+    gvg_typesDeviceDown[0] = "Lob_DeviceDown_Basic";
+    gvg_typesDeviceDown_Basic[0] = "Lob_DeviceDown_Basic";
+    gvg_typesDevice_Basic[0] = "Lob_Device_Basic";
+    gvg_typesEmp[0] = "Lob_Emp_Basic";
+    gvg_typesEmp_Basic[0] = "Lob_Emp_Basic";
+    gvg_typesHero[0] = "Lob_Hero_Agent";
+    gvg_typesHero_Agent[0] = "Lob_Hero_Agent";
+    gvg_typesMarker[0] = "Lob_Marker_Spawn";
+    gvg_typesMarker_Spawn[0] = "Lob_Marker_Spawn";
+    gvg_typesPile[0] = "Lob_Pile_Ore";
+    gvg_typesPile_Ore[0] = "Lob_Pile_Ore";
+    gvg_typesRecycler[0] = "Lob_Recycler_Basic";
+    gvg_typesRecycler_Basic[0] = "Lob_Recycler_Basic";
+    gvg_typesSCV[0] = "Lob_SCV_Miner";
+    gvg_typesSCV[1] = "Lob_SCV_Unassigned";
+    gvg_typesSCV[2] = "Lob_SCV_Worker";
+    gvg_typesSCV_Miner[0] = "Lob_SCV_Miner";
+    gvg_typesSCV_Unassigned[0] = "Lob_SCV_Unassigned";
+    gvg_typesSCV_Worker[0] = "Lob_SCV_Worker";
+    gvg_groupNames[0] = "debris";
+    gvg_groupFirst[0] = 0;
+    gvg_groupSize[0] = 2;
+    gvg_groupMembers[0] = 982629277;
+    gvg_groupMembers[1] = 1070187309;
+    gvg_deptUpgradeId[0] = "Malkuth_Upg2_1";
+    gvg_deptUpgradeLine[0] = "Malkuth_Upg2";
+    gvg_deptUpgradeAlly[0] = "Malkuth_Upg2_1_Ally";
+    gvg_deptUpgradeLevel[0] = 1;
+    gvg_deptUpgradeIsAlly[0] = false;
+    gvg_deptUpgradeId[1] = "Malkuth_Upg2_1_Ally";
+    gvg_deptUpgradeLine[1] = "Malkuth_Upg2";
+    gvg_deptUpgradeAlly[1] = "";
+    gvg_deptUpgradeLevel[1] = 1;
+    gvg_deptUpgradeIsAlly[1] = true;
+    gvg_regionNames[0] = "resthall1";
+    gvg_regionIds[0] = 1;
 }
