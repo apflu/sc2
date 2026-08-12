@@ -1,0 +1,483 @@
+//--------------------------------------------------------------------------------------------------
+// Work.
+//
+// The verb itself. 11_employee.galaxy owns the person, 13_containment.galaxy
+// owns the thing, and this is "send that one to do that to it" -- which
+// design 2.1 identifies as the whole reason employees exist. Without it an
+// abnormality is a mine with a plot.
+//
+// The numbers are not here. Every one of them comes from the abnormality's own
+// doc through 04_abno_gen.galaxy: how fast boxes come, how many there are,
+// which box counts read as Good or Normal, and the success chance for each of
+// the four works against each stat level. Adding an abnormality is writing a
+// document.
+//
+// One roll per box, not one roll per work. O-03-03 attempts ten boxes at a
+// chance that depends on the work chosen and the employee's level in the stat
+// that work uses, and the number that land is the result. That is why a
+// specialist is not merely likelier to succeed -- they produce more, and the
+// grade is a consequence of the amount rather than a separate roll.
+//
+// The stat each work leans on:
+//
+//     Instinct   -> Fortitude    Insight    -> Prudence
+//     Attachment -> Temperance   Repression -> Justice
+//
+// Two things are deliberately absent, both marked where they belong:
+//
+//   Failure costs nothing yet. A failed box is White 1-2 damage to the
+//   employee's SP, and there is no SP. The roll is made and the damage is
+//   counted so that adding SP later is one line rather than a redesign.
+//
+//   Work speed does not yet respond to Temperance or to observation level.
+//   The docs give bonuses as flat "+5 Work Speed" against a base stated in
+//   boxes per second, and the two are not in the same unit anywhere I can
+//   check. Inventing the conversion would put a made-up curve underneath every
+//   abnormality at once, so the interval is 1/boxSpeed and the multiplier has
+//   a named home waiting for it.
+//--------------------------------------------------------------------------------------------------
+
+const int c_workInstinct = 0;
+const int c_workInsight = 1;
+const int c_workAttachment = 2;
+const int c_workRepression = 3;
+const int c_workCount = 4;
+
+const int c_resultBad = 0;
+const int c_resultNormal = 1;
+const int c_resultGood = 2;
+
+// How close an employee has to be to the door to be working at it.
+const fixed c_workReach = 3.0;
+
+// TUNING, and the only invented number in this file. Stat gained per completed
+// work, by result. Design 2.2 requires that work be the thing that grows an
+// employee; how fast is a curve nobody has designed yet, and this is a
+// deliberately flat stand-in rather than a guess dressed up as a formula.
+const int c_workGainBad = 1;
+const int c_workGainNormal = 2;
+const int c_workGainGood = 3;
+
+const fixed c_workTick = 0.25;
+
+const int c_workMax = 32;
+
+string[4] gvg_workName;
+
+// The stat each work leans on.
+int[4] gvg_workStat;
+
+// One row per work in progress.
+int gv_workCount;
+unit[32] gvg_workEmp;
+unit[32] gvg_workAbno;
+int[32] gvg_workType;
+int[32] gvg_workBoxes;
+int[32] gvg_workDone;
+fixed[32] gvg_workNextBox;
+
+// What a player's next work order will be. A placeholder for the order UI:
+// there is nowhere to choose a work from yet, so it is chosen once and applies
+// until changed.
+int[16] gvg_workDefault;
+
+// Cooldown per cell, keyed the same way 13_containment keys its cells.
+fixed[32] gvg_workReadyAt;
+
+// PE-Boxes a player has drawn out of each abnormality. Per player AND per
+// abnormality on purpose: design 8.1 has these buying that abnormality's
+// encyclopedia and nothing else, so they must never pool.
+//
+// Flattened player * c_abnoCount + abnormality. Sized for 16 players against 64
+// abnormalities; c_abnoCount is generated, so passing 64 documents means this
+// number has to grow with it.
+int[1024] gvg_workBoxesOf;
+
+// Energy. The same amount as every box produced, into one pool for the whole
+// table, and the win condition is filling it. Not a wallet -- nothing is spent
+// out of it and no player's rate is affected by another's, so it does not touch
+// the no-shared-wallet principle. It is a scoreboard the table fills together.
+int gv_energy;
+int gv_energyGoal;
+bool gv_energySubmitted;
+
+trigger gt_workTick;
+
+string Work_Name (int work) {
+    if (work < 0 || work >= c_workCount) {
+        return "";
+    }
+    return gvg_workName[work];
+}
+
+int Work_Stat (int work) {
+    if (work < 0 || work >= c_workCount) {
+        return c_statFortitude;
+    }
+    return gvg_workStat[work];
+}
+
+int Work_DefaultOf (int player) {
+    if (player < 1 || player > 15) {
+        return c_workInstinct;
+    }
+    return gvg_workDefault[player];
+}
+
+void Work_SetDefault (int player, int work) {
+    if (player < 1 || player > 15 || work < 0 || work >= c_workCount) {
+        return;
+    }
+    gvg_workDefault[player] = work;
+}
+
+//--------------------------------------------------------------------------------------------------
+// PE-Boxes one player has taken out of one abnormality.
+//
+// Flattened player * c_abnoCount + abnormality, which is the whole of the
+// storage: these never combine across abnormalities, so there is no total to
+// keep and no way to accidentally spend one abnormality's boxes on another.
+//--------------------------------------------------------------------------------------------------
+int Work_BoxesOf (int player, int abnoIndex) {
+    if (player < 1 || player > 15 || abnoIndex < 0 || abnoIndex >= c_abnoCount) {
+        return 0;
+    }
+    return gvg_workBoxesOf[player * c_abnoCount + abnoIndex];
+}
+
+//--------------------------------------------------------------------------------------------------
+// Energy, and the end of the game.
+//
+// Boxes pay twice: once into the player's private stock for that abnormality's
+// encyclopedia, and the same amount again into this. So a table that studies
+// its abnormalities is also a table that is winning, and neither is bought at
+// the expense of the other.
+//
+// Submitting is a decision rather than an automatic end, because the threshold
+// being reachable does not mean it is the right moment -- there may be an
+// abnormality loose, or one more work worth finishing.
+//--------------------------------------------------------------------------------------------------
+void Work_AddEnergy (int amount) {
+    gv_energy = gv_energy + amount;
+}
+
+bool Work_CanSubmit () {
+    return gv_energy >= gv_energyGoal && !gv_energySubmitted;
+}
+
+void Work_Submit (int player) {
+    int other;
+
+    if (!Work_CanSubmit()) {
+        return;
+    }
+    gv_energySubmitted = true;
+
+    UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle,
+                     StringToText("energy delivered -- the ship makes it out"));
+
+    other = 1;
+    while (other <= 15) {
+        if (Dept_Of(other) != c_deptNone) {
+            GameOver(other, c_gameOverVictory, true, true);
+        }
+        other = other + 1;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether this employee can start work on this abnormality right now.
+//--------------------------------------------------------------------------------------------------
+int Work_SlotOfEmp (unit emp) {
+    int i;
+
+    i = 0;
+    while (i < gv_workCount) {
+        if (gvg_workEmp[i] == emp) {
+            return i;
+        }
+        i = i + 1;
+    }
+    return -1;
+}
+
+bool Work_IsBusy (unit emp) {
+    return Work_SlotOfEmp(emp) >= 0;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Starts one.
+//
+// The employee is not moved into the cell and nothing is teleported: per
+// docs/usr/containment.md nobody can enter, and standing at the door doing
+// nothing visible is the placeholder that document asks for.
+//--------------------------------------------------------------------------------------------------
+bool Work_Begin (unit emp, unit abno, int work) {
+    int cell;
+    int index;
+
+    if (emp == null || abno == null || !UnitIsAlive(emp) || Work_IsBusy(emp)) {
+        return false;
+    }
+    if (gv_workCount >= c_workMax) {
+        return false;
+    }
+
+    index = AbnoGen_IndexOf(abno);
+    cell = Cont_SlotOf(abno);
+    if (index < 0 || cell < 0) {
+        return false;
+    }
+
+    // A dropped door is exactly and only this: you cannot work on it. That is
+    // the whole consequence for an abnormality that does not escape.
+    if (!Cont_DoorIsUp(abno)) {
+        return false;
+    }
+    if (Cont_State(abno) != c_cellContained) {
+        return false;
+    }
+    if (GameGetMissionTime() < gvg_workReadyAt[cell]) {
+        return false;
+    }
+
+    gvg_workEmp[gv_workCount] = emp;
+    gvg_workAbno[gv_workCount] = abno;
+    gvg_workType[gv_workCount] = work;
+    gvg_workBoxes[gv_workCount] = 0;
+    gvg_workDone[gv_workCount] = 0;
+    gvg_workNextBox[gv_workCount] =
+        GameGetMissionTime() + 1.0 / gvg_abnoBoxSpeed[index];
+    gv_workCount = gv_workCount + 1;
+
+    UnitIssueOrder(emp, OrderTargetingPoint(AbilityCommand("stop", 0),
+                                            UnitGetPosition(emp)),
+                   c_orderQueueReplace);
+    return true;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Drops row `slot`, keeping the rows dense by moving the last one into the gap.
+//--------------------------------------------------------------------------------------------------
+void Work_Drop (int slot) {
+    int last;
+
+    last = gv_workCount - 1;
+    gvg_workEmp[slot] = gvg_workEmp[last];
+    gvg_workAbno[slot] = gvg_workAbno[last];
+    gvg_workType[slot] = gvg_workType[last];
+    gvg_workBoxes[slot] = gvg_workBoxes[last];
+    gvg_workDone[slot] = gvg_workDone[last];
+    gvg_workNextBox[slot] = gvg_workNextBox[last];
+    gv_workCount = last;
+}
+
+string Work_ResultName (int result) {
+    if (result == c_resultGood) {
+        return "Good";
+    }
+    if (result == c_resultNormal) {
+        return "Normal";
+    }
+    return "Bad";
+}
+
+//--------------------------------------------------------------------------------------------------
+// Pays out and clears the row.
+//
+// The result is the box count read against the doc's own ranges, so an
+// abnormality that is generous about what counts as Good says so in its own
+// file rather than here.
+//--------------------------------------------------------------------------------------------------
+void Work_Finish (int slot) {
+    unit emp;
+    unit abno;
+    int index;
+    int cell;
+    int boxes;
+    int result;
+    int gain;
+    int owner;
+
+    emp = gvg_workEmp[slot];
+    abno = gvg_workAbno[slot];
+    index = AbnoGen_IndexOf(abno);
+    cell = Cont_SlotOf(abno);
+    boxes = gvg_workBoxes[slot];
+    owner = UnitGetOwner(emp);
+
+    result = c_resultBad;
+    if (boxes >= gvg_abnoGoodMin[index]) {
+        result = c_resultGood;
+    }
+    else if (boxes >= gvg_abnoNormalMin[index]) {
+        result = c_resultNormal;
+    }
+
+    gain = c_workGainBad;
+    if (result == c_resultGood) {
+        gain = c_workGainGood;
+    }
+    else if (result == c_resultNormal) {
+        gain = c_workGainNormal;
+    }
+    Emp_StatAdd(emp, Work_Stat(gvg_workType[slot]), gain);
+
+    // Boxes pay twice, into two things that never mix.
+    if (owner >= 1 && owner <= 15 && index >= 0) {
+        gvg_workBoxesOf[owner * c_abnoCount + index] =
+            gvg_workBoxesOf[owner * c_abnoCount + index] + boxes;
+    }
+    Work_AddEnergy(boxes);
+
+    if (cell >= 0) {
+        gvg_workReadyAt[cell] = GameGetMissionTime() + gvg_abnoCooldown[index];
+    }
+
+    UIDisplayMessage(
+        PlayerGroupSingle(owner), c_messageAreaSubtitle,
+        StringToText(gvg_abnoName[index] + ": " + Work_Name(gvg_workType[slot])
+                     + " -- " + IntToString(boxes) + " boxes, "
+                     + Work_ResultName(result)
+                     + "  (+" + IntToString(gain) + " " + Emp_StatName(Work_Stat(gvg_workType[slot]))
+                     + ")"));
+
+    Work_Drop(slot);
+}
+
+//--------------------------------------------------------------------------------------------------
+// One box attempt.
+//
+// The chance is the abnormality's own preference for this work against this
+// employee's LEVEL in the matching stat, straight out of its doc. Level, not
+// value: the source tables are indexed I to V, which is also why an employee
+// with 30 Prudence and one with 44 are the same to an abnormality, and why the
+// thresholds are worth caring about.
+//--------------------------------------------------------------------------------------------------
+void Work_RollBox (int slot) {
+    unit emp;
+    int index;
+    int chance;
+
+    emp = gvg_workEmp[slot];
+    index = AbnoGen_IndexOf(gvg_workAbno[slot]);
+    chance = AbnoGen_Pref(index, gvg_workType[slot],
+                          Emp_StatLevel(emp, Work_Stat(gvg_workType[slot])));
+
+    gvg_workDone[slot] = gvg_workDone[slot] + 1;
+    if (RandomInt(1, 100) <= chance) {
+        gvg_workBoxes[slot] = gvg_workBoxes[slot] + 1;
+    }
+    // A missed box is White 1-2 to the employee's SP. There is no SP yet, so
+    // nothing is applied -- but this is the only place it will ever go.
+
+    gvg_workNextBox[slot] = GameGetMissionTime() + 1.0 / gvg_abnoBoxSpeed[index];
+}
+
+//--------------------------------------------------------------------------------------------------
+// Turns "sent to the door" into work.
+//
+// No new ability and no new button: an order targeting a door is already an
+// unambiguous statement of intent, and UnitOrder plus OrderGetTargetUnit can
+// read it. The proper order UI will replace the reading, not the meaning.
+//--------------------------------------------------------------------------------------------------
+void Work_CheckOrders () {
+    unitgroup all;
+    unit emp;
+    unit door;
+    unit abno;
+    int count;
+    int i;
+    int slot;
+
+    all = ObjectsGen_ScanEmp();
+    count = UnitGroupCount(all, c_unitCountAlive);
+
+    i = 1;
+    while (i <= count) {
+        emp = UnitGroupUnit(all, i);
+        if (emp != null && UnitIsAlive(emp) && !Work_IsBusy(emp)
+            && UnitOrderCount(emp) > 0) {
+            door = OrderGetTargetUnit(UnitOrder(emp, 0));
+            if (Cont_IsDoor(door)
+                && DistanceBetweenPoints(UnitGetPosition(emp),
+                                         UnitGetPosition(door)) <= c_workReach) {
+                slot = 0;
+                while (slot < gv_cellCount) {
+                    abno = gvg_cellAbno[slot];
+                    if (Cont_DoorAt(gvg_cellHome[slot]) == door) {
+                        Work_Begin(emp, abno, Work_DefaultOf(UnitGetOwner(emp)));
+                        slot = gv_cellCount;
+                    }
+                    slot = slot + 1;
+                }
+            }
+        }
+        i = i + 1;
+    }
+}
+
+bool Work_Tick_Func (bool testConds, bool runActions) {
+    fixed now;
+    int index;
+    int slot;
+
+    if (!runActions) {
+        return true;
+    }
+
+    now = GameGetMissionTime();
+
+    // Backwards: finishing a row moves the last row into its place.
+    slot = gv_workCount - 1;
+    while (slot >= 0) {
+        if (gvg_workEmp[slot] == null || !UnitIsAlive(gvg_workEmp[slot])
+            || Cont_State(gvg_workAbno[slot]) != c_cellContained) {
+            // The worker died, or the thing they were working on got out. Either
+            // way the work is over and pays nothing.
+            Work_Drop(slot);
+        }
+        else if (now >= gvg_workNextBox[slot]) {
+            Work_RollBox(slot);
+            index = AbnoGen_IndexOf(gvg_workAbno[slot]);
+            if (gvg_workDone[slot] >= gvg_abnoMaxBox[index]) {
+                Work_Finish(slot);
+            }
+        }
+        slot = slot - 1;
+    }
+
+    Work_CheckOrders();
+    return true;
+}
+
+void Work_Init () {
+    int player;
+
+    gvg_workName[c_workInstinct] = "Instinct";
+    gvg_workName[c_workInsight] = "Insight";
+    gvg_workName[c_workAttachment] = "Attachment";
+    gvg_workName[c_workRepression] = "Repression";
+
+    gvg_workStat[c_workInstinct] = c_statFortitude;
+    gvg_workStat[c_workInsight] = c_statPrudence;
+    gvg_workStat[c_workAttachment] = c_statTemperance;
+    gvg_workStat[c_workRepression] = c_statJustice;
+
+    gv_workCount = 0;
+    gv_energy = 0;
+    gv_energySubmitted = false;
+
+    // PLACEHOLDER. Design says the goal scales with difficulty, and difficulty
+    // is the lobby's business, which does not exist yet.
+    gv_energyGoal = 200;
+
+    player = 1;
+    while (player <= 15) {
+        gvg_workDefault[player] = c_workInstinct;
+        player = player + 1;
+    }
+
+    gt_workTick = TriggerCreate("Work_Tick_Func");
+    TriggerAddEventTimePeriodic(gt_workTick, c_workTick, c_timeGame);
+}

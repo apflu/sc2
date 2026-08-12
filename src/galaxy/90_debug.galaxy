@@ -267,6 +267,96 @@ void Debug_Breach (int player, string slotWord) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// -work <inst|insi|atta|repr>
+//
+// Sets what the next employee sent to a door will do. Sending is the game's own
+// right-click; there is no order UI yet and this stands in for the part of it
+// that chooses.
+//--------------------------------------------------------------------------------------------------
+int Debug_WorkFromWord (string word) {
+    if (StringEqual(word, "inst", false) || StringEqual(word, "i", false)) {
+        return c_workInstinct;
+    }
+    if (StringEqual(word, "insi", false) || StringEqual(word, "n", false)) {
+        return c_workInsight;
+    }
+    if (StringEqual(word, "atta", false) || StringEqual(word, "a", false)) {
+        return c_workAttachment;
+    }
+    if (StringEqual(word, "repr", false) || StringEqual(word, "r", false)) {
+        return c_workRepression;
+    }
+    return -1;
+}
+
+void Debug_Work (int player, string word) {
+    unit abno;
+    int work;
+    int slot;
+    string line;
+
+    work = Debug_WorkFromWord(word);
+    if (work >= 0) {
+        Work_SetDefault(player, work);
+    }
+
+    Debug_Say(player, "work: sending an employee to a door does "
+                      + Work_Name(Work_DefaultOf(player))
+                      + " (inst|insi|atta|repr)");
+
+    // The odds for that work against each abnormality, at this player's
+    // employees' current level in the matching stat. This is the whole reason
+    // to choose one work over another, so it should not need a wiki open.
+    slot = 0;
+    while (slot < gv_cellCount) {
+        abno = gvg_cellAbno[slot];
+        line = "  " + gvg_abnoName[AbnoGen_IndexOf(abno)] + ":";
+        work = 0;
+        while (work < c_workCount) {
+            line = line + " " + StringSub(Work_Name(work), 1, 4) + "=";
+            if (UnitGroupCount(Emp_Of(player), c_unitCountAlive) > 0) {
+                line = line + IntToString(AbnoGen_Pref(
+                    AbnoGen_IndexOf(abno), work,
+                    Emp_StatLevel(UnitGroupUnit(Emp_Of(player), 1), Work_Stat(work))))
+                    + "%";
+            }
+            else {
+                line = line + IntToString(AbnoGen_Pref(AbnoGen_IndexOf(abno), work, 1))
+                       + "%@I";
+            }
+            work = work + 1;
+        }
+        Debug_Say(player, line);
+        slot = slot + 1;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// -energy
+//--------------------------------------------------------------------------------------------------
+void Debug_Energy (int player, string word) {
+    if (StringEqual(word, "submit", false)) {
+        if (Work_CanSubmit()) {
+            Work_Submit(player);
+        }
+        else {
+            Debug_Say(player, "energy: not enough yet");
+        }
+        return;
+    }
+    if (word != "") {
+        Work_AddEnergy(Debug_Int(word, 0));
+    }
+    // Galaxy has no conditional expression, so this is two statements.
+    if (Work_CanSubmit()) {
+        Debug_Say(player, "energy " + IntToString(gv_energy) + "/"
+                          + IntToString(gv_energyGoal) + "  -- -energy submit to end it");
+        return;
+    }
+    Debug_Say(player, "energy " + IntToString(gv_energy) + "/" + IntToString(gv_energyGoal));
+}
+
+//--------------------------------------------------------------------------------------------------
 // -qlip <slot> <n>
 //
 // The counter without the thing that moves it, since the thing that moves it is
@@ -374,6 +464,8 @@ void Debug_Help (int player) {
     Debug_Say(player, "-cont                   every cell: grade, state, counter, door");
     Debug_Say(player, "-breach [slot]          that abnormality decides to leave");
     Debug_Say(player, "-qlip <slot> <n>        set a Qliphoth counter");
+    Debug_Say(player, "-work <type>            what a door-bound employee will do");
+    Debug_Say(player, "-energy [n|submit]      the win condition");
 }
 
 bool Debug_Chat_Func (bool testConds, bool runActions) {
@@ -425,6 +517,12 @@ bool Debug_Chat_Func (bool testConds, bool runActions) {
     }
     else if (StringEqual(command, "-breach", false)) {
         Debug_Breach(player, StringWord(message, 2));
+    }
+    else if (StringEqual(command, "-work", false)) {
+        Debug_Work(player, StringWord(message, 2));
+    }
+    else if (StringEqual(command, "-energy", false)) {
+        Debug_Energy(player, StringWord(message, 2));
     }
     else if (StringEqual(command, "-qlip", false)) {
         Debug_SetCounter(player, StringWord(message, 2), StringWord(message, 3));
