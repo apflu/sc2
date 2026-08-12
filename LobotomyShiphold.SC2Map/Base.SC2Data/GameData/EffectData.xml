@@ -12,4 +12,7 @@
     <CEffectApplyBehavior id="Lob_Debug_Haste">
         <Behavior value="Lob_Debug_Haste"/>
     </CEffectApplyBehavior>
+    <!-- Deliberately empty. An ability has to point at an effect; this one's
+         whole job is to be pressable so a trigger can hear it. -->
+    <CEffectSet id="Lob_Nothing"/>
 </Catalog>

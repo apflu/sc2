@@ -67,6 +67,20 @@
         <LifeMax value="50"/>
         <Footprint value="Footprint4x4Contour"/>
         <PlacementFootprint value="Footprint4x4Contour"/>
+        <!-- The encyclopedia. Four buttons, generic across every abnormality:
+             the text on them is set per unit instance at runtime, so this panel
+             serves whichever abnormality it stands next to and nothing has to be
+             authored per abnormality. -->
+        <AbilArray Link="Lob_Obs_1"/>
+        <AbilArray Link="Lob_Obs_2"/>
+        <AbilArray Link="Lob_Obs_3"/>
+        <AbilArray Link="Lob_Obs_4"/>
+        <CardLayouts>
+            <LayoutButtons Face="Lob_Obs_1" Type="AbilCmd" AbilCmd="Lob_Obs_1,Execute" Row="0" Column="0"/>
+            <LayoutButtons Face="Lob_Obs_2" Type="AbilCmd" AbilCmd="Lob_Obs_2,Execute" Row="0" Column="1"/>
+            <LayoutButtons Face="Lob_Obs_3" Type="AbilCmd" AbilCmd="Lob_Obs_3,Execute" Row="0" Column="2"/>
+            <LayoutButtons Face="Lob_Obs_4" Type="AbilCmd" AbilCmd="Lob_Obs_4,Execute" Row="0" Column="3"/>
+        </CardLayouts>
         <EditorCategories value="ObjectType:Destructible,ObjectFamily:Campaign"/>
     </CUnit>
     <CUnit id="Lob_Marker_Spawn" parent="DESTRUCTIBLE">

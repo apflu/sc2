@@ -28,6 +28,11 @@ int[10] gvg_abnoObsSuccess;
 // PE-Box price of each of the four sections, flattened:
 // abnormality * 4 + section. Observation level is how many are bought.
 int[8] gvg_abnoObsCost;
+// What a bought section says, flattened abnormality * 4 + section.
+// Pushed onto the panel's buttons with UnitSetInfoButtonTooltip, which
+// is per unit INSTANCE -- so four generic abilities serve every
+// abnormality and nothing has to be generated into the catalogs.
+string[8] gvg_abnoLore;
 
 void AbnoGen_Init () {
     gvg_abnoType[0] = "0_00_00";
@@ -50,9 +55,13 @@ void AbnoGen_Init () {
     gvg_abnoObsSpeed[4] = 0;
     gvg_abnoObsSuccess[4] = 0;
     gvg_abnoObsCost[0] = 0;
+    gvg_abnoLore[0] = "Its special ability activates when its  Qliphoth Counter reaches 0. It will decrease by 1 when Repression.png Repression is used on it.<n/>When the counter is depleted, the Abnormality will breach but will remain immobile outside the Containment Unit's door. It possesses low  HP at 100 and doesn't have any other special abilities. It is easy to suppress and will flip upside down when defeated.";
     gvg_abnoObsCost[1] = 0;
+    gvg_abnoLore[1] = "No preference data.";
     gvg_abnoObsCost[2] = 0;
+    gvg_abnoLore[2] = "";
     gvg_abnoObsCost[3] = 0;
+    gvg_abnoLore[3] = "";
     gvg_abnoPref[0] = 50;
     gvg_abnoPref[1] = 50;
     gvg_abnoPref[2] = 50;
@@ -93,9 +102,13 @@ void AbnoGen_Init () {
     gvg_abnoObsSpeed[9] = 10;
     gvg_abnoObsSuccess[9] = 10;
     gvg_abnoObsCost[4] = 8;
+    gvg_abnoLore[4] = "Its special ability restores 4 points of SP of the agent who was working on it if the Work Result is Good. If the employee collects all the 10 E-Boxes, One Sin will heal 4 points of SP to all Agents belonging to the department.";
     gvg_abnoObsCost[5] = 8;
+    gvg_abnoLore[5] = "Success per box, by the matching stat's level:<n/>        I   II  III IV  V<n/>Instinct   50  40  30  30  30 <n/>Insight    70  70  50  50  50 <n/>Attachment 70  70  70  70  70 <n/>Repression 50  40  30  30  30 ";
     gvg_abnoObsCost[6] = 8;
+    gvg_abnoLore[6] = "1  One Sin and Hundreds of Good Deeds will restore the employee’s mental state when the work result is Good. <name>, who received this benediction, commented that it felt refreshing.<n/>2  After the maximum number of PE-Boxes was produced with One Sin and Hundreds of Good Deeds, it restored the mental health of every employee in the department.";
     gvg_abnoObsCost[7] = 8;
+    gvg_abnoLore[7] = "Qliphoth counter X<n/>Non-Escaping Entity";
     gvg_abnoPref[20] = 50;
     gvg_abnoPref[21] = 40;
     gvg_abnoPref[22] = 30;
@@ -218,4 +231,14 @@ int AbnoGen_ObsCost (int index, int obs) {
         return 0;
     }
     return gvg_abnoObsCost[index * 4 + obs];
+}
+
+//--------------------------------------------------------------------------------------------------
+// What section `sec` of this abnormality says.
+//--------------------------------------------------------------------------------------------------
+string AbnoGen_Lore (int index, int sec) {
+    if (index < 0 || index >= c_abnoCount || sec < 0 || sec >= 4) {
+        return "";
+    }
+    return gvg_abnoLore[index * 4 + sec];
 }

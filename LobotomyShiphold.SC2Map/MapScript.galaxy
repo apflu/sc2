@@ -72,6 +72,11 @@ int[10] gvg_abnoObsSuccess;
 // PE-Box price of each of the four sections, flattened:
 // abnormality * 4 + section. Observation level is how many are bought.
 int[8] gvg_abnoObsCost;
+// What a bought section says, flattened abnormality * 4 + section.
+// Pushed onto the panel's buttons with UnitSetInfoButtonTooltip, which
+// is per unit INSTANCE -- so four generic abilities serve every
+// abnormality and nothing has to be generated into the catalogs.
+string[8] gvg_abnoLore;
 
 void AbnoGen_Init () {
     gvg_abnoType[0] = "0_00_00";
@@ -94,9 +99,13 @@ void AbnoGen_Init () {
     gvg_abnoObsSpeed[4] = 0;
     gvg_abnoObsSuccess[4] = 0;
     gvg_abnoObsCost[0] = 0;
+    gvg_abnoLore[0] = "Its special ability activates when its  Qliphoth Counter reaches 0. It will decrease by 1 when Repression.png Repression is used on it.<n/>When the counter is depleted, the Abnormality will breach but will remain immobile outside the Containment Unit's door. It possesses low  HP at 100 and doesn't have any other special abilities. It is easy to suppress and will flip upside down when defeated.";
     gvg_abnoObsCost[1] = 0;
+    gvg_abnoLore[1] = "No preference data.";
     gvg_abnoObsCost[2] = 0;
+    gvg_abnoLore[2] = "";
     gvg_abnoObsCost[3] = 0;
+    gvg_abnoLore[3] = "";
     gvg_abnoPref[0] = 50;
     gvg_abnoPref[1] = 50;
     gvg_abnoPref[2] = 50;
@@ -137,9 +146,13 @@ void AbnoGen_Init () {
     gvg_abnoObsSpeed[9] = 10;
     gvg_abnoObsSuccess[9] = 10;
     gvg_abnoObsCost[4] = 8;
+    gvg_abnoLore[4] = "Its special ability restores 4 points of SP of the agent who was working on it if the Work Result is Good. If the employee collects all the 10 E-Boxes, One Sin will heal 4 points of SP to all Agents belonging to the department.";
     gvg_abnoObsCost[5] = 8;
+    gvg_abnoLore[5] = "Success per box, by the matching stat's level:<n/>        I   II  III IV  V<n/>Instinct   50  40  30  30  30 <n/>Insight    70  70  50  50  50 <n/>Attachment 70  70  70  70  70 <n/>Repression 50  40  30  30  30 ";
     gvg_abnoObsCost[6] = 8;
+    gvg_abnoLore[6] = "1  One Sin and Hundreds of Good Deeds will restore the employee’s mental state when the work result is Good. <name>, who received this benediction, commented that it felt refreshing.<n/>2  After the maximum number of PE-Boxes was produced with One Sin and Hundreds of Good Deeds, it restored the mental health of every employee in the department.";
     gvg_abnoObsCost[7] = 8;
+    gvg_abnoLore[7] = "Qliphoth counter X<n/>Non-Escaping Entity";
     gvg_abnoPref[20] = 50;
     gvg_abnoPref[21] = 40;
     gvg_abnoPref[22] = 30;
@@ -262,6 +275,16 @@ int AbnoGen_ObsCost (int index, int obs) {
         return 0;
     }
     return gvg_abnoObsCost[index * 4 + obs];
+}
+
+//--------------------------------------------------------------------------------------------------
+// What section `sec` of this abnormality says.
+//--------------------------------------------------------------------------------------------------
+string AbnoGen_Lore (int index, int sec) {
+    if (index < 0 || index >= c_abnoCount || sec < 0 || sec >= 4) {
+        return "";
+    }
+    return gvg_abnoLore[index * 4 + sec];
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -2136,12 +2159,12 @@ void Registry_Init () {
 //   per-point Modification is where the stat's effect goes. War3's STR/AGI/INT
 //   are this catalog.
 //
-//   A stat is STORED as a stackable hidden buff, one point per stack. An
-//   attribute's points are not its own stack count and there is no native that
-//   writes them: points arrive only through some other behavior's
-//   Modification/AttributeChangeArray. So the buff is the number and the
-//   attribute is the readout. Blizzard's own case is starcoop's
-//   AbathurPropArmor, fed by BiomassBuff1/10/100.
+//   A stat is STORED in that same behavior, through UnitGetAttributePoint and
+//   UnitSetAttributePoint. Points are not the behavior's stack count, so
+//   UnitBehaviorCount answers 0 no matter what -- but there is a native pair
+//   for them, and it lives in natives_missing.galaxy rather than in
+//   natives.galaxy, which is why an earlier version of this file routed the
+//   number through four stackable carrier buffs instead. Those are gone.
 //
 //   Rank is one CBehaviorVeterancy. The hero pane's level readout is a sum over
 //   every veterancy a unit carries, so a unit with exactly one veterancy shows
@@ -2155,9 +2178,11 @@ void Registry_Init () {
 // obstacle to route around; it is the panel doing its job, and the thing it
 // wants to be handed is the rank.
 //
-// The second attempt read and wrote the attribute behavior itself. It silently
-// did nothing at all -- the count answered 0 before and after every write,
-// because there was no channel to the points.
+// The second attempt read and wrote the attribute behavior with the BEHAVIOR
+// natives. It silently did nothing -- the count answered 0 before and after
+// every write. The third routed the number through a stackable carrier buff per
+// stat, which worked; the fourth is this one, after UnitSetAttributePoint
+// turned up in the natives file that natives.galaxy does not include.
 //
 // What is left for this file is two rules that have no engine-side home:
 //
@@ -2206,11 +2231,15 @@ const fixed c_empPeriod = 2.0;
 
 const string c_panicBuff = "Lob_Panicked";
 
-// The attribute behavior is what the panel draws; the point behavior is what
-// holds the number. Only the second is ever read or written.
 string[4] gvg_statBehavior;
-string[4] gvg_statPoint;
 string[4] gvg_statName;
+
+// The base/bonus selector on the attribute point natives. Both calls pass the
+// same value, so the stat round-trips whichever half of the split this picks;
+// the panel shows the total either way. Worth one look in game only if a
+// department upgrade ever needs to add points that Training Team cannot take
+// back, which is exactly what the other half is for.
+const bool c_attrBase = true;
 
 // Absolute points at which each stat level starts.
 int[6] gvg_statLevelMin;
@@ -2228,13 +2257,6 @@ string Emp_StatBehavior (int stat) {
     return gvg_statBehavior[stat];
 }
 
-string Emp_StatPoint (int stat) {
-    if (stat < 0 || stat >= c_statCount) {
-        return "";
-    }
-    return gvg_statPoint[stat];
-}
-
 string Emp_StatName (int stat) {
     if (stat < 0 || stat >= c_statCount) {
         return "";
@@ -2249,7 +2271,7 @@ int Emp_Stat (unit who, int stat) {
     if (who == null || stat < 0 || stat >= c_statCount) {
         return 0;
     }
-    return UnitBehaviorCount(who, gvg_statPoint[stat]);
+    return UnitGetAttributePoint(who, gvg_statBehavior[stat], c_attrBase);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -2295,11 +2317,8 @@ void Emp_StatAdd (unit who, int stat, int delta) {
         want = cap;
     }
 
-    if (want > have) {
-        UnitBehaviorAdd(who, gvg_statPoint[stat], who, want - have);
-    }
-    else if (want < have) {
-        UnitBehaviorRemove(who, gvg_statPoint[stat], have - want);
+    if (want != have) {
+        UnitSetAttributePoint(who, gvg_statBehavior[stat], c_attrBase, want);
     }
 }
 
@@ -2565,11 +2584,6 @@ void Employee_Init () {
     gvg_statBehavior[c_statPrudence] = "Lob_Attr_Prudence";
     gvg_statBehavior[c_statTemperance] = "Lob_Attr_Temperance";
     gvg_statBehavior[c_statJustice] = "Lob_Attr_Justice";
-
-    gvg_statPoint[c_statFortitude] = "Lob_Point_Fortitude";
-    gvg_statPoint[c_statPrudence] = "Lob_Point_Prudence";
-    gvg_statPoint[c_statTemperance] = "Lob_Point_Temperance";
-    gvg_statPoint[c_statJustice] = "Lob_Point_Justice";
 
     gvg_statName[c_statFortitude] = "Fortitude";
     gvg_statName[c_statPrudence] = "Prudence";
@@ -2959,6 +2973,13 @@ void Departments_Init () {
 const int c_doorTypeCount = 1;
 string[1] gvg_doorType;
 
+// The control panel, and the four encyclopedia buttons on it. Named outright
+// for the same reason the door is: the panel was copied from a Blizzard
+// destructible and carries no Lob_ prefix.
+const string c_panelType = "ContainGateControl";
+const int c_obsAbilCount = 4;
+string[4] gvg_obsAbil;
+
 const string c_containedBuff = "Lob_Contained";
 const string c_qliphothBuff = "Lob_Qliphoth";
 const string c_doorStrainBuff = "Lob_DoorStrain";
@@ -2995,6 +3016,7 @@ fixed[32] gvg_cellStrainAt;
 
 trigger gt_cellFatal;
 trigger gt_cellTick;
+trigger gt_cellObserve;
 
 //--------------------------------------------------------------------------------------------------
 // Registry.
@@ -3103,6 +3125,23 @@ bool Cont_DoorIsUp (unit abno) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// The control panel of a cell: nearest one to that abnormality's home.
+//--------------------------------------------------------------------------------------------------
+unit Cont_PanelAt (point home) {
+    unit panel;
+
+    panel = UnitGroupClosestToPoint(
+        UnitGroup(c_panelType, c_playerAny, RegionEntireMap(), null, 0), home);
+    if (panel == null) {
+        return null;
+    }
+    if (DistanceBetweenPoints(UnitGetPosition(panel), home) > c_cellRadius) {
+        return null;
+    }
+    return panel;
+}
+
+//--------------------------------------------------------------------------------------------------
 // The encyclopedia: what a player has extracted from an abnormality, and what
 // they have spent it on.
 //
@@ -3205,6 +3244,84 @@ bool Cont_Observe (int player, int abnoIndex) {
 
     gvg_obsBoxes[i] = gvg_obsBoxes[i] - cost;
     gvg_obsLevel[i] = level + 1;
+    return true;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Brings one panel's four buttons into line with what its owner knows.
+//
+// A section not yet bought is an ability you can press. A bought one is
+// disabled, which is what "becomes passive" is in engine terms -- it keeps its
+// place and its text and stops being a thing you do. Either way the tooltip is
+// pushed per unit INSTANCE with UnitSetInfoButtonTooltip, which is why four
+// generic abilities can serve every abnormality and why the lore never has to
+// leave the document it is written in.
+//
+// Pushed to everyone rather than to the owner alone: a panel is a thing in a
+// room, and what it says about an abnormality is the same fact whoever reads
+// it. Whose PE-Boxes buy the next section is a separate question and is asked
+// when the button is pressed.
+//--------------------------------------------------------------------------------------------------
+void Cont_SyncPanel (int slot) {
+    unit panel;
+    int index;
+    int level;
+    int sec;
+    int cost;
+
+    panel = Cont_PanelAt(gvg_cellHome[slot]);
+    if (panel == null) {
+        return;
+    }
+
+    index = AbnoGen_IndexOf(gvg_cellAbno[slot]);
+    level = Cont_ObservationOfPlayer(UnitGetOwner(panel), index);
+
+    sec = 0;
+    while (sec < c_obsAbilCount) {
+        if (sec < level) {
+            UnitAbilityEnable(panel, gvg_obsAbil[sec], false);
+            UnitSetInfoButtonTooltip(panel, gvg_obsAbil[sec],
+                                     StringToText(AbnoGen_Lore(index, sec)));
+        }
+        else {
+            UnitAbilityEnable(panel, gvg_obsAbil[sec], sec == level);
+            cost = AbnoGen_ObsCost(index, sec);
+            UnitSetInfoButtonTooltip(
+                panel, gvg_obsAbil[sec],
+                StringToText("Unobserved. " + IntToString(cost) + " PE-Boxes."
+                             + "<n/>You have " + IntToString(
+                                 Cont_BoxesOf(UnitGetOwner(panel), index)) + "."));
+        }
+        sec = sec + 1;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// A press on one of the four buttons.
+//
+// Which section it is comes from which ability fired, and which abnormality
+// from which panel it fired on -- so the same four abilities work everywhere
+// and nothing is keyed by name.
+//--------------------------------------------------------------------------------------------------
+bool Cont_Observe_Func (bool testConds, bool runActions) {
+    unit panel;
+    int slot;
+
+    if (!runActions) {
+        return true;
+    }
+
+    panel = EventUnit();
+    slot = 0;
+    while (slot < gv_cellCount) {
+        if (Cont_PanelAt(gvg_cellHome[slot]) == panel) {
+            Cont_Observe(UnitGetOwner(panel), AbnoGen_IndexOf(gvg_cellAbno[slot]));
+            Cont_SyncPanel(slot);
+            return true;
+        }
+        slot = slot + 1;
+    }
     return true;
 }
 
@@ -3487,6 +3604,7 @@ bool Cont_Tick_Func (bool testConds, bool runActions) {
         else if (gvg_cellState[slot] == c_cellReturning && now >= gvg_cellReturnAt[slot]) {
             Cont_Return(slot);
         }
+        Cont_SyncPanel(slot);
         slot = slot + 1;
     }
     return true;
@@ -3522,9 +3640,25 @@ void Cont_BuildRegistry () {
 }
 
 void Containment_Init () {
+    int i;
+
     gvg_doorType[0] = "ContainGateHorizontal";
 
+    gvg_obsAbil[0] = "Lob_Obs_1";
+    gvg_obsAbil[1] = "Lob_Obs_2";
+    gvg_obsAbil[2] = "Lob_Obs_3";
+    gvg_obsAbil[3] = "Lob_Obs_4";
+
     Cont_BuildRegistry();
+
+    gt_cellObserve = TriggerCreate("Cont_Observe_Func");
+    i = 0;
+    while (i < c_obsAbilCount) {
+        TriggerAddEventUnitAbility(gt_cellObserve, null,
+                                   AbilityCommand(gvg_obsAbil[i], 0),
+                                   c_unitAbilStageExecute, true);
+        i = i + 1;
+    }
 
     gt_cellFatal = TriggerCreate("Cont_Fatal_Func");
     TriggerAddEventUnitDamaged(gt_cellFatal, null, c_unitDamageTypeAny, c_unitDamageFatal, null);

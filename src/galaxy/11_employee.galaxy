@@ -16,12 +16,12 @@
 //   per-point Modification is where the stat's effect goes. War3's STR/AGI/INT
 //   are this catalog.
 //
-//   A stat is STORED as a stackable hidden buff, one point per stack. An
-//   attribute's points are not its own stack count and there is no native that
-//   writes them: points arrive only through some other behavior's
-//   Modification/AttributeChangeArray. So the buff is the number and the
-//   attribute is the readout. Blizzard's own case is starcoop's
-//   AbathurPropArmor, fed by BiomassBuff1/10/100.
+//   A stat is STORED in that same behavior, through UnitGetAttributePoint and
+//   UnitSetAttributePoint. Points are not the behavior's stack count, so
+//   UnitBehaviorCount answers 0 no matter what -- but there is a native pair
+//   for them, and it lives in natives_missing.galaxy rather than in
+//   natives.galaxy, which is why an earlier version of this file routed the
+//   number through four stackable carrier buffs instead. Those are gone.
 //
 //   Rank is one CBehaviorVeterancy. The hero pane's level readout is a sum over
 //   every veterancy a unit carries, so a unit with exactly one veterancy shows
@@ -35,9 +35,11 @@
 // obstacle to route around; it is the panel doing its job, and the thing it
 // wants to be handed is the rank.
 //
-// The second attempt read and wrote the attribute behavior itself. It silently
-// did nothing at all -- the count answered 0 before and after every write,
-// because there was no channel to the points.
+// The second attempt read and wrote the attribute behavior with the BEHAVIOR
+// natives. It silently did nothing -- the count answered 0 before and after
+// every write. The third routed the number through a stackable carrier buff per
+// stat, which worked; the fourth is this one, after UnitSetAttributePoint
+// turned up in the natives file that natives.galaxy does not include.
 //
 // What is left for this file is two rules that have no engine-side home:
 //
@@ -86,11 +88,15 @@ const fixed c_empPeriod = 2.0;
 
 const string c_panicBuff = "Lob_Panicked";
 
-// The attribute behavior is what the panel draws; the point behavior is what
-// holds the number. Only the second is ever read or written.
 string[4] gvg_statBehavior;
-string[4] gvg_statPoint;
 string[4] gvg_statName;
+
+// The base/bonus selector on the attribute point natives. Both calls pass the
+// same value, so the stat round-trips whichever half of the split this picks;
+// the panel shows the total either way. Worth one look in game only if a
+// department upgrade ever needs to add points that Training Team cannot take
+// back, which is exactly what the other half is for.
+const bool c_attrBase = true;
 
 // Absolute points at which each stat level starts.
 int[6] gvg_statLevelMin;
@@ -108,13 +114,6 @@ string Emp_StatBehavior (int stat) {
     return gvg_statBehavior[stat];
 }
 
-string Emp_StatPoint (int stat) {
-    if (stat < 0 || stat >= c_statCount) {
-        return "";
-    }
-    return gvg_statPoint[stat];
-}
-
 string Emp_StatName (int stat) {
     if (stat < 0 || stat >= c_statCount) {
         return "";
@@ -129,7 +128,7 @@ int Emp_Stat (unit who, int stat) {
     if (who == null || stat < 0 || stat >= c_statCount) {
         return 0;
     }
-    return UnitBehaviorCount(who, gvg_statPoint[stat]);
+    return UnitGetAttributePoint(who, gvg_statBehavior[stat], c_attrBase);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -175,11 +174,8 @@ void Emp_StatAdd (unit who, int stat, int delta) {
         want = cap;
     }
 
-    if (want > have) {
-        UnitBehaviorAdd(who, gvg_statPoint[stat], who, want - have);
-    }
-    else if (want < have) {
-        UnitBehaviorRemove(who, gvg_statPoint[stat], have - want);
+    if (want != have) {
+        UnitSetAttributePoint(who, gvg_statBehavior[stat], c_attrBase, want);
     }
 }
 
@@ -445,11 +441,6 @@ void Employee_Init () {
     gvg_statBehavior[c_statPrudence] = "Lob_Attr_Prudence";
     gvg_statBehavior[c_statTemperance] = "Lob_Attr_Temperance";
     gvg_statBehavior[c_statJustice] = "Lob_Attr_Justice";
-
-    gvg_statPoint[c_statFortitude] = "Lob_Point_Fortitude";
-    gvg_statPoint[c_statPrudence] = "Lob_Point_Prudence";
-    gvg_statPoint[c_statTemperance] = "Lob_Point_Temperance";
-    gvg_statPoint[c_statJustice] = "Lob_Point_Justice";
 
     gvg_statName[c_statFortitude] = "Fortitude";
     gvg_statName[c_statPrudence] = "Prudence";

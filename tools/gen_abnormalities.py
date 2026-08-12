@@ -165,6 +165,56 @@ def parse_costs(text: str) -> list[int]:
     return costs
 
 
+# Where each section's lore comes from. The button on the panel shows this once
+# the section is bought, so the doc's prose is the reward for buying it -- which
+# is the arrangement the source has too.
+LORE_SOURCE = ["Ability", "Abnormality Work Preferences",
+               "Abnormality Management Tips", "Abnormality Escape Information"]
+
+
+def prefs_lore(prefs: dict[str, list[int]]) -> str:
+    """The preference table rendered from the parsed numbers.
+
+    Not from the prose. The wiki paste is a tab-separated grid wrapped at
+    arbitrary points, and re-flowing it produces something worse than the table
+    it came from -- while the numbers behind it are already parsed and are the
+    thing a player actually wants to read off this button.
+    """
+    if not prefs:
+        return "No preference data."
+    rows = ["Success per box, by the matching stat's level:"]
+    rows.append("        I   II  III IV  V")
+    for work in WORKS:
+        row = prefs.get(work)
+        if not row:
+            continue
+        rows.append(f"{work:<11}" + " ".join(f"{p:<3}" for p in row))
+    return "<n/>".join(rows)
+
+
+def parse_lore(text: str) -> list[str]:
+    """One block of prose per section, flattened to a single Galaxy string.
+
+    Wiki paste is ragged, so lines are joined with an explicit newline token
+    rather than trusting the original wrapping, and the icon filenames the wiki
+    leaves inline are stripped -- they are not text, they are the wiki's way of
+    drawing a symbol.
+    """
+    out = []
+    for title in LORE_SOURCE:
+        body = section(text, title)
+        lines = []
+        for line in body.splitlines():
+            line = re.sub(r"\S*Icon\.png|Risk \w+\.png|\w+Result\.png", "", line).strip()
+            line = re.sub(r"^\(Cost:.*\)$", "", line).strip()
+            if line:
+                lines.append(line)
+        joined = "<n/>".join(lines).replace("\t", " ")
+        joined = joined.replace("\\", "").replace('"', "'")
+        out.append(joined[:900])
+    return out
+
+
 def parse(path: Path) -> dict:
     text = path.read_text(encoding="utf-8")
     lines = [l.strip() for l in text.splitlines() if l.strip()]
@@ -202,7 +252,13 @@ def parse(path: Path) -> dict:
         "prefs": parse_prefs(section(text, "Abnormality Work Preferences")),
         "obs": parse_observation(section(text, "Observation Level")),
         "costs": parse_costs(text),
+        "lore": parse_lore(text),
     }
+
+
+def finish(entry: dict) -> dict:
+    entry["lore"][1] = prefs_lore(entry["prefs"])
+    return entry
 
 
 def unit_attributes() -> dict[str, set[str]]:
@@ -281,7 +337,12 @@ def build(entries: list[dict]) -> str:
     out.append(f"int[{max(len(entries) * 5, 1)}] gvg_abnoObsSuccess;\n")
     out.append("// PE-Box price of each of the four sections, flattened:\n"
                "// abnormality * 4 + section. Observation level is how many are bought.\n")
-    out.append(f"int[{max(len(entries) * 4, 1)}] gvg_abnoObsCost;\n\n")
+    out.append(f"int[{max(len(entries) * 4, 1)}] gvg_abnoObsCost;\n")
+    out.append("// What a bought section says, flattened abnormality * 4 + section.\n"
+               "// Pushed onto the panel's buttons with UnitSetInfoButtonTooltip, which\n"
+               "// is per unit INSTANCE -- so four generic abilities serve every\n"
+               "// abnormality and nothing has to be generated into the catalogs.\n")
+    out.append(f"string[{max(len(entries) * 4, 1)}] gvg_abnoLore;\n\n")
 
     for i, e in enumerate(entries):
         fills.append(f'    gvg_abnoType[{i}] = "{e["id"]}";')
@@ -299,6 +360,7 @@ def build(entries: list[dict]) -> str:
             fills.append(f"    gvg_abnoObsSuccess[{i * 5 + lvl}] = {obs_success[lvl]};")
         for sec in range(4):
             fills.append(f"    gvg_abnoObsCost[{i * 4 + sec}] = {e['costs'][sec]};")
+            fills.append(f'    gvg_abnoLore[{i * 4 + sec}] = "{e["lore"][sec]}";')
         for w, work in enumerate(WORKS):
             row = e["prefs"].get(work, [50] * 5)
             for lvl, pct in enumerate(row):
@@ -400,6 +462,15 @@ def build(entries: list[dict]) -> str:
         "        return 0;\n"
         "    }\n"
         "    return gvg_abnoObsCost[index * 4 + obs];\n"
+        "}\n\n"
+        "//--------------------------------------------------------------------------------------------------\n"
+        "// What section `sec` of this abnormality says.\n"
+        "//--------------------------------------------------------------------------------------------------\n"
+        "string AbnoGen_Lore (int index, int sec) {\n"
+        "    if (index < 0 || index >= c_abnoCount || sec < 0 || sec >= 4) {\n"
+        "        return \"\";\n"
+        "    }\n"
+        "    return gvg_abnoLore[index * 4 + sec];\n"
         "}\n"
     )
     return "".join(out)
@@ -407,7 +478,7 @@ def build(entries: list[dict]) -> str:
 
 def generate():
     entries = sorted(
-        (parse(p) for p in DOCS.glob("*.md")), key=lambda e: e["id"]
+        (finish(parse(p)) for p in DOCS.glob("*.md")), key=lambda e: e["id"]
     ) if DOCS.is_dir() else []
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(build(entries), encoding="utf-8")

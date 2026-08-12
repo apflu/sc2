@@ -3,4 +3,16 @@
     <CButton id="Lob_Debug_Haste">
         <Icon value="Assets\Textures\btn-ability-terran-stimpack.dds"/>
     </CButton>
+    <CButton id="Lob_Obs_1">
+        <Icon value="Assets\Textures\btn-ability-terran-battlefieldawareness.dds"/>
+    </CButton>
+    <CButton id="Lob_Obs_2">
+        <Icon value="Assets\Textures\btn-ability-terran-holdfire.dds"/>
+    </CButton>
+    <CButton id="Lob_Obs_3">
+        <Icon value="Assets\Textures\btn-upgrade-terran-infantryarmorlevel1.dds"/>
+    </CButton>
+    <CButton id="Lob_Obs_4">
+        <Icon value="Assets\Textures\btn-upgrade-terran-infantryweaponslevel1.dds"/>
+    </CButton>
 </Catalog>

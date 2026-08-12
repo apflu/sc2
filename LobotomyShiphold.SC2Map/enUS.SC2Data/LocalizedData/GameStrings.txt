@@ -1,11 +1,11 @@
-﻿Behavior/Name/Lob_Attr_Fortitude=Fortitude
+﻿Abil/Name/Lob_Obs_1=Basic Information
+Abil/Name/Lob_Obs_2=Work Preferences
+Abil/Name/Lob_Obs_3=Management Tips
+Abil/Name/Lob_Obs_4=Escape Information
+Behavior/Name/Lob_Attr_Fortitude=Fortitude
 Behavior/Name/Lob_Attr_Justice=Justice
 Behavior/Name/Lob_Attr_Prudence=Prudence
 Behavior/Name/Lob_Attr_Temperance=Temperance
-Behavior/Name/Lob_Point_Fortitude=Fortitude point
-Behavior/Name/Lob_Point_Justice=Justice point
-Behavior/Name/Lob_Point_Prudence=Prudence point
-Behavior/Name/Lob_Point_Temperance=Temperance point
 Behavior/Name/Lob_Rank=Rank
 Behavior/PrimaryName/Lob_Attr_Fortitude=Fortitude
 Behavior/PrimaryName/Lob_Attr_Justice=Justice
@@ -19,12 +19,12 @@ Behavior/Tooltip/Lob_Attr_Fortitude=Health. Raised by working abnormalities.<n/>
 Behavior/Tooltip/Lob_Attr_Justice=Attack speed. Raised by working abnormalities.<n/><n/>I &lt;30&gt; II &lt;45&gt; III &lt;65&gt; IV &lt;85&gt; V &lt;100&gt; EX
 Behavior/Tooltip/Lob_Attr_Prudence=Mental resilience. Raised by working abnormalities.<n/><n/>I &lt;30&gt; II &lt;45&gt; III &lt;65&gt; IV &lt;85&gt; V &lt;100&gt; EX
 Behavior/Tooltip/Lob_Attr_Temperance=Work speed. Raised by working abnormalities.<n/><n/>I &lt;30&gt; II &lt;45&gt; III &lt;65&gt; IV &lt;85&gt; V &lt;100&gt; EX
-Behavior/Tooltip/Lob_Point_Fortitude=One point of Fortitude. Hidden; the attribute above is the readout.
-Behavior/Tooltip/Lob_Point_Justice=One point of Justice. Hidden; the attribute above is the readout.
-Behavior/Tooltip/Lob_Point_Prudence=One point of Prudence. Hidden; the attribute above is the readout.
-Behavior/Tooltip/Lob_Point_Temperance=One point of Temperance. Hidden; the attribute above is the readout.
 Behavior/Tooltip/Lob_Rank=Employee rank, from the sum of the four attribute levels.
 Button/Name/Lob_Debug_Haste=DEBUG: Haste
+Button/Name/Lob_Obs_1=Basic Information
+Button/Name/Lob_Obs_2=Work Preferences
+Button/Name/Lob_Obs_3=Management Tips
+Button/Name/Lob_Obs_4=Escape Information
 Button/Tooltip/Critter0_00_00=Automaton 2000. The utility bot of choice.
 Button/Tooltip/Lob_CoreDown_Basic=Inner layer lost. Repair it to bring your sector back.
 Button/Tooltip/Lob_Core_Basic=The heart of your inner layer. Department passives and rest hall recovery run off it.
@@ -34,9 +34,13 @@ Button/Tooltip/Lob_DeviceDown_Basic=Offline. Off the power grid until repaired. 
 Button/Tooltip/Lob_Device_Basic=Contains upgrades for Terran infantry and structures. <n/><n/><c val="ffff8a">Enables:</c><n/>- Missile Turrets from SCVs<n/>- Sensor Towers from SCVs<n/>- Planetary Fortresses from Command Centers
 Button/Tooltip/Lob_Emp_Basic=An employee. Send them to work an abnormality; the four stats grow from the work itself.<n/><n/><c val="ffff8a">They do not come back.</c>
 Button/Tooltip/Lob_Hero_Agent=Your character. Clears debris, repairs devices, and holds the line -- one pair of hands for all three.
+Button/Tooltip/Lob_Obs_1=Not yet observed.
+Button/Tooltip/Lob_Obs_2=Not yet observed.
+Button/Tooltip/Lob_Obs_3=Not yet observed.
+Button/Tooltip/Lob_Obs_4=Not yet observed.
 Button/Tooltip/Lob_SCV_Miner=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
-Button/Tooltip/Lob_SCV_Unassigned=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
 Button/Tooltip/Lob_SCV_Unassigned2=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
+Button/Tooltip/Lob_SCV_Unassigned=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
 Button/Tooltip/O_03_03=O-03-03<n/><n/><c val="FFE303">Detector</c>
 DocInfo/DescLong=Completely devoid of any description whatsoever.
 DocInfo/DescShort=Any

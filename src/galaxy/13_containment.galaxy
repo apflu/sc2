@@ -66,6 +66,13 @@
 const int c_doorTypeCount = 1;
 string[1] gvg_doorType;
 
+// The control panel, and the four encyclopedia buttons on it. Named outright
+// for the same reason the door is: the panel was copied from a Blizzard
+// destructible and carries no Lob_ prefix.
+const string c_panelType = "ContainGateControl";
+const int c_obsAbilCount = 4;
+string[4] gvg_obsAbil;
+
 const string c_containedBuff = "Lob_Contained";
 const string c_qliphothBuff = "Lob_Qliphoth";
 const string c_doorStrainBuff = "Lob_DoorStrain";
@@ -102,6 +109,7 @@ fixed[32] gvg_cellStrainAt;
 
 trigger gt_cellFatal;
 trigger gt_cellTick;
+trigger gt_cellObserve;
 
 //--------------------------------------------------------------------------------------------------
 // Registry.
@@ -210,6 +218,23 @@ bool Cont_DoorIsUp (unit abno) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// The control panel of a cell: nearest one to that abnormality's home.
+//--------------------------------------------------------------------------------------------------
+unit Cont_PanelAt (point home) {
+    unit panel;
+
+    panel = UnitGroupClosestToPoint(
+        UnitGroup(c_panelType, c_playerAny, RegionEntireMap(), null, 0), home);
+    if (panel == null) {
+        return null;
+    }
+    if (DistanceBetweenPoints(UnitGetPosition(panel), home) > c_cellRadius) {
+        return null;
+    }
+    return panel;
+}
+
+//--------------------------------------------------------------------------------------------------
 // The encyclopedia: what a player has extracted from an abnormality, and what
 // they have spent it on.
 //
@@ -312,6 +337,84 @@ bool Cont_Observe (int player, int abnoIndex) {
 
     gvg_obsBoxes[i] = gvg_obsBoxes[i] - cost;
     gvg_obsLevel[i] = level + 1;
+    return true;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Brings one panel's four buttons into line with what its owner knows.
+//
+// A section not yet bought is an ability you can press. A bought one is
+// disabled, which is what "becomes passive" is in engine terms -- it keeps its
+// place and its text and stops being a thing you do. Either way the tooltip is
+// pushed per unit INSTANCE with UnitSetInfoButtonTooltip, which is why four
+// generic abilities can serve every abnormality and why the lore never has to
+// leave the document it is written in.
+//
+// Pushed to everyone rather than to the owner alone: a panel is a thing in a
+// room, and what it says about an abnormality is the same fact whoever reads
+// it. Whose PE-Boxes buy the next section is a separate question and is asked
+// when the button is pressed.
+//--------------------------------------------------------------------------------------------------
+void Cont_SyncPanel (int slot) {
+    unit panel;
+    int index;
+    int level;
+    int sec;
+    int cost;
+
+    panel = Cont_PanelAt(gvg_cellHome[slot]);
+    if (panel == null) {
+        return;
+    }
+
+    index = AbnoGen_IndexOf(gvg_cellAbno[slot]);
+    level = Cont_ObservationOfPlayer(UnitGetOwner(panel), index);
+
+    sec = 0;
+    while (sec < c_obsAbilCount) {
+        if (sec < level) {
+            UnitAbilityEnable(panel, gvg_obsAbil[sec], false);
+            UnitSetInfoButtonTooltip(panel, gvg_obsAbil[sec],
+                                     StringToText(AbnoGen_Lore(index, sec)));
+        }
+        else {
+            UnitAbilityEnable(panel, gvg_obsAbil[sec], sec == level);
+            cost = AbnoGen_ObsCost(index, sec);
+            UnitSetInfoButtonTooltip(
+                panel, gvg_obsAbil[sec],
+                StringToText("Unobserved. " + IntToString(cost) + " PE-Boxes."
+                             + "<n/>You have " + IntToString(
+                                 Cont_BoxesOf(UnitGetOwner(panel), index)) + "."));
+        }
+        sec = sec + 1;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// A press on one of the four buttons.
+//
+// Which section it is comes from which ability fired, and which abnormality
+// from which panel it fired on -- so the same four abilities work everywhere
+// and nothing is keyed by name.
+//--------------------------------------------------------------------------------------------------
+bool Cont_Observe_Func (bool testConds, bool runActions) {
+    unit panel;
+    int slot;
+
+    if (!runActions) {
+        return true;
+    }
+
+    panel = EventUnit();
+    slot = 0;
+    while (slot < gv_cellCount) {
+        if (Cont_PanelAt(gvg_cellHome[slot]) == panel) {
+            Cont_Observe(UnitGetOwner(panel), AbnoGen_IndexOf(gvg_cellAbno[slot]));
+            Cont_SyncPanel(slot);
+            return true;
+        }
+        slot = slot + 1;
+    }
     return true;
 }
 
@@ -594,6 +697,7 @@ bool Cont_Tick_Func (bool testConds, bool runActions) {
         else if (gvg_cellState[slot] == c_cellReturning && now >= gvg_cellReturnAt[slot]) {
             Cont_Return(slot);
         }
+        Cont_SyncPanel(slot);
         slot = slot + 1;
     }
     return true;
@@ -629,9 +733,25 @@ void Cont_BuildRegistry () {
 }
 
 void Containment_Init () {
+    int i;
+
     gvg_doorType[0] = "ContainGateHorizontal";
 
+    gvg_obsAbil[0] = "Lob_Obs_1";
+    gvg_obsAbil[1] = "Lob_Obs_2";
+    gvg_obsAbil[2] = "Lob_Obs_3";
+    gvg_obsAbil[3] = "Lob_Obs_4";
+
     Cont_BuildRegistry();
+
+    gt_cellObserve = TriggerCreate("Cont_Observe_Func");
+    i = 0;
+    while (i < c_obsAbilCount) {
+        TriggerAddEventUnitAbility(gt_cellObserve, null,
+                                   AbilityCommand(gvg_obsAbil[i], 0),
+                                   c_unitAbilStageExecute, true);
+        i = i + 1;
+    }
 
     gt_cellFatal = TriggerCreate("Cont_Fatal_Func");
     TriggerAddEventUnitDamaged(gt_cellFatal, null, c_unitDamageTypeAny, c_unitDamageFatal, null);

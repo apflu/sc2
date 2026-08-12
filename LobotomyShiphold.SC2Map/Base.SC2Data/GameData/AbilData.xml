@@ -8,4 +8,50 @@
             <Flags index="ToSelection" value="1"/>
         </CmdButtonArray>
     </CAbilEffectInstant>
+    <!-- The encyclopedia, as four buttons on a containment control panel.
+
+         Four generic abilities serve every abnormality, because the text on
+         them is set per unit INSTANCE with UnitSetInfoButtonTooltip rather than
+         being baked into the catalog. So thirty abnormalities need no abilities
+         of their own and the lore stays where it is written, in the doc.
+
+         An unbought section is an ability you can press: pressing it spends
+         that abnormality's PE-Boxes. A bought one is disabled — which is what
+         "becomes passive" means in engine terms, and it keeps its tooltip, so
+         the button turns into the page it bought.
+
+         The effect does nothing. 13_containment.galaxy handles the press off
+         the ability event; the ability exists to be a button. -->
+    <CAbilEffectInstant id="Lob_Obs_1">
+        <EditorCategories value="AbilityorEffectType:Units"/>
+        <Effect value="Lob_Nothing"/>
+        <Cost Resource="Minerals">
+            <Vital index="Life" value="0"/>
+        </Cost>
+        <CmdButtonArray index="Execute" DefaultButtonFace="Lob_Obs_1" Requirements=""/>
+    </CAbilEffectInstant>
+    <CAbilEffectInstant id="Lob_Obs_2">
+        <EditorCategories value="AbilityorEffectType:Units"/>
+        <Effect value="Lob_Nothing"/>
+        <Cost Resource="Minerals">
+            <Vital index="Life" value="0"/>
+        </Cost>
+        <CmdButtonArray index="Execute" DefaultButtonFace="Lob_Obs_2" Requirements=""/>
+    </CAbilEffectInstant>
+    <CAbilEffectInstant id="Lob_Obs_3">
+        <EditorCategories value="AbilityorEffectType:Units"/>
+        <Effect value="Lob_Nothing"/>
+        <Cost Resource="Minerals">
+            <Vital index="Life" value="0"/>
+        </Cost>
+        <CmdButtonArray index="Execute" DefaultButtonFace="Lob_Obs_3" Requirements=""/>
+    </CAbilEffectInstant>
+    <CAbilEffectInstant id="Lob_Obs_4">
+        <EditorCategories value="AbilityorEffectType:Units"/>
+        <Effect value="Lob_Nothing"/>
+        <Cost Resource="Minerals">
+            <Vital index="Life" value="0"/>
+        </Cost>
+        <CmdButtonArray index="Execute" DefaultButtonFace="Lob_Obs_4" Requirements=""/>
+    </CAbilEffectInstant>
 </Catalog>

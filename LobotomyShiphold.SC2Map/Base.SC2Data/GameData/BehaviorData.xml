@@ -62,18 +62,13 @@
                                Behavior/Name and Behavior/Tooltip. MaxPoints
                                caps it. War3's STR/AGI/INT are this catalog.
 
-           CBehaviorBuff       holds the points. An attribute's point total is
-                               NOT its own stack count; points arrive only
-                               through some other behavior's
-                               Modification/AttributeChangeArray. So one
-                               stackable hidden buff per stat, worth one point
-                               per stack, and the stack count is the stat.
-
-         That second half is the correction. Reading and writing the attribute
-         behavior directly looked right and does nothing: UnitBehaviorCount on
-         it answered 0 before and after, because there was no channel from the
-         script to the points at all. Blizzard's own case is starcoop's
-         AbathurPropArmor, fed by BiomassBuff1/10/100 carrying Points 1/10/100.
+         Points are read and written with UnitGetAttributePoint and
+         UnitSetAttributePoint. They are NOT the behavior's stack count, which
+         is why UnitBehaviorCount on one of these answers zero however much you
+         add — and the point natives are declared in natives_missing.galaxy
+         rather than natives.galaxy, which is why an earlier version routed the
+         number through a stackable carrier buff per stat instead. Four
+         behaviors and an indirection, gone.
 
          MaxPoints and MaxStackCount are both 100 so EX is representable.
          Galaxy still clamps to 99, which is what keeps EX behind whatever ends
@@ -94,16 +89,6 @@
         <MaxPoints value="100"/>
         <InfoIcon value="Assets\Textures\btn-upgrade-terran-infantryarmorlevel1.dds"/>
     </CBehaviorAttribute>
-    <CBehaviorBuff id="Lob_Point_Fortitude">
-        <EditorCategories value="AbilityorEffectType:Units"/>
-        <MaxStackCount value="100"/>
-        <BehaviorFlags index="Permanent" value="1"/>
-        <BehaviorFlags index="EnabledWhileDead" value="1"/>
-        <InfoFlags index="Hidden" value="1"/>
-        <Modification>
-            <AttributeChangeArray Attribute="Lob_Attr_Fortitude" Points="1"/>
-        </Modification>
-    </CBehaviorBuff>
     <!-- Prudence is the only stat with its Modification filled in, because it is
          the only one whose target already exists: SP is the Energy vital, so a
          point of Prudence is a point of SP ceiling and nothing in Galaxy has to
@@ -120,46 +105,16 @@
             <VitalMaxArray index="Energy" value="1"/>
         </Modification>
     </CBehaviorAttribute>
-    <CBehaviorBuff id="Lob_Point_Prudence">
-        <EditorCategories value="AbilityorEffectType:Units"/>
-        <MaxStackCount value="100"/>
-        <BehaviorFlags index="Permanent" value="1"/>
-        <BehaviorFlags index="EnabledWhileDead" value="1"/>
-        <InfoFlags index="Hidden" value="1"/>
-        <Modification>
-            <AttributeChangeArray Attribute="Lob_Attr_Prudence" Points="1"/>
-        </Modification>
-    </CBehaviorBuff>
     <CBehaviorAttribute id="Lob_Attr_Temperance">
         <EditorCategories value="AbilityorEffectType:Units"/>
         <MaxPoints value="100"/>
         <InfoIcon value="Assets\Textures\btn-ability-terran-holdfire.dds"/>
     </CBehaviorAttribute>
-    <CBehaviorBuff id="Lob_Point_Temperance">
-        <EditorCategories value="AbilityorEffectType:Units"/>
-        <MaxStackCount value="100"/>
-        <BehaviorFlags index="Permanent" value="1"/>
-        <BehaviorFlags index="EnabledWhileDead" value="1"/>
-        <InfoFlags index="Hidden" value="1"/>
-        <Modification>
-            <AttributeChangeArray Attribute="Lob_Attr_Temperance" Points="1"/>
-        </Modification>
-    </CBehaviorBuff>
     <CBehaviorAttribute id="Lob_Attr_Justice">
         <EditorCategories value="AbilityorEffectType:Units"/>
         <MaxPoints value="100"/>
         <InfoIcon value="Assets\Textures\btn-upgrade-terran-infantryweaponslevel1.dds"/>
     </CBehaviorAttribute>
-    <CBehaviorBuff id="Lob_Point_Justice">
-        <EditorCategories value="AbilityorEffectType:Units"/>
-        <MaxStackCount value="100"/>
-        <BehaviorFlags index="Permanent" value="1"/>
-        <BehaviorFlags index="EnabledWhileDead" value="1"/>
-        <InfoFlags index="Hidden" value="1"/>
-        <Modification>
-            <AttributeChangeArray Attribute="Lob_Attr_Justice" Points="1"/>
-        </Modification>
-    </CBehaviorBuff>
 
     <!-- Employee rank, as the unit's one veterancy.
 
