@@ -159,12 +159,18 @@
          five rank buffs were faking, and they are gone.
 
          XP is fed the sum of the four stat levels (4 at minimum, 24 at all-EX)
-         by src/galaxy/11_employee.galaxy. The thresholds below are the design's
-         6 / 9 / 12 / 16 expressed as per-level increments, since MinVeterancyXP
-         is an increment rather than a running total:
+         by src/galaxy/11_employee.galaxy, and the rows below are the design's
+         thresholds written straight out:
 
-             I  (sum 4-5)    II 6    III 9    IV 12    V 16
-                              +6      +3       +3       +4
+             I (sum 4-5)    II 6    III 9    IV 12    V 16
+
+         MinVeterancyXP is the ABSOLUTE total for that level, not the increment
+         to reach it. Measured, not assumed: with the rows written as increments
+         (0 6 3 3 4) an employee at 6 XP came out level V, because 6 clears 6, 3,
+         3 and 4 all at once. Stock data reads either way — Dehaka has 100 on
+         every row, which is the same curve under both — so the flat repeats
+         there are not evidence for increments, and War3's rising 100/150/200
+         series is the shape an absolute table has anyway.
 
          Every XPFraction is zero: rank is derived, so nothing may feed it
          except the line that recomputes it. A kill that nudged this would put
@@ -178,8 +184,8 @@
         <XPFraction index="DamageTaken" value="0"/>
         <VeterancyLevelArray/>
         <VeterancyLevelArray MinVeterancyXP="6"/>
-        <VeterancyLevelArray MinVeterancyXP="3"/>
-        <VeterancyLevelArray MinVeterancyXP="3"/>
-        <VeterancyLevelArray MinVeterancyXP="4"/>
+        <VeterancyLevelArray MinVeterancyXP="9"/>
+        <VeterancyLevelArray MinVeterancyXP="12"/>
+        <VeterancyLevelArray MinVeterancyXP="16"/>
     </CBehaviorVeterancy>
 </Catalog>

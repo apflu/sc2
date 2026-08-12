@@ -1797,8 +1797,9 @@ void Registry_Init () {
 //
 // What is left for this file is two rules that have no engine-side home:
 //
-//   The stat thresholds. Absolute here, incremental in BehaviorData for the
-//   rank veterancy; edit both or neither.
+//   The stat thresholds. The same numbers appear on Lob_Rank in BehaviorData
+//   -- MinVeterancyXP is an absolute total, not an increment -- so the two
+//   tables are literally the same and must be edited together.
 //
 //   The sum rule. Employee rank is the SUM of the four stat levels, not the
 //   minimum -- see Emp_Rank, where the reason is written down.
@@ -1839,8 +1840,8 @@ string[4] gvg_statName;
 // Absolute points at which each stat level starts.
 int[6] gvg_statLevelMin;
 
-// Sum of the four stat levels at which each rank starts. Mirrors the per-level
-// increments on Lob_Rank in BehaviorData.xml.
+// Sum of the four stat levels at which each rank starts. The same numbers are
+// on Lob_Rank in BehaviorData.xml.
 int[5] gvg_rankMin;
 
 trigger gt_empTick;
@@ -2007,30 +2008,22 @@ int Emp_Rank (unit who) {
 // Feeds the rank veterancy so the hero pane's level and experience bar read the
 // rank and its progress.
 //
-// The XP is written and the level is only corrected if the engine disagrees.
-// Whether UnitXPGetCurrentXP counts from zero or from the start of the current
-// level has not been established -- MinVeterancyXP is an increment, which is
-// what raises the question -- and this arrangement is right either way: if the
-// engine derives the level from the total, the correction never fires and the
-// bar fills correctly; if it does not, the level is forced and only the bar's
-// fill is approximate. The number every rule reads is Emp_Rank, which does not
-// depend on this at all.
+// Writing the XP is the whole of it: the engine derives the level from the
+// running total against Lob_Rank's absolute thresholds, which are the same
+// numbers as gvg_rankMin. Both of those facts were measured rather than
+// assumed. XP is a running total and not a per-level counter -- an employee
+// left at 6 XP stayed at 6 across several promotions -- and levels are 1-based,
+// which four fresh veterancies reading as "level 4" established.
 //
-// Levels are 1-based, which the first test established: four fresh veterancies
-// read as "level 4" on the panel, so each contributed 1.
+// No level is written. Setting the XP and then correcting the level would be
+// two sources for one number, and the panel disagreeing with Emp_Rank is
+// exactly what the -emp readout prints so it can be seen.
 //--------------------------------------------------------------------------------------------------
 void Emp_SyncRank (unit who) {
-    int rank;
-
     if (who == null || !UnitIsAlive(who)) {
         return;
     }
-
-    rank = Emp_Rank(who);
     UnitXPSetCurrentXP(who, c_rankBehavior, IntToFixed(Emp_LevelSum(who)));
-    if (UnitXPGetCurrentLevel(who, c_rankBehavior) != rank) {
-        UnitXPSetCurrentLevel(who, c_rankBehavior, rank);
-    }
 }
 
 //--------------------------------------------------------------------------------------------------
