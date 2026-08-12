@@ -708,5 +708,6 @@
         <Attributes index="Light" value="1"/>
         <Attributes index="Biological" value="0"/>
         <Race value="Abnormality"/>
+        <FlagArray index="Invulnerable" value="1"/>
     </CUnit>
 </Catalog>
