@@ -8,3 +8,11 @@
 // P0 is single player. The map's default slots are 1 = the player, 2 = Hostile.
 const int c_p0Player = 1;
 const int c_p0Zerg = 2;
+
+// Loose abnormalities. A third slot, and it has to be hostile to the zerg as
+// well as to the players -- design 5.1 makes releasing an easy one to meet a
+// wave a real tactic, and that is an alliance setting in the map's player
+// properties, not something script can arrange. Until that slot is configured
+// in the editor, a breached abnormality will simply be on nobody's side of the
+// fight it was meant to join.
+const int c_abnoPlayer = 3;

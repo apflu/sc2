@@ -6,6 +6,8 @@
 //--------------------------------------------------------------------------------------------------
 
 // Unit types, by the category segment of their id.
+const int c_typesAbnoCount = 0;
+string[1] gvg_typesAbno;
 const int c_typesContCount = 0;
 string[1] gvg_typesCont;
 const int c_typesContDownCount = 0;
@@ -58,6 +60,10 @@ const int c_typesSCV_UnassignedCount = 1;
 string[1] gvg_typesSCV_Unassigned;
 const int c_typesSCV_WorkerCount = 1;
 string[1] gvg_typesSCV_Worker;
+const int c_typesToolCount = 0;
+string[1] gvg_typesTool;
+const int c_typesToolDownCount = 0;
+string[1] gvg_typesToolDown;
 
 // Editor object groups, flattened: names[i] owns the members
 // slice starting at groupFirst[i] and running groupSize[i] long.
@@ -66,6 +72,44 @@ string[1] gvg_groupNames;
 int[1] gvg_groupFirst;
 int[1] gvg_groupSize;
 int[2] gvg_groupMembers;
+
+//--------------------------------------------------------------------------------------------------
+// Every live Abno unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanAbno () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesAbnoCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesAbno[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Abno, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsAbno (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesAbnoCount) {
+        if (UnitGetType(target) == gvg_typesAbno[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
 
 //--------------------------------------------------------------------------------------------------
 // Every live Cont unit on the map, whichever variant and whoever owns it.
@@ -1048,6 +1092,82 @@ bool ObjectsGen_IsSCV_Worker (unit target) {
     i = 0;
     while (i < c_typesSCV_WorkerCount) {
         if (UnitGetType(target) == gvg_typesSCV_Worker[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live Tool unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanTool () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesToolCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesTool[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Tool, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsTool (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesToolCount) {
+        if (UnitGetType(target) == gvg_typesTool[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live ToolDown unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanToolDown () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesToolDownCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesToolDown[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a ToolDown, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsToolDown (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesToolDownCount) {
+        if (UnitGetType(target) == gvg_typesToolDown[i]) {
             return true;
         }
         i = i + 1;

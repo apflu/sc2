@@ -22,6 +22,14 @@ include "TriggerLibs/NativeLib"
 const int c_p0Player = 1;
 const int c_p0Zerg = 2;
 
+// Loose abnormalities. A third slot, and it has to be hostile to the zerg as
+// well as to the players -- design 5.1 makes releasing an easy one to meet a
+// wave a real tactic, and that is an alliance setting in the map's player
+// properties, not something script can arrange. Until that slot is configured
+// in the editor, a breached abnormality will simply be on nobody's side of the
+// fight it was meant to join.
+const int c_abnoPlayer = 3;
+
 //--------------------------------------------------------------------------------------------------
 // src/galaxy/05_objects_gen.galaxy
 //--------------------------------------------------------------------------------------------------
@@ -33,6 +41,8 @@ const int c_p0Zerg = 2;
 //--------------------------------------------------------------------------------------------------
 
 // Unit types, by the category segment of their id.
+const int c_typesAbnoCount = 0;
+string[1] gvg_typesAbno;
 const int c_typesContCount = 0;
 string[1] gvg_typesCont;
 const int c_typesContDownCount = 0;
@@ -85,6 +95,10 @@ const int c_typesSCV_UnassignedCount = 1;
 string[1] gvg_typesSCV_Unassigned;
 const int c_typesSCV_WorkerCount = 1;
 string[1] gvg_typesSCV_Worker;
+const int c_typesToolCount = 0;
+string[1] gvg_typesTool;
+const int c_typesToolDownCount = 0;
+string[1] gvg_typesToolDown;
 
 // Editor object groups, flattened: names[i] owns the members
 // slice starting at groupFirst[i] and running groupSize[i] long.
@@ -93,6 +107,44 @@ string[1] gvg_groupNames;
 int[1] gvg_groupFirst;
 int[1] gvg_groupSize;
 int[2] gvg_groupMembers;
+
+//--------------------------------------------------------------------------------------------------
+// Every live Abno unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanAbno () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesAbnoCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesAbno[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Abno, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsAbno (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesAbnoCount) {
+        if (UnitGetType(target) == gvg_typesAbno[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
 
 //--------------------------------------------------------------------------------------------------
 // Every live Cont unit on the map, whichever variant and whoever owns it.
@@ -1083,6 +1135,82 @@ bool ObjectsGen_IsSCV_Worker (unit target) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// Every live Tool unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanTool () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesToolCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesTool[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Tool, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsTool (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesToolCount) {
+        if (UnitGetType(target) == gvg_typesTool[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live ToolDown unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanToolDown () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesToolDownCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesToolDown[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a ToolDown, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsToolDown (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesToolDownCount) {
+        if (UnitGetType(target) == gvg_typesToolDown[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
 // The placed objects of a named editor group. Preplaced only -- runtime
 // spawns have no group. Returns empty for an unknown name.
 //--------------------------------------------------------------------------------------------------
@@ -1739,6 +1867,10 @@ void Sector_Init () {
 string Registry_ScanLine () {
     return "scan: hero=" + IntToString(UnitGroupCount(ObjectsGen_ScanHero(), c_unitCountAlive))
            + " emp=" + IntToString(UnitGroupCount(ObjectsGen_ScanEmp(), c_unitCountAlive))
+           + " cont=" + IntToString(UnitGroupCount(ObjectsGen_ScanCont(), c_unitCountAlive))
+           + "+" + IntToString(UnitGroupCount(ObjectsGen_ScanContDown(), c_unitCountAlive))
+           + " tool=" + IntToString(UnitGroupCount(ObjectsGen_ScanTool(), c_unitCountAlive))
+           + " loose=" + IntToString(UnitGroupCount(ObjectsGen_ScanAbno(), c_unitCountAlive))
            + " debris=" + IntToString(UnitGroupCount(ObjectsGen_ScanDebris(), c_unitCountAlive))
            + " worker=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Worker(), c_unitCountAlive))
            + " miner=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Miner(), c_unitCountAlive))
@@ -2444,6 +2576,313 @@ void Departments_Init () {
         TriggerAddEventUpgradeLevelChanged(gt_upgradeChanged, player);
         player = player + 1;
     }
+}
+
+//--------------------------------------------------------------------------------------------------
+// src/galaxy/13_containment.galaxy
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// Containment cells, and what gets out of them.
+//
+// The other half of the verb. 11_employee.galaxy owns the person you send; this
+// owns the thing you send them to.
+//
+// Three unit types per abnormality, sharing a variant segment:
+//
+//     Lob_Cont_<X>       the cell, working
+//     Lob_ContDown_<X>   the cell, breached or wrecked
+//     Lob_Abno_<X>       the abnormality itself, loose
+//
+// The first two are an ordinary downable pair (08_downable), which is not a
+// convenience -- it is the whole of design section 5. A breach must never cost
+// a player their slot, because in a five-player game that is one person
+// spectating for forty minutes, and it picks the newest player. Reusing
+// "disabled -> repair -> online" makes recovery structural rather than a
+// balance number: the cost of a breach is employees, time, and the defensive
+// pressure on everybody, and none of those are permanent.
+//
+// Tool abnormalities are a separate family, Lob_Tool_<X> / Lob_ToolDown_<X>,
+// rather than a variant of Cont. That follows the contract's rule that a plain
+// scan should answer the common question without filtering, and the common
+// question here excludes tools: meltdown does not count them, Control Team's
+// cross-department clauses treat them separately, and Training Team's practice
+// rabbit is one. Asking for "cells including tools" is two scans and says so.
+//
+// What this module does NOT decide, because it is not decided:
+//
+//   How a loose abnormality behaves. Some walk to the rest hall, some never
+//   move at all. That is per-abnormality authoring, so nothing here issues them
+//   an order; a blanket attack-move would be inventing content.
+//
+//   What suppression pays out. Design 5.1 says it pays; the amount is open. A
+//   system that wants to count suppressions registers its own death trigger,
+//   the way 25_clearing does for debris.
+//
+//   Qliphoth counters and meltdown. Separate module, and it needs cells to
+//   exist first, which is why this one is before it.
+//--------------------------------------------------------------------------------------------------
+
+const string c_contUpPrefix = "Lob_Cont_";
+const string c_contDownPrefix = "Lob_ContDown_";
+const string c_abnoPrefix = "Lob_Abno_";
+
+const string c_toolUpPrefix = "Lob_Tool_";
+const string c_toolDownPrefix = "Lob_ToolDown_";
+
+const fixed c_contPeriod = 1.0;
+
+trigger gt_contFatal;
+trigger gt_contTick;
+
+//--------------------------------------------------------------------------------------------------
+// The variant segment of a cell, a downed cell or an abnormality: the name the
+// three share. Empty for anything that is none of them.
+//--------------------------------------------------------------------------------------------------
+string Cont_VariantOfType (string unitType) {
+    if (StringSub(unitType, 1, StringLength(c_contDownPrefix)) == c_contDownPrefix) {
+        return StringSub(unitType, StringLength(c_contDownPrefix) + 1, StringLength(unitType));
+    }
+    if (StringSub(unitType, 1, StringLength(c_toolDownPrefix)) == c_toolDownPrefix) {
+        return StringSub(unitType, StringLength(c_toolDownPrefix) + 1, StringLength(unitType));
+    }
+    if (StringSub(unitType, 1, StringLength(c_contUpPrefix)) == c_contUpPrefix) {
+        return StringSub(unitType, StringLength(c_contUpPrefix) + 1, StringLength(unitType));
+    }
+    if (StringSub(unitType, 1, StringLength(c_toolUpPrefix)) == c_toolUpPrefix) {
+        return StringSub(unitType, StringLength(c_toolUpPrefix) + 1, StringLength(unitType));
+    }
+    if (StringSub(unitType, 1, StringLength(c_abnoPrefix)) == c_abnoPrefix) {
+        return StringSub(unitType, StringLength(c_abnoPrefix) + 1, StringLength(unitType));
+    }
+    return "";
+}
+
+string Cont_Variant (unit which) {
+    if (which == null) {
+        return "";
+    }
+    return Cont_VariantOfType(UnitGetType(which));
+}
+
+bool Cont_IsTool (unit which) {
+    return ObjectsGen_IsTool(which) || ObjectsGen_IsToolDown(which);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every containment cell a player holds, working or not, tools included.
+//
+// Ownership is the unit's owner rather than which sector it stands in. A cell
+// belongs to whoever is answerable for it, and that has to survive the cell
+// being placed a little outside the region somebody drew.
+//--------------------------------------------------------------------------------------------------
+unitgroup Cont_AllOf (int player) {
+    unitgroup all;
+    unitgroup mine;
+    unit cell;
+    int count;
+    int i;
+
+    all = ObjectsGen_ScanCont();
+    UnitGroupAddUnitGroup(all, ObjectsGen_ScanContDown());
+    UnitGroupAddUnitGroup(all, ObjectsGen_ScanTool());
+    UnitGroupAddUnitGroup(all, ObjectsGen_ScanToolDown());
+
+    mine = UnitGroupEmpty();
+    count = UnitGroupCount(all, c_unitCountAlive);
+    i = 1;
+    while (i <= count) {
+        cell = UnitGroupUnit(all, i);
+        if (cell != null && UnitGetOwner(cell) == player) {
+            UnitGroupAdd(mine, cell);
+        }
+        i = i + 1;
+    }
+    return mine;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Cells that are working. Control Team's passive scales on exactly this count
+// and says tools do not count towards it, which is what the family split buys.
+//--------------------------------------------------------------------------------------------------
+int Cont_OnlineCount (int player) {
+    unitgroup online;
+    unit cell;
+    int total;
+    int count;
+    int i;
+
+    online = ObjectsGen_ScanCont();
+    total = 0;
+    count = UnitGroupCount(online, c_unitCountAlive);
+
+    i = 1;
+    while (i <= count) {
+        cell = UnitGroupUnit(online, i);
+        if (cell != null && UnitGetOwner(cell) == player) {
+            total = total + 1;
+        }
+        i = i + 1;
+    }
+    return total;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether this abnormality is currently loose.
+//
+// Asked of the world, like everything else: a variant is out if a Lob_Abno_ of
+// that name is alive. There is no flag to fall out of step with the unit that
+// is actually standing there.
+//--------------------------------------------------------------------------------------------------
+bool Cont_VariantIsLoose (string variant) {
+    unitgroup loose;
+    unit which;
+    int count;
+    int i;
+
+    loose = ObjectsGen_ScanAbno();
+    count = UnitGroupCount(loose, c_unitCountAlive);
+
+    i = 1;
+    while (i <= count) {
+        which = UnitGroupUnit(loose, i);
+        if (which != null && Cont_Variant(which) == variant) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Lets one out.
+//
+// The cell goes down the way a device does, and the abnormality appears where
+// the cell is, owned by the abnormality player. That player is hostile to the
+// zerg as well as to everybody else, which is an alliance setting rather than
+// anything script can arrange -- design 5.1 turns on it, because releasing an
+// easy one to meet a wave is meant to be a real tactic rather than an accident.
+//
+// Nothing is ordered. See the header.
+//--------------------------------------------------------------------------------------------------
+void Cont_Breach (unit cell) {
+    string variant;
+    string upPrefix;
+    string downPrefix;
+    point where;
+
+    if (cell == null) {
+        return;
+    }
+
+    variant = Cont_Variant(cell);
+    if (variant == "") {
+        return;
+    }
+    if (Cont_VariantIsLoose(variant)) {
+        return;
+    }
+
+    if (Cont_IsTool(cell)) {
+        upPrefix = c_toolUpPrefix;
+        downPrefix = c_toolDownPrefix;
+    }
+    else {
+        upPrefix = c_contUpPrefix;
+        downPrefix = c_contDownPrefix;
+    }
+
+    where = UnitGetPosition(cell);
+    Downable_TakeDown(cell, upPrefix, downPrefix);
+
+    // A variant with no Lob_Abno_ authored simply stays contained-but-broken.
+    // That is the right failure for a tool, and it keeps a half-authored
+    // abnormality from taking the map down.
+    if (c_typesAbnoCount > 0) {
+        UnitCreate(1, c_abnoPrefix + variant, c_unitCreateIgnorePlacement,
+                   c_abnoPlayer, where, 270.0);
+    }
+
+    UIDisplayMessage(
+        PlayerGroupAll(),
+        c_messageAreaSubtitle,
+        StringToText(Risk_Name(Risk_OfType(c_contUpPrefix + variant))
+                     + " containment breach -- " + variant)
+    );
+}
+
+//--------------------------------------------------------------------------------------------------
+// A cell that takes a killing blow lets its occupant out.
+//
+// Which is a decision, not a mechanism: the alternative is a wrecked cell that
+// somehow still holds. Reading it this way is what makes a neighbour losing
+// their outer layer cost the table something, without touching anybody's own
+// numbers -- the pressure travels, the punishment does not. One handler, so it
+// is one line to change if that turns out to play badly.
+//--------------------------------------------------------------------------------------------------
+bool Cont_Fatal_Func (bool testConds, bool runActions) {
+    unit victim;
+
+    if (!runActions) {
+        return true;
+    }
+
+    victim = EventUnit();
+    if (!ObjectsGen_IsCont(victim) && !ObjectsGen_IsTool(victim)) {
+        return true;
+    }
+
+    Cont_Breach(victim);
+    return true;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Puts repaired cells back online.
+//
+// Not Downable_RestoreRepaired, and the difference is the point: a cell whose
+// occupant is still loose must not come back, or repairing the room would put
+// the abnormality in two places at once. Suppression first, repair second, and
+// the order is enforced here rather than asked of the player.
+//--------------------------------------------------------------------------------------------------
+void Cont_RestoreRepaired (unitgroup down, string downPrefix, string upPrefix) {
+    unit cell;
+    int count;
+    int i;
+
+    count = UnitGroupCount(down, c_unitCountAlive);
+
+    // Counting down: a morph removes the unit, and a unit group drops units
+    // that stop existing, so walking forwards would skip every second cell that
+    // finished repairing on the same tick.
+    i = count;
+    while (i >= 1) {
+        cell = UnitGroupUnit(down, i);
+        if (cell != null
+            && UnitGetPropertyFixed(cell, c_unitPropLifePercent, true) >= 99.0
+            && !Cont_VariantIsLoose(Cont_Variant(cell))) {
+            Downable_Morph(cell,
+                           Downable_Retype(UnitGetType(cell), downPrefix, upPrefix),
+                           UnitGetPropertyFixed(cell, c_unitPropLifeMax, true));
+        }
+        i = i - 1;
+    }
+}
+
+bool Cont_Tick_Func (bool testConds, bool runActions) {
+    if (!runActions) {
+        return true;
+    }
+
+    Cont_RestoreRepaired(ObjectsGen_ScanContDown(), c_contDownPrefix, c_contUpPrefix);
+    Cont_RestoreRepaired(ObjectsGen_ScanToolDown(), c_toolDownPrefix, c_toolUpPrefix);
+    return true;
+}
+
+void Containment_Init () {
+    gt_contFatal = TriggerCreate("Cont_Fatal_Func");
+    TriggerAddEventUnitDamaged(gt_contFatal, null, c_unitDamageTypeAny, c_unitDamageFatal, null);
+
+    gt_contTick = TriggerCreate("Cont_Tick_Func");
+    TriggerAddEventTimePeriodic(gt_contTick, c_contPeriod, c_timeGame);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -3244,6 +3683,114 @@ void Debug_ReportEmployees (int player) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// -cont
+//
+// One line per containment cell: what is in it, what grade, and which of the
+// three states it is in. The states are the point -- online, down with the
+// occupant loose, and down with it suppressed are three different situations
+// and only the middle one blocks repair.
+//--------------------------------------------------------------------------------------------------
+void Debug_ReportCells (int player) {
+    unitgroup mine;
+    unit cell;
+    string variant;
+    string line;
+    int count;
+    int i;
+
+    mine = Cont_AllOf(player);
+    count = UnitGroupCount(mine, c_unitCountAlive);
+
+    if (count == 0) {
+        Debug_Say(player, "cont: no Lob_Cont_* / Lob_Tool_* cells owned");
+        return;
+    }
+
+    i = 1;
+    while (i <= count) {
+        cell = UnitGroupUnit(mine, i);
+        variant = Cont_Variant(cell);
+
+        line = "cont " + variant;
+        if (Cont_IsTool(cell)) {
+            line = line + " [tool]";
+        }
+        else {
+            line = line + " [" + Risk_Name(Risk_OfType(c_contUpPrefix + variant)) + "]";
+        }
+
+        if (ObjectsGen_IsCont(cell) || ObjectsGen_IsTool(cell)) {
+            line = line + " online";
+        }
+        else if (Cont_VariantIsLoose(variant)) {
+            line = line + " BREACHED (suppress it before repairing)";
+        }
+        else {
+            line = line + " down, repairable ("
+                   + IntToString(FixedToInt(
+                         UnitGetPropertyFixed(cell, c_unitPropLifePercent, true)))
+                   + "%)";
+        }
+
+        Debug_Say(player, line);
+        i = i + 1;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// -breach
+//
+// Drives the transition the meltdown clock will drive later. Selection first,
+// so a specific cell can be picked; otherwise every working cell the player
+// owns, which is the interesting case for watching the defence hold or not.
+//--------------------------------------------------------------------------------------------------
+void Debug_BreachCells (int player) {
+    unitgroup selected;
+    unitgroup targets;
+    unit cell;
+    int count;
+    int i;
+
+    targets = UnitGroupEmpty();
+    selected = UnitGroupSelected(player);
+    count = UnitGroupCount(selected, c_unitCountAlive);
+    i = 1;
+    while (i <= count) {
+        cell = UnitGroupUnit(selected, i);
+        if (cell != null && (ObjectsGen_IsCont(cell) || ObjectsGen_IsTool(cell))) {
+            UnitGroupAdd(targets, cell);
+        }
+        i = i + 1;
+    }
+
+    if (UnitGroupCount(targets, c_unitCountAlive) == 0) {
+        count = UnitGroupCount(Cont_AllOf(player), c_unitCountAlive);
+        i = 1;
+        while (i <= count) {
+            cell = UnitGroupUnit(Cont_AllOf(player), i);
+            if (cell != null && (ObjectsGen_IsCont(cell) || ObjectsGen_IsTool(cell))) {
+                UnitGroupAdd(targets, cell);
+            }
+            i = i + 1;
+        }
+    }
+
+    count = UnitGroupCount(targets, c_unitCountAlive);
+    if (count == 0) {
+        Debug_Say(player, "breach: nothing of yours is contained right now");
+        return;
+    }
+
+    // Counting down: breaching morphs the cell away, which renumbers the group.
+    i = count;
+    while (i >= 1) {
+        Cont_Breach(UnitGroupUnit(targets, i));
+        i = i - 1;
+    }
+    Debug_ReportCells(player);
+}
+
+//--------------------------------------------------------------------------------------------------
 // -emp spawn [n]
 //--------------------------------------------------------------------------------------------------
 void Debug_SpawnEmployees (int player, int howMany) {
@@ -3329,6 +3876,8 @@ void Debug_Help (int player) {
     Debug_Say(player, "-rank                   resync every rank readout");
     Debug_Say(player, "-status                 the economy/power/sector readout");
     Debug_Say(player, "-scan                   what the object tables can see");
+    Debug_Say(player, "-cont                   your containment cells and their state");
+    Debug_Say(player, "-breach                 let the selected cell's occupant out");
 }
 
 bool Debug_Chat_Func (bool testConds, bool runActions) {
@@ -3375,6 +3924,12 @@ bool Debug_Chat_Func (bool testConds, bool runActions) {
     else if (StringEqual(command, "-scan", false)) {
         Debug_Say(player, Registry_ScanLine());
     }
+    else if (StringEqual(command, "-cont", false)) {
+        Debug_ReportCells(player);
+    }
+    else if (StringEqual(command, "-breach", false)) {
+        Debug_BreachCells(player);
+    }
     return true;
 }
 
@@ -3399,6 +3954,7 @@ void InitMap () {
     Registry_Init();
     Employee_Init();
     Departments_Init();
+    Containment_Init();
     Hero_Init();
     Devices_Init();
     Clearing_Init();

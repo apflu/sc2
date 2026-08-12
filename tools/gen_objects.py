@@ -54,6 +54,7 @@ INT32_MAX = 2**31 - 1
 # the predicate returns false, so unwritten content stays inert rather than
 # breaking the build.
 EXPECTED_CATEGORIES = [
+    "Abno",
     "Cont",
     "ContDown",
     "Core",
@@ -69,6 +70,8 @@ EXPECTED_CATEGORIES = [
     "SCV",
     "SCV_Miner",
     "SCV_Worker",
+    "Tool",
+    "ToolDown",
 ]
 
 HEADER = """//--------------------------------------------------------------------------------------------------

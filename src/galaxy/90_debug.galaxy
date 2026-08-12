@@ -186,6 +186,114 @@ void Debug_ReportEmployees (int player) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// -cont
+//
+// One line per containment cell: what is in it, what grade, and which of the
+// three states it is in. The states are the point -- online, down with the
+// occupant loose, and down with it suppressed are three different situations
+// and only the middle one blocks repair.
+//--------------------------------------------------------------------------------------------------
+void Debug_ReportCells (int player) {
+    unitgroup mine;
+    unit cell;
+    string variant;
+    string line;
+    int count;
+    int i;
+
+    mine = Cont_AllOf(player);
+    count = UnitGroupCount(mine, c_unitCountAlive);
+
+    if (count == 0) {
+        Debug_Say(player, "cont: no Lob_Cont_* / Lob_Tool_* cells owned");
+        return;
+    }
+
+    i = 1;
+    while (i <= count) {
+        cell = UnitGroupUnit(mine, i);
+        variant = Cont_Variant(cell);
+
+        line = "cont " + variant;
+        if (Cont_IsTool(cell)) {
+            line = line + " [tool]";
+        }
+        else {
+            line = line + " [" + Risk_Name(Risk_OfType(c_contUpPrefix + variant)) + "]";
+        }
+
+        if (ObjectsGen_IsCont(cell) || ObjectsGen_IsTool(cell)) {
+            line = line + " online";
+        }
+        else if (Cont_VariantIsLoose(variant)) {
+            line = line + " BREACHED (suppress it before repairing)";
+        }
+        else {
+            line = line + " down, repairable ("
+                   + IntToString(FixedToInt(
+                         UnitGetPropertyFixed(cell, c_unitPropLifePercent, true)))
+                   + "%)";
+        }
+
+        Debug_Say(player, line);
+        i = i + 1;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// -breach
+//
+// Drives the transition the meltdown clock will drive later. Selection first,
+// so a specific cell can be picked; otherwise every working cell the player
+// owns, which is the interesting case for watching the defence hold or not.
+//--------------------------------------------------------------------------------------------------
+void Debug_BreachCells (int player) {
+    unitgroup selected;
+    unitgroup targets;
+    unit cell;
+    int count;
+    int i;
+
+    targets = UnitGroupEmpty();
+    selected = UnitGroupSelected(player);
+    count = UnitGroupCount(selected, c_unitCountAlive);
+    i = 1;
+    while (i <= count) {
+        cell = UnitGroupUnit(selected, i);
+        if (cell != null && (ObjectsGen_IsCont(cell) || ObjectsGen_IsTool(cell))) {
+            UnitGroupAdd(targets, cell);
+        }
+        i = i + 1;
+    }
+
+    if (UnitGroupCount(targets, c_unitCountAlive) == 0) {
+        count = UnitGroupCount(Cont_AllOf(player), c_unitCountAlive);
+        i = 1;
+        while (i <= count) {
+            cell = UnitGroupUnit(Cont_AllOf(player), i);
+            if (cell != null && (ObjectsGen_IsCont(cell) || ObjectsGen_IsTool(cell))) {
+                UnitGroupAdd(targets, cell);
+            }
+            i = i + 1;
+        }
+    }
+
+    count = UnitGroupCount(targets, c_unitCountAlive);
+    if (count == 0) {
+        Debug_Say(player, "breach: nothing of yours is contained right now");
+        return;
+    }
+
+    // Counting down: breaching morphs the cell away, which renumbers the group.
+    i = count;
+    while (i >= 1) {
+        Cont_Breach(UnitGroupUnit(targets, i));
+        i = i - 1;
+    }
+    Debug_ReportCells(player);
+}
+
+//--------------------------------------------------------------------------------------------------
 // -emp spawn [n]
 //--------------------------------------------------------------------------------------------------
 void Debug_SpawnEmployees (int player, int howMany) {
@@ -271,6 +379,8 @@ void Debug_Help (int player) {
     Debug_Say(player, "-rank                   resync every rank readout");
     Debug_Say(player, "-status                 the economy/power/sector readout");
     Debug_Say(player, "-scan                   what the object tables can see");
+    Debug_Say(player, "-cont                   your containment cells and their state");
+    Debug_Say(player, "-breach                 let the selected cell's occupant out");
 }
 
 bool Debug_Chat_Func (bool testConds, bool runActions) {
@@ -316,6 +426,12 @@ bool Debug_Chat_Func (bool testConds, bool runActions) {
     }
     else if (StringEqual(command, "-scan", false)) {
         Debug_Say(player, Registry_ScanLine());
+    }
+    else if (StringEqual(command, "-cont", false)) {
+        Debug_ReportCells(player);
+    }
+    else if (StringEqual(command, "-breach", false)) {
+        Debug_BreachCells(player);
     }
     return true;
 }
