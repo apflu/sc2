@@ -24,8 +24,14 @@ const string c_debugPrefix = "-";
 
 trigger gt_debugChat;
 
+// The chat area rather than the debug area. The debug area is the obvious home
+// for this and was the first choice, but some of the DEBUG-tagged styles in
+// core's FontStyles are marked requiredtoload, so it is not certain to be
+// instantiated in a retail client -- and a font-style error that only some
+// builds produce is not worth the tidiness. Chat is always there, and it does
+// not get overwritten by the economy readout the way the subtitle area does.
 void Debug_Say (int player, string line) {
-    UIDisplayMessage(PlayerGroupSingle(player), c_messageAreaDebug, StringToText(line));
+    UIDisplayMessage(PlayerGroupSingle(player), c_messageAreaChat, StringToText(line));
 }
 
 //--------------------------------------------------------------------------------------------------

@@ -115,6 +115,21 @@ scan: hero=N debris=N worker=N miner=N device=N | group(debris)=N
 
 SC2 按固定文件名自动加载这个目录，新增一个 catalog 不需要改 `ComponentList.SC2Components`。
 
+### 谁来建单位 **【已定】**
+
+**`CUnit` 由人在编辑器里复制现有单位来建，不手写。**Behavior、Effect、Weapon、Upgrade 这类**不需要 actor** 的 catalog 条目可以手写。
+
+理由就是下面那一整节：actor 靠 `unitName` 绑定，不跟着 `CUnit` 的 `parent` 走。手写一个 `parent="Marine"` 的单位得到的是**没有模型、没有枪口火焰、没有音效**的东西，而这些缺失不会报错，只会在游戏里看起来不对。编辑器复制会把 actor 一起带过来。
+
+代码侧对此是免疫的：没建出来的前缀产出空表，扫描返回空、判定返回 false（见"命名约定"末尾）。所以**代码可以先写，单位后建**，中间那段时间只是功能惰性，不是坏的。
+
+新建员工单位时要带上：
+
+- id 以 `Lob_Emp_` 开头
+- `BehaviorArray`：`Lob_Stat_Fortitude` / `Lob_Stat_Prudence` / `Lob_Stat_Temperance` / `Lob_Stat_Justice`
+- `Attributes` 里 `Light` 和 `Biological` 置 0（在本作里它们是危险等级，不是体型）
+- 不带武器（自卫武器是培训部 lv1 给的）
+
 **继承，不要展开。**编辑器"复制单位"会把父单位的字段全量拍平进新条目——`Lob_SCV_*` 就是这么来的，一个单位 60 行。手写时用 `parent=`，条目就变成一份相对基准单位的 diff，一眼能看出改了什么。数组字段按下标覆盖：
 
 ```xml
