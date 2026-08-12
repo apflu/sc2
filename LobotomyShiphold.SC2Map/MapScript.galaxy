@@ -43,10 +43,6 @@ const int c_abnoPlayer = 3;
 // Unit types, by the category segment of their id.
 const int c_typesAbnoCount = 0;
 string[1] gvg_typesAbno;
-const int c_typesContCount = 0;
-string[1] gvg_typesCont;
-const int c_typesContDownCount = 0;
-string[1] gvg_typesContDown;
 const int c_typesCoreCount = 1;
 string[1] gvg_typesCore;
 const int c_typesCoreDownCount = 1;
@@ -67,6 +63,10 @@ const int c_typesDeviceDown_BasicCount = 1;
 string[1] gvg_typesDeviceDown_Basic;
 const int c_typesDevice_BasicCount = 1;
 string[1] gvg_typesDevice_Basic;
+const int c_typesDoorCount = 0;
+string[1] gvg_typesDoor;
+const int c_typesDoorDownCount = 0;
+string[1] gvg_typesDoorDown;
 const int c_typesEmpCount = 1;
 string[1] gvg_typesEmp;
 const int c_typesEmp_BasicCount = 1;
@@ -79,6 +79,8 @@ const int c_typesMarkerCount = 1;
 string[1] gvg_typesMarker;
 const int c_typesMarker_SpawnCount = 1;
 string[1] gvg_typesMarker_Spawn;
+const int c_typesPanelCount = 0;
+string[1] gvg_typesPanel;
 const int c_typesPileCount = 1;
 string[1] gvg_typesPile;
 const int c_typesPile_OreCount = 1;
@@ -97,8 +99,6 @@ const int c_typesSCV_WorkerCount = 1;
 string[1] gvg_typesSCV_Worker;
 const int c_typesToolCount = 0;
 string[1] gvg_typesTool;
-const int c_typesToolDownCount = 0;
-string[1] gvg_typesToolDown;
 
 // Editor object groups, flattened: names[i] owns the members
 // slice starting at groupFirst[i] and running groupSize[i] long.
@@ -139,82 +139,6 @@ bool ObjectsGen_IsAbno (unit target) {
     i = 0;
     while (i < c_typesAbnoCount) {
         if (UnitGetType(target) == gvg_typesAbno[i]) {
-            return true;
-        }
-        i = i + 1;
-    }
-    return false;
-}
-
-//--------------------------------------------------------------------------------------------------
-// Every live Cont unit on the map, whichever variant and whoever owns it.
-// Works for runtime-spawned units too, unlike anything keyed on placed ids.
-//--------------------------------------------------------------------------------------------------
-unitgroup ObjectsGen_ScanCont () {
-    unitgroup found;
-    int i;
-
-    found = UnitGroupEmpty();
-    i = 0;
-    while (i < c_typesContCount) {
-        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesCont[i], c_playerAny,
-                                               RegionEntireMap(), null, 0));
-        i = i + 1;
-    }
-    return found;
-}
-
-//--------------------------------------------------------------------------------------------------
-// Whether a unit is a Cont, whatever variant. False for an empty
-// category, so code can be written ahead of the units existing.
-//--------------------------------------------------------------------------------------------------
-bool ObjectsGen_IsCont (unit target) {
-    int i;
-
-    if (target == null) {
-        return false;
-    }
-    i = 0;
-    while (i < c_typesContCount) {
-        if (UnitGetType(target) == gvg_typesCont[i]) {
-            return true;
-        }
-        i = i + 1;
-    }
-    return false;
-}
-
-//--------------------------------------------------------------------------------------------------
-// Every live ContDown unit on the map, whichever variant and whoever owns it.
-// Works for runtime-spawned units too, unlike anything keyed on placed ids.
-//--------------------------------------------------------------------------------------------------
-unitgroup ObjectsGen_ScanContDown () {
-    unitgroup found;
-    int i;
-
-    found = UnitGroupEmpty();
-    i = 0;
-    while (i < c_typesContDownCount) {
-        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesContDown[i], c_playerAny,
-                                               RegionEntireMap(), null, 0));
-        i = i + 1;
-    }
-    return found;
-}
-
-//--------------------------------------------------------------------------------------------------
-// Whether a unit is a ContDown, whatever variant. False for an empty
-// category, so code can be written ahead of the units existing.
-//--------------------------------------------------------------------------------------------------
-bool ObjectsGen_IsContDown (unit target) {
-    int i;
-
-    if (target == null) {
-        return false;
-    }
-    i = 0;
-    while (i < c_typesContDownCount) {
-        if (UnitGetType(target) == gvg_typesContDown[i]) {
             return true;
         }
         i = i + 1;
@@ -603,6 +527,82 @@ bool ObjectsGen_IsDevice_Basic (unit target) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// Every live Door unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanDoor () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesDoorCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesDoor[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Door, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsDoor (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesDoorCount) {
+        if (UnitGetType(target) == gvg_typesDoor[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live DoorDown unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanDoorDown () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesDoorDownCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesDoorDown[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a DoorDown, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsDoorDown (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesDoorDownCount) {
+        if (UnitGetType(target) == gvg_typesDoorDown[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
 // Every live Emp unit on the map, whichever variant and whoever owns it.
 // Works for runtime-spawned units too, unlike anything keyed on placed ids.
 //--------------------------------------------------------------------------------------------------
@@ -823,6 +823,44 @@ bool ObjectsGen_IsMarker_Spawn (unit target) {
     i = 0;
     while (i < c_typesMarker_SpawnCount) {
         if (UnitGetType(target) == gvg_typesMarker_Spawn[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live Panel unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanPanel () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesPanelCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesPanel[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Panel, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsPanel (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesPanelCount) {
+        if (UnitGetType(target) == gvg_typesPanel[i]) {
             return true;
         }
         i = i + 1;
@@ -1165,44 +1203,6 @@ bool ObjectsGen_IsTool (unit target) {
     i = 0;
     while (i < c_typesToolCount) {
         if (UnitGetType(target) == gvg_typesTool[i]) {
-            return true;
-        }
-        i = i + 1;
-    }
-    return false;
-}
-
-//--------------------------------------------------------------------------------------------------
-// Every live ToolDown unit on the map, whichever variant and whoever owns it.
-// Works for runtime-spawned units too, unlike anything keyed on placed ids.
-//--------------------------------------------------------------------------------------------------
-unitgroup ObjectsGen_ScanToolDown () {
-    unitgroup found;
-    int i;
-
-    found = UnitGroupEmpty();
-    i = 0;
-    while (i < c_typesToolDownCount) {
-        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesToolDown[i], c_playerAny,
-                                               RegionEntireMap(), null, 0));
-        i = i + 1;
-    }
-    return found;
-}
-
-//--------------------------------------------------------------------------------------------------
-// Whether a unit is a ToolDown, whatever variant. False for an empty
-// category, so code can be written ahead of the units existing.
-//--------------------------------------------------------------------------------------------------
-bool ObjectsGen_IsToolDown (unit target) {
-    int i;
-
-    if (target == null) {
-        return false;
-    }
-    i = 0;
-    while (i < c_typesToolDownCount) {
-        if (UnitGetType(target) == gvg_typesToolDown[i]) {
             return true;
         }
         i = i + 1;
@@ -1867,10 +1867,11 @@ void Sector_Init () {
 string Registry_ScanLine () {
     return "scan: hero=" + IntToString(UnitGroupCount(ObjectsGen_ScanHero(), c_unitCountAlive))
            + " emp=" + IntToString(UnitGroupCount(ObjectsGen_ScanEmp(), c_unitCountAlive))
-           + " cont=" + IntToString(UnitGroupCount(ObjectsGen_ScanCont(), c_unitCountAlive))
-           + "+" + IntToString(UnitGroupCount(ObjectsGen_ScanContDown(), c_unitCountAlive))
+           + " abno=" + IntToString(UnitGroupCount(ObjectsGen_ScanAbno(), c_unitCountAlive))
            + " tool=" + IntToString(UnitGroupCount(ObjectsGen_ScanTool(), c_unitCountAlive))
-           + " loose=" + IntToString(UnitGroupCount(ObjectsGen_ScanAbno(), c_unitCountAlive))
+           + " door=" + IntToString(UnitGroupCount(ObjectsGen_ScanDoor(), c_unitCountAlive))
+           + "up/" + IntToString(UnitGroupCount(ObjectsGen_ScanDoorDown(), c_unitCountAlive))
+           + "down"
            + " debris=" + IntToString(UnitGroupCount(ObjectsGen_ScanDebris(), c_unitCountAlive))
            + " worker=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Worker(), c_unitCountAlive))
            + " miner=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Miner(), c_unitCountAlive))
@@ -2582,242 +2583,377 @@ void Departments_Init () {
 // src/galaxy/13_containment.galaxy
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
-// Containment cells, and what gets out of them.
+// Containment.
 //
 // The other half of the verb. 11_employee.galaxy owns the person you send; this
-// owns the thing you send them to.
+// owns the thing you send them to. Structure is from docs/usr/containment.md.
 //
-// Three unit types per abnormality, sharing a variant segment:
+// The abnormality is a unit that exists from the start and never stops
+// existing. Contained is a state it is in, not a state of the world:
 //
-//     Lob_Cont_<X>       the cell, working
-//     Lob_ContDown_<X>   the cell, breached or wrecked
-//     Lob_Abno_<X>       the abnormality itself, loose
+//     Lob_Abno_<X>     the abnormality. Carries its risk grade, its Qliphoth
+//                      counter, and while contained, Lob_Contained.
+//     Lob_Door_Basic   the cell's only entrance, and the thing with durability
+//     Lob_DoorDown_*   the door, dropped
 //
-// The first two are an ordinary downable pair (08_downable), which is not a
-// convenience -- it is the whole of design section 5. A breach must never cost
-// a player their slot, because in a five-player game that is one person
-// spectating for forty minutes, and it picks the newest player. Reusing
-// "disabled -> repair -> online" makes recovery structural rather than a
-// balance number: the cost of a breach is employees, time, and the defensive
-// pressure on everybody, and none of those are permanent.
+// The door is generic and the abnormality is not, which is the whole reason
+// this is affordable: thirty abnormalities is thirty units, not a hundred and
+// twenty. A door belongs to the abnormality whose cell it stands at, which is a
+// spatial fact and is answered spatially -- nearest door to that abnormality's
+// home. Nothing is named after anything.
 //
-// Tool abnormalities are a separate family, Lob_Tool_<X> / Lob_ToolDown_<X>,
-// rather than a variant of Cont. That follows the contract's rule that a plain
-// scan should answer the common question without filtering, and the common
-// question here excludes tools: meltdown does not count them, Control Team's
-// cross-department clauses treat them separately, and Training Team's practice
-// rabbit is one. Asking for "cells including tools" is two scans and says so.
+// The first version of this module had it backwards: it made the CELL the
+// downable thing and spawned the abnormality on breach. Both halves were wrong.
+// Durability belongs to the door, and an abnormality that is created at the
+// moment it escapes cannot be worked on, cannot be observed, and cannot have a
+// counter -- which is most of what an abnormality is for.
+//
+// Four states, and only the first is quiet:
+//
+//     Contained   invulnerable and inert, behind a raised door
+//     Escaping    it has decided to leave and is attacking its own door.
+//                 Repair cannot prevent this, only delay it, which is what
+//                 Lob_DoorStrain is for.
+//     Loose       door down, invulnerability gone, it is a combat problem
+//     Returning   suppressed, on its way back to the cell
+//
+// Returning rather than dying is not a nicety. Design 5 forbids a breach ever
+// costing a player their slot, and docs/usr/containment.md spells out the
+// return: teleported home after a delay, restored to its initial state, counter
+// back to default, door instantly full and raised. So a suppressed abnormality
+// is never killed; the fatal blow is intercepted the way a device's is.
 //
 // What this module does NOT decide, because it is not decided:
 //
-//   How a loose abnormality behaves. Some walk to the rest hall, some never
-//   move at all. That is per-abnormality authoring, so nothing here issues them
-//   an order; a blanket attack-move would be inventing content.
+//   Which abnormalities escape at counter zero and what the rest do instead.
+//   The doc says most do something bad and escaping is the worst of them, and
+//   that some carry no counter at all. That is per-abnormality authoring.
 //
-//   What suppression pays out. Design 5.1 says it pays; the amount is open. A
-//   system that wants to count suppressions registers its own death trigger,
-//   the way 25_clearing does for debris.
+//   The Qliphoth default per abnormality. It is a per-type NUMBER, and this
+//   project has no channel for one yet -- the same gap as residual management
+//   difficulty in docs/dev/authoring-contract.md. Everything runs off
+//   c_qliphothDefault until that is settled, which is a placeholder and is
+//   marked as one.
 //
-//   Qliphoth counters and meltdown. Separate module, and it needs cells to
-//   exist first, which is why this one is before it.
+//   What suppression pays out, what work does, and the meltdown clock.
 //--------------------------------------------------------------------------------------------------
 
-const string c_contUpPrefix = "Lob_Cont_";
-const string c_contDownPrefix = "Lob_ContDown_";
-const string c_abnoPrefix = "Lob_Abno_";
+const string c_doorUpPrefix = "Lob_Door_";
+const string c_doorDownPrefix = "Lob_DoorDown_";
 
-const string c_toolUpPrefix = "Lob_Tool_";
-const string c_toolDownPrefix = "Lob_ToolDown_";
+const string c_containedBuff = "Lob_Contained";
+const string c_qliphothBuff = "Lob_Qliphoth";
+const string c_doorStrainBuff = "Lob_DoorStrain";
+
+const int c_cellContained = 0;
+const int c_cellEscaping = 1;
+const int c_cellLoose = 2;
+const int c_cellReturning = 3;
+
+const int c_cellMax = 32;
+
+// How far from an abnormality's home its door may stand.
+const fixed c_cellRadius = 12.0;
+
+// PLACEHOLDER. Every abnormality is supposed to bring its own, and some bring
+// none at all. See the header.
+const int c_qliphothDefault = 3;
+
+// Seconds between suppression and the return home.
+const fixed c_returnDelay = 8.0;
+
+// Seconds of pressure on a door per stack of strain. One stack is a small
+// amount of life regeneration removed, so the door bleeds faster the longer the
+// abnormality has been working on it -- which is what makes repair a delay
+// rather than an answer, per docs/usr/containment.md. Grade multiplies the
+// rate, so an Aleph chews through a door it cannot be held against.
+const fixed c_strainPeriod = 2.0;
 
 const fixed c_contPeriod = 1.0;
 
-trigger gt_contFatal;
-trigger gt_contTick;
+int gv_cellCount;
+unit[32] gvg_cellAbno;
+point[32] gvg_cellHome;
+int[32] gvg_cellState;
+fixed[32] gvg_cellReturnAt;
+fixed[32] gvg_cellStrainAt;
+
+trigger gt_cellFatal;
+trigger gt_cellTick;
 
 //--------------------------------------------------------------------------------------------------
-// The variant segment of a cell, a downed cell or an abnormality: the name the
-// three share. Empty for anything that is none of them.
-//--------------------------------------------------------------------------------------------------
-string Cont_VariantOfType (string unitType) {
-    if (StringSub(unitType, 1, StringLength(c_contDownPrefix)) == c_contDownPrefix) {
-        return StringSub(unitType, StringLength(c_contDownPrefix) + 1, StringLength(unitType));
-    }
-    if (StringSub(unitType, 1, StringLength(c_toolDownPrefix)) == c_toolDownPrefix) {
-        return StringSub(unitType, StringLength(c_toolDownPrefix) + 1, StringLength(unitType));
-    }
-    if (StringSub(unitType, 1, StringLength(c_contUpPrefix)) == c_contUpPrefix) {
-        return StringSub(unitType, StringLength(c_contUpPrefix) + 1, StringLength(unitType));
-    }
-    if (StringSub(unitType, 1, StringLength(c_toolUpPrefix)) == c_toolUpPrefix) {
-        return StringSub(unitType, StringLength(c_toolUpPrefix) + 1, StringLength(unitType));
-    }
-    if (StringSub(unitType, 1, StringLength(c_abnoPrefix)) == c_abnoPrefix) {
-        return StringSub(unitType, StringLength(c_abnoPrefix) + 1, StringLength(unitType));
-    }
-    return "";
-}
-
-string Cont_Variant (unit which) {
-    if (which == null) {
-        return "";
-    }
-    return Cont_VariantOfType(UnitGetType(which));
-}
-
-bool Cont_IsTool (unit which) {
-    return ObjectsGen_IsTool(which) || ObjectsGen_IsToolDown(which);
-}
-
-//--------------------------------------------------------------------------------------------------
-// Every containment cell a player holds, working or not, tools included.
+// Registry.
 //
-// Ownership is the unit's owner rather than which sector it stands in. A cell
-// belongs to whoever is answerable for it, and that has to survive the cell
-// being placed a little outside the region somebody drew.
+// Built once from the abnormalities standing on the map, because an abnormality
+// has a home and the home is where it was placed. A cell chosen at runtime will
+// need a spawn point of its own; that belongs with the selection screen, which
+// does not exist, so nothing here pretends to know where an empty cell is.
 //--------------------------------------------------------------------------------------------------
-unitgroup Cont_AllOf (int player) {
-    unitgroup all;
-    unitgroup mine;
-    unit cell;
-    int count;
+int Cont_SlotOf (unit abno) {
     int i;
 
-    all = ObjectsGen_ScanCont();
-    UnitGroupAddUnitGroup(all, ObjectsGen_ScanContDown());
-    UnitGroupAddUnitGroup(all, ObjectsGen_ScanTool());
-    UnitGroupAddUnitGroup(all, ObjectsGen_ScanToolDown());
-
-    mine = UnitGroupEmpty();
-    count = UnitGroupCount(all, c_unitCountAlive);
-    i = 1;
-    while (i <= count) {
-        cell = UnitGroupUnit(all, i);
-        if (cell != null && UnitGetOwner(cell) == player) {
-            UnitGroupAdd(mine, cell);
+    if (abno == null) {
+        return -1;
+    }
+    i = 0;
+    while (i < gv_cellCount) {
+        if (gvg_cellAbno[i] == abno) {
+            return i;
         }
         i = i + 1;
     }
-    return mine;
+    return -1;
+}
+
+int Cont_State (unit abno) {
+    int slot;
+
+    slot = Cont_SlotOf(abno);
+    if (slot < 0) {
+        return c_cellContained;
+    }
+    return gvg_cellState[slot];
+}
+
+bool Cont_IsLoose (unit abno) {
+    int state;
+
+    state = Cont_State(abno);
+    return state == c_cellLoose || state == c_cellEscaping;
 }
 
 //--------------------------------------------------------------------------------------------------
-// Cells that are working. Control Team's passive scales on exactly this count
-// and says tools do not count towards it, which is what the family split buys.
+// The door of a cell: nearest door to that abnormality's home, raised or
+// dropped. Null while no door has been placed, which leaves an abnormality
+// contained by nothing but its own behavior -- inert, but visibly wrong.
 //--------------------------------------------------------------------------------------------------
-int Cont_OnlineCount (int player) {
-    unitgroup online;
-    unit cell;
-    int total;
-    int count;
-    int i;
+unit Cont_DoorAt (point home) {
+    unitgroup doors;
+    unit door;
 
-    online = ObjectsGen_ScanCont();
-    total = 0;
-    count = UnitGroupCount(online, c_unitCountAlive);
+    doors = ObjectsGen_ScanDoor();
+    UnitGroupAddUnitGroup(doors, ObjectsGen_ScanDoorDown());
 
-    i = 1;
-    while (i <= count) {
-        cell = UnitGroupUnit(online, i);
-        if (cell != null && UnitGetOwner(cell) == player) {
-            total = total + 1;
-        }
-        i = i + 1;
+    door = UnitGroupClosestToPoint(doors, home);
+    if (door == null) {
+        return null;
     }
-    return total;
+    if (DistanceBetweenPoints(UnitGetPosition(door), home) > c_cellRadius) {
+        return null;
+    }
+    return door;
+}
+
+unit Cont_DoorOf (unit abno) {
+    int slot;
+
+    slot = Cont_SlotOf(abno);
+    if (slot < 0) {
+        return null;
+    }
+    return Cont_DoorAt(gvg_cellHome[slot]);
+}
+
+bool Cont_DoorIsUp (unit abno) {
+    return ObjectsGen_IsDoor(Cont_DoorOf(abno));
 }
 
 //--------------------------------------------------------------------------------------------------
-// Whether this abnormality is currently loose.
+// The Qliphoth counter, as the stack count of a behavior.
 //
-// Asked of the world, like everything else: a variant is out if a Lob_Abno_ of
-// that name is alive. There is no flag to fall out of step with the unit that
-// is actually standing there.
+// Same trick as employee stats, and for the same reason: a stack count is a
+// number the engine already stores, already caps, and already draws on the
+// unit with the count on the icon. Nothing here keeps a parallel copy.
 //--------------------------------------------------------------------------------------------------
-bool Cont_VariantIsLoose (string variant) {
-    unitgroup loose;
-    unit which;
-    int count;
-    int i;
-
-    loose = ObjectsGen_ScanAbno();
-    count = UnitGroupCount(loose, c_unitCountAlive);
-
-    i = 1;
-    while (i <= count) {
-        which = UnitGroupUnit(loose, i);
-        if (which != null && Cont_Variant(which) == variant) {
-            return true;
-        }
-        i = i + 1;
+int Cont_Counter (unit abno) {
+    if (abno == null) {
+        return 0;
     }
-    return false;
+    return UnitBehaviorCount(abno, c_qliphothBuff);
+}
+
+void Cont_SetCounter (unit abno, int value) {
+    int have;
+
+    if (abno == null || !UnitIsAlive(abno)) {
+        return;
+    }
+    if (value < 0) {
+        value = 0;
+    }
+
+    have = Cont_Counter(abno);
+    if (value > have) {
+        UnitBehaviorAdd(abno, c_qliphothBuff, abno, value - have);
+    }
+    else if (value < have) {
+        UnitBehaviorRemove(abno, c_qliphothBuff, have - value);
+    }
 }
 
 //--------------------------------------------------------------------------------------------------
-// Lets one out.
-//
-// The cell goes down the way a device does, and the abnormality appears where
-// the cell is, owned by the abnormality player. That player is hostile to the
-// zerg as well as to everybody else, which is an alliance setting rather than
-// anything script can arrange -- design 5.1 turns on it, because releasing an
-// easy one to meet a wave is meant to be a real tactic rather than an accident.
-//
-// Nothing is ordered. See the header.
+// Contained is a behavior, so the state and its consequences are the same
+// object. Invulnerable, uncommandable, passive and unable to attack all come
+// from one Modification in data, which is what "在收容单元中的异想体是无敌的，
+// 且不会做任何事情" asks for, without a line of script per consequence.
 //--------------------------------------------------------------------------------------------------
-void Cont_Breach (unit cell) {
-    string variant;
-    string upPrefix;
-    string downPrefix;
-    point where;
+void Cont_SetContained (unit abno, bool contained) {
+    Buffs_Set(abno, c_containedBuff, contained);
+}
 
-    if (cell == null) {
+//--------------------------------------------------------------------------------------------------
+// Formally out: the door is down and the invulnerability goes with it.
+//
+// Nothing is ordered. Some abnormalities walk to the rest hall, some never move
+// at all, and a blanket attack-move would be inventing content that belongs to
+// each of them.
+//--------------------------------------------------------------------------------------------------
+void Cont_GoLoose (unit abno) {
+    int slot;
+
+    slot = Cont_SlotOf(abno);
+    if (slot < 0 || gvg_cellState[slot] == c_cellLoose) {
         return;
     }
 
-    variant = Cont_Variant(cell);
-    if (variant == "") {
-        return;
-    }
-    if (Cont_VariantIsLoose(variant)) {
-        return;
-    }
-
-    if (Cont_IsTool(cell)) {
-        upPrefix = c_toolUpPrefix;
-        downPrefix = c_toolDownPrefix;
-    }
-    else {
-        upPrefix = c_contUpPrefix;
-        downPrefix = c_contDownPrefix;
-    }
-
-    where = UnitGetPosition(cell);
-    Downable_TakeDown(cell, upPrefix, downPrefix);
-
-    // A variant with no Lob_Abno_ authored simply stays contained-but-broken.
-    // That is the right failure for a tool, and it keeps a half-authored
-    // abnormality from taking the map down.
-    if (c_typesAbnoCount > 0) {
-        UnitCreate(1, c_abnoPrefix + variant, c_unitCreateIgnorePlacement,
-                   c_abnoPlayer, where, 270.0);
-    }
+    gvg_cellState[slot] = c_cellLoose;
+    Cont_SetContained(abno, false);
+    Cont_SetCounter(abno, 0);
 
     UIDisplayMessage(
-        PlayerGroupAll(),
-        c_messageAreaSubtitle,
-        StringToText(Risk_Name(Risk_OfType(c_contUpPrefix + variant))
-                     + " containment breach -- " + variant)
-    );
+        PlayerGroupAll(), c_messageAreaSubtitle,
+        StringToText(Risk_Name(Risk_Of(abno)) + " containment breach"));
 }
 
 //--------------------------------------------------------------------------------------------------
-// A cell that takes a killing blow lets its occupant out.
+// It has decided to leave.
 //
-// Which is a decision, not a mechanism: the alternative is a wrecked cell that
-// somehow still holds. Reading it this way is what makes a neighbour losing
-// their outer layer cost the table something, without touching anybody's own
-// numbers -- the pressure travels, the punishment does not. One handler, so it
-// is one line to change if that turns out to play badly.
+// If the door is still standing it attacks the door -- its own door, from the
+// inside -- and the door starts accumulating strain. If the door is already
+// down it is simply out. Both paths end at Loose; the difference is how long
+// the rest of the table has.
+//
+// An abnormality that does not escape never reaches here. For those, a dropped
+// door means only that they cannot be worked on, which needs no code because
+// the work order will ask Cont_DoorIsUp.
+//--------------------------------------------------------------------------------------------------
+void Cont_BeginEscape (unit abno) {
+    int slot;
+    unit door;
+
+    slot = Cont_SlotOf(abno);
+    if (slot < 0 || gvg_cellState[slot] != c_cellContained) {
+        return;
+    }
+
+    door = Cont_DoorAt(gvg_cellHome[slot]);
+    if (door != null && ObjectsGen_IsDoor(door)) {
+        gvg_cellState[slot] = c_cellEscaping;
+        gvg_cellStrainAt[slot] = GameGetMissionTime() + c_strainPeriod;
+
+        // Uncontained enough to act, but it is still inside a standing door and
+        // nothing can reach it, so the invulnerability stays until the door is
+        // actually down. That matches the doc: the unit is formally escaped
+        // only once the door drops.
+        UnitIssueOrder(abno, OrderTargetingUnit(AbilityCommand("attack", 0), door),
+                       c_orderQueueReplace);
+        UIDisplayMessage(
+            PlayerGroupAll(), c_messageAreaSubtitle,
+            StringToText(Risk_Name(Risk_Of(abno)) + " is working on its door"));
+        return;
+    }
+
+    Cont_GoLoose(abno);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Drops a door, and zeroes the counter of whatever it was holding.
+//
+// "被从外部破坏时，大门将会降下，并将其 Qliphoth Counter 设为 0" -- the same
+// thing happens whether the zerg did it or the occupant did, so both paths come
+// through here. What happens next is the abnormality's business, not the door's.
+//--------------------------------------------------------------------------------------------------
+void Cont_DropDoor (unit door) {
+    point where;
+    int slot;
+
+    if (door == null || !ObjectsGen_IsDoor(door)) {
+        return;
+    }
+    where = UnitGetPosition(door);
+    Downable_TakeDown(door, c_doorUpPrefix, c_doorDownPrefix);
+
+    slot = 0;
+    while (slot < gv_cellCount) {
+        if (DistanceBetweenPoints(gvg_cellHome[slot], where) <= c_cellRadius) {
+            Cont_SetCounter(gvg_cellAbno[slot], 0);
+            if (gvg_cellState[slot] == c_cellEscaping) {
+                Cont_GoLoose(gvg_cellAbno[slot]);
+            }
+        }
+        slot = slot + 1;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// Suppression: defeated, not killed.
+//
+// The fatal blow is intercepted the way a device's is, and what follows is the
+// doc's return -- home after a delay, initial state, counter back to default,
+// door instantly whole and raised. An abnormality is never removed from the
+// game, so a breach can cost employees, time and the table's attention, but
+// never a slot.
+//--------------------------------------------------------------------------------------------------
+void Cont_Suppress (unit abno) {
+    int slot;
+
+    slot = Cont_SlotOf(abno);
+    if (slot < 0 || gvg_cellState[slot] == c_cellReturning) {
+        return;
+    }
+
+    gvg_cellState[slot] = c_cellReturning;
+    gvg_cellReturnAt[slot] = GameGetMissionTime() + c_returnDelay;
+
+    // Contained again immediately, so nothing keeps hitting it during the walk
+    // back and it stops acting the moment it is beaten.
+    UnitSetPropertyFixed(abno, c_unitPropLife,
+                         UnitGetPropertyFixed(abno, c_unitPropLifeMax, true));
+    Cont_SetContained(abno, true);
+
+    UIDisplayMessage(
+        PlayerGroupAll(), c_messageAreaSubtitle,
+        StringToText(Risk_Name(Risk_Of(abno)) + " suppressed"));
+}
+
+void Cont_Return (int slot) {
+    unit abno;
+    unit door;
+
+    abno = gvg_cellAbno[slot];
+    gvg_cellState[slot] = c_cellContained;
+
+    UnitSetPosition(abno, gvg_cellHome[slot], false);
+    Cont_SetContained(abno, true);
+    Cont_SetCounter(abno, c_qliphothDefault);
+
+    // The door comes back whole and raised, which is not the same as being
+    // repaired: the doc restores it outright on suppression.
+    door = Cont_DoorAt(gvg_cellHome[slot]);
+    if (door != null && ObjectsGen_IsDoorDown(door)) {
+        Downable_Morph(door,
+                       Downable_Retype(UnitGetType(door), c_doorDownPrefix, c_doorUpPrefix),
+                       UnitGetPropertyFixed(door, c_unitPropLifeMax, true));
+    }
+    else if (door != null) {
+        UnitSetPropertyFixed(door, c_unitPropLife,
+                             UnitGetPropertyFixed(door, c_unitPropLifeMax, true));
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// A fatal blow on a door drops it; a fatal blow on a loose abnormality
+// suppresses it. Same interception, two meanings.
 //--------------------------------------------------------------------------------------------------
 bool Cont_Fatal_Func (bool testConds, bool runActions) {
     unit victim;
@@ -2827,62 +2963,100 @@ bool Cont_Fatal_Func (bool testConds, bool runActions) {
     }
 
     victim = EventUnit();
-    if (!ObjectsGen_IsCont(victim) && !ObjectsGen_IsTool(victim)) {
+    if (ObjectsGen_IsDoor(victim)) {
+        Cont_DropDoor(victim);
         return true;
     }
-
-    Cont_Breach(victim);
+    if (ObjectsGen_IsAbno(victim) && Cont_IsLoose(victim)) {
+        Cont_Suppress(victim);
+    }
     return true;
 }
 
 //--------------------------------------------------------------------------------------------------
-// Puts repaired cells back online.
+// Strain, and the return timer.
 //
-// Not Downable_RestoreRepaired, and the difference is the point: a cell whose
-// occupant is still loose must not come back, or repairing the room would put
-// the abnormality in two places at once. Suppression first, repair second, and
-// the order is enforced here rather than asked of the player.
+// Strain is a stack per period on the door of a cell whose occupant is trying
+// to get out, scaled by grade. The doc requires that repair be a delay rather
+// than an answer, and stacking regeneration loss is what makes that true
+// without an SCV's repair rate having to be balanced against every grade
+// separately: eventually the strain outruns any fixed repair rate, and the
+// higher the grade the sooner.
 //--------------------------------------------------------------------------------------------------
-void Cont_RestoreRepaired (unitgroup down, string downPrefix, string upPrefix) {
-    unit cell;
-    int count;
-    int i;
-
-    count = UnitGroupCount(down, c_unitCountAlive);
-
-    // Counting down: a morph removes the unit, and a unit group drops units
-    // that stop existing, so walking forwards would skip every second cell that
-    // finished repairing on the same tick.
-    i = count;
-    while (i >= 1) {
-        cell = UnitGroupUnit(down, i);
-        if (cell != null
-            && UnitGetPropertyFixed(cell, c_unitPropLifePercent, true) >= 99.0
-            && !Cont_VariantIsLoose(Cont_Variant(cell))) {
-            Downable_Morph(cell,
-                           Downable_Retype(UnitGetType(cell), downPrefix, upPrefix),
-                           UnitGetPropertyFixed(cell, c_unitPropLifeMax, true));
-        }
-        i = i - 1;
-    }
-}
-
 bool Cont_Tick_Func (bool testConds, bool runActions) {
+    unit door;
+    fixed now;
+    int slot;
+    int grade;
+
     if (!runActions) {
         return true;
     }
 
-    Cont_RestoreRepaired(ObjectsGen_ScanContDown(), c_contDownPrefix, c_contUpPrefix);
-    Cont_RestoreRepaired(ObjectsGen_ScanToolDown(), c_toolDownPrefix, c_toolUpPrefix);
+    now = GameGetMissionTime();
+
+    slot = 0;
+    while (slot < gv_cellCount) {
+        if (gvg_cellState[slot] == c_cellEscaping && now >= gvg_cellStrainAt[slot]) {
+            door = Cont_DoorAt(gvg_cellHome[slot]);
+            if (door == null || ObjectsGen_IsDoorDown(door)) {
+                Cont_GoLoose(gvg_cellAbno[slot]);
+            }
+            else {
+                grade = Risk_Of(gvg_cellAbno[slot]);
+                if (grade < 0) {
+                    grade = 0;
+                }
+                UnitBehaviorAdd(door, c_doorStrainBuff, gvg_cellAbno[slot], grade + 1);
+                gvg_cellStrainAt[slot] = now + c_strainPeriod;
+            }
+        }
+        else if (gvg_cellState[slot] == c_cellReturning && now >= gvg_cellReturnAt[slot]) {
+            Cont_Return(slot);
+        }
+        slot = slot + 1;
+    }
     return true;
 }
 
-void Containment_Init () {
-    gt_contFatal = TriggerCreate("Cont_Fatal_Func");
-    TriggerAddEventUnitDamaged(gt_contFatal, null, c_unitDamageTypeAny, c_unitDamageFatal, null);
+//--------------------------------------------------------------------------------------------------
+// Everything on the map that is an abnormality, contained where it stands.
+//--------------------------------------------------------------------------------------------------
+void Cont_BuildRegistry () {
+    unitgroup all;
+    unit abno;
+    int count;
+    int i;
 
-    gt_contTick = TriggerCreate("Cont_Tick_Func");
-    TriggerAddEventTimePeriodic(gt_contTick, c_contPeriod, c_timeGame);
+    gv_cellCount = 0;
+
+    all = ObjectsGen_ScanAbno();
+    UnitGroupAddUnitGroup(all, ObjectsGen_ScanTool());
+    count = UnitGroupCount(all, c_unitCountAlive);
+
+    i = 1;
+    while (i <= count && gv_cellCount < c_cellMax) {
+        abno = UnitGroupUnit(all, i);
+        if (abno != null) {
+            gvg_cellAbno[gv_cellCount] = abno;
+            gvg_cellHome[gv_cellCount] = UnitGetPosition(abno);
+            gvg_cellState[gv_cellCount] = c_cellContained;
+            Cont_SetContained(abno, true);
+            Cont_SetCounter(abno, c_qliphothDefault);
+            gv_cellCount = gv_cellCount + 1;
+        }
+        i = i + 1;
+    }
+}
+
+void Containment_Init () {
+    Cont_BuildRegistry();
+
+    gt_cellFatal = TriggerCreate("Cont_Fatal_Func");
+    TriggerAddEventUnitDamaged(gt_cellFatal, null, c_unitDamageTypeAny, c_unitDamageFatal, null);
+
+    gt_cellTick = TriggerCreate("Cont_Tick_Func");
+    TriggerAddEventTimePeriodic(gt_cellTick, c_contPeriod, c_timeGame);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -3685,108 +3859,99 @@ void Debug_ReportEmployees (int player) {
 //--------------------------------------------------------------------------------------------------
 // -cont
 //
-// One line per containment cell: what is in it, what grade, and which of the
-// three states it is in. The states are the point -- online, down with the
-// occupant loose, and down with it suppressed are three different situations
-// and only the middle one blocks repair.
+// One line per abnormality: grade, state, Qliphoth counter, and what its door
+// is doing. The state and the door are printed together because the pairing is
+// the whole mechanic -- an abnormality that has decided to leave and a door
+// that is still standing is the only situation where anybody has time to react.
 //--------------------------------------------------------------------------------------------------
+string Debug_CellStateName (int state) {
+    if (state == c_cellContained) { return "contained"; }
+    if (state == c_cellEscaping) { return "ESCAPING (on its door)"; }
+    if (state == c_cellLoose) { return "LOOSE"; }
+    if (state == c_cellReturning) { return "returning"; }
+    return "?";
+}
+
 void Debug_ReportCells (int player) {
-    unitgroup mine;
-    unit cell;
-    string variant;
+    unit abno;
+    unit door;
     string line;
-    int count;
-    int i;
+    int slot;
 
-    mine = Cont_AllOf(player);
-    count = UnitGroupCount(mine, c_unitCountAlive);
-
-    if (count == 0) {
-        Debug_Say(player, "cont: no Lob_Cont_* / Lob_Tool_* cells owned");
+    if (gv_cellCount == 0) {
+        Debug_Say(player, "cont: no Lob_Abno_* / Lob_Tool_* on the map");
         return;
     }
 
-    i = 1;
-    while (i <= count) {
-        cell = UnitGroupUnit(mine, i);
-        variant = Cont_Variant(cell);
+    slot = 0;
+    while (slot < gv_cellCount) {
+        abno = gvg_cellAbno[slot];
+        door = Cont_DoorAt(gvg_cellHome[slot]);
 
-        line = "cont " + variant;
-        if (Cont_IsTool(cell)) {
-            line = line + " [tool]";
-        }
-        else {
-            line = line + " [" + Risk_Name(Risk_OfType(c_contUpPrefix + variant)) + "]";
-        }
+        line = "cell " + IntToString(slot) + " " + UnitGetType(abno)
+               + " [" + Risk_Name(Risk_Of(abno)) + "]"
+               + " " + Debug_CellStateName(gvg_cellState[slot])
+               + " qlip=" + IntToString(Cont_Counter(abno));
 
-        if (ObjectsGen_IsCont(cell) || ObjectsGen_IsTool(cell)) {
-            line = line + " online";
+        if (door == null) {
+            line = line + " door=none";
         }
-        else if (Cont_VariantIsLoose(variant)) {
-            line = line + " BREACHED (suppress it before repairing)";
-        }
-        else {
-            line = line + " down, repairable ("
+        else if (ObjectsGen_IsDoor(door)) {
+            line = line + " door=up "
                    + IntToString(FixedToInt(
-                         UnitGetPropertyFixed(cell, c_unitPropLifePercent, true)))
-                   + "%)";
+                         UnitGetPropertyFixed(door, c_unitPropLifePercent, true)))
+                   + "% strain=" + IntToString(UnitBehaviorCount(door, c_doorStrainBuff));
+        }
+        else {
+            line = line + " door=DOWN";
         }
 
         Debug_Say(player, line);
-        i = i + 1;
+        slot = slot + 1;
     }
 }
 
 //--------------------------------------------------------------------------------------------------
-// -breach
+// -breach [slot]
 //
-// Drives the transition the meltdown clock will drive later. Selection first,
-// so a specific cell can be picked; otherwise every working cell the player
-// owns, which is the interesting case for watching the defence hold or not.
+// Drives the decision the meltdown clock will drive later: the abnormality
+// decides to leave. It still has to get through its own door, which is the part
+// worth watching.
 //--------------------------------------------------------------------------------------------------
-void Debug_BreachCells (int player) {
-    unitgroup selected;
-    unitgroup targets;
-    unit cell;
-    int count;
-    int i;
+void Debug_Breach (int player, string slotWord) {
+    int slot;
 
-    targets = UnitGroupEmpty();
-    selected = UnitGroupSelected(player);
-    count = UnitGroupCount(selected, c_unitCountAlive);
-    i = 1;
-    while (i <= count) {
-        cell = UnitGroupUnit(selected, i);
-        if (cell != null && (ObjectsGen_IsCont(cell) || ObjectsGen_IsTool(cell))) {
-            UnitGroupAdd(targets, cell);
-        }
-        i = i + 1;
-    }
-
-    if (UnitGroupCount(targets, c_unitCountAlive) == 0) {
-        count = UnitGroupCount(Cont_AllOf(player), c_unitCountAlive);
-        i = 1;
-        while (i <= count) {
-            cell = UnitGroupUnit(Cont_AllOf(player), i);
-            if (cell != null && (ObjectsGen_IsCont(cell) || ObjectsGen_IsTool(cell))) {
-                UnitGroupAdd(targets, cell);
-            }
-            i = i + 1;
-        }
-    }
-
-    count = UnitGroupCount(targets, c_unitCountAlive);
-    if (count == 0) {
-        Debug_Say(player, "breach: nothing of yours is contained right now");
+    if (gv_cellCount == 0) {
+        Debug_Say(player, "breach: nothing to let out");
         return;
     }
 
-    // Counting down: breaching morphs the cell away, which renumbers the group.
-    i = count;
-    while (i >= 1) {
-        Cont_Breach(UnitGroupUnit(targets, i));
-        i = i - 1;
+    slot = Debug_Int(slotWord, 0);
+    if (slot < 0 || slot >= gv_cellCount) {
+        Debug_Say(player, "breach: slot 0.." + IntToString(gv_cellCount - 1));
+        return;
     }
+
+    Cont_BeginEscape(gvg_cellAbno[slot]);
+    Debug_ReportCells(player);
+}
+
+//--------------------------------------------------------------------------------------------------
+// -qlip <slot> <n>
+//
+// The counter without the thing that moves it, since the thing that moves it is
+// the meltdown clock and work results, neither of which exists.
+//--------------------------------------------------------------------------------------------------
+void Debug_SetCounter (int player, string slotWord, string valueWord) {
+    int slot;
+
+    slot = Debug_Int(slotWord, -1);
+    if (slot < 0 || slot >= gv_cellCount) {
+        Debug_Say(player, "qlip: want a slot 0.." + IntToString(gv_cellCount - 1));
+        return;
+    }
+
+    Cont_SetCounter(gvg_cellAbno[slot], Debug_Int(valueWord, 0));
     Debug_ReportCells(player);
 }
 
@@ -3876,8 +4041,9 @@ void Debug_Help (int player) {
     Debug_Say(player, "-rank                   resync every rank readout");
     Debug_Say(player, "-status                 the economy/power/sector readout");
     Debug_Say(player, "-scan                   what the object tables can see");
-    Debug_Say(player, "-cont                   your containment cells and their state");
-    Debug_Say(player, "-breach                 let the selected cell's occupant out");
+    Debug_Say(player, "-cont                   every cell: grade, state, counter, door");
+    Debug_Say(player, "-breach [slot]          that abnormality decides to leave");
+    Debug_Say(player, "-qlip <slot> <n>        set a Qliphoth counter");
 }
 
 bool Debug_Chat_Func (bool testConds, bool runActions) {
@@ -3928,7 +4094,10 @@ bool Debug_Chat_Func (bool testConds, bool runActions) {
         Debug_ReportCells(player);
     }
     else if (StringEqual(command, "-breach", false)) {
-        Debug_BreachCells(player);
+        Debug_Breach(player, StringWord(message, 2));
+    }
+    else if (StringEqual(command, "-qlip", false)) {
+        Debug_SetCounter(player, StringWord(message, 2), StringWord(message, 3));
     }
     return true;
 }

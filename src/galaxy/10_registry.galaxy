@@ -20,10 +20,11 @@
 string Registry_ScanLine () {
     return "scan: hero=" + IntToString(UnitGroupCount(ObjectsGen_ScanHero(), c_unitCountAlive))
            + " emp=" + IntToString(UnitGroupCount(ObjectsGen_ScanEmp(), c_unitCountAlive))
-           + " cont=" + IntToString(UnitGroupCount(ObjectsGen_ScanCont(), c_unitCountAlive))
-           + "+" + IntToString(UnitGroupCount(ObjectsGen_ScanContDown(), c_unitCountAlive))
+           + " abno=" + IntToString(UnitGroupCount(ObjectsGen_ScanAbno(), c_unitCountAlive))
            + " tool=" + IntToString(UnitGroupCount(ObjectsGen_ScanTool(), c_unitCountAlive))
-           + " loose=" + IntToString(UnitGroupCount(ObjectsGen_ScanAbno(), c_unitCountAlive))
+           + " door=" + IntToString(UnitGroupCount(ObjectsGen_ScanDoor(), c_unitCountAlive))
+           + "up/" + IntToString(UnitGroupCount(ObjectsGen_ScanDoorDown(), c_unitCountAlive))
+           + "down"
            + " debris=" + IntToString(UnitGroupCount(ObjectsGen_ScanDebris(), c_unitCountAlive))
            + " worker=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Worker(), c_unitCountAlive))
            + " miner=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Miner(), c_unitCountAlive))

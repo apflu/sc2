@@ -8,10 +8,6 @@
 // Unit types, by the category segment of their id.
 const int c_typesAbnoCount = 0;
 string[1] gvg_typesAbno;
-const int c_typesContCount = 0;
-string[1] gvg_typesCont;
-const int c_typesContDownCount = 0;
-string[1] gvg_typesContDown;
 const int c_typesCoreCount = 1;
 string[1] gvg_typesCore;
 const int c_typesCoreDownCount = 1;
@@ -32,6 +28,10 @@ const int c_typesDeviceDown_BasicCount = 1;
 string[1] gvg_typesDeviceDown_Basic;
 const int c_typesDevice_BasicCount = 1;
 string[1] gvg_typesDevice_Basic;
+const int c_typesDoorCount = 0;
+string[1] gvg_typesDoor;
+const int c_typesDoorDownCount = 0;
+string[1] gvg_typesDoorDown;
 const int c_typesEmpCount = 1;
 string[1] gvg_typesEmp;
 const int c_typesEmp_BasicCount = 1;
@@ -44,6 +44,8 @@ const int c_typesMarkerCount = 1;
 string[1] gvg_typesMarker;
 const int c_typesMarker_SpawnCount = 1;
 string[1] gvg_typesMarker_Spawn;
+const int c_typesPanelCount = 0;
+string[1] gvg_typesPanel;
 const int c_typesPileCount = 1;
 string[1] gvg_typesPile;
 const int c_typesPile_OreCount = 1;
@@ -62,8 +64,6 @@ const int c_typesSCV_WorkerCount = 1;
 string[1] gvg_typesSCV_Worker;
 const int c_typesToolCount = 0;
 string[1] gvg_typesTool;
-const int c_typesToolDownCount = 0;
-string[1] gvg_typesToolDown;
 
 // Editor object groups, flattened: names[i] owns the members
 // slice starting at groupFirst[i] and running groupSize[i] long.
@@ -104,82 +104,6 @@ bool ObjectsGen_IsAbno (unit target) {
     i = 0;
     while (i < c_typesAbnoCount) {
         if (UnitGetType(target) == gvg_typesAbno[i]) {
-            return true;
-        }
-        i = i + 1;
-    }
-    return false;
-}
-
-//--------------------------------------------------------------------------------------------------
-// Every live Cont unit on the map, whichever variant and whoever owns it.
-// Works for runtime-spawned units too, unlike anything keyed on placed ids.
-//--------------------------------------------------------------------------------------------------
-unitgroup ObjectsGen_ScanCont () {
-    unitgroup found;
-    int i;
-
-    found = UnitGroupEmpty();
-    i = 0;
-    while (i < c_typesContCount) {
-        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesCont[i], c_playerAny,
-                                               RegionEntireMap(), null, 0));
-        i = i + 1;
-    }
-    return found;
-}
-
-//--------------------------------------------------------------------------------------------------
-// Whether a unit is a Cont, whatever variant. False for an empty
-// category, so code can be written ahead of the units existing.
-//--------------------------------------------------------------------------------------------------
-bool ObjectsGen_IsCont (unit target) {
-    int i;
-
-    if (target == null) {
-        return false;
-    }
-    i = 0;
-    while (i < c_typesContCount) {
-        if (UnitGetType(target) == gvg_typesCont[i]) {
-            return true;
-        }
-        i = i + 1;
-    }
-    return false;
-}
-
-//--------------------------------------------------------------------------------------------------
-// Every live ContDown unit on the map, whichever variant and whoever owns it.
-// Works for runtime-spawned units too, unlike anything keyed on placed ids.
-//--------------------------------------------------------------------------------------------------
-unitgroup ObjectsGen_ScanContDown () {
-    unitgroup found;
-    int i;
-
-    found = UnitGroupEmpty();
-    i = 0;
-    while (i < c_typesContDownCount) {
-        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesContDown[i], c_playerAny,
-                                               RegionEntireMap(), null, 0));
-        i = i + 1;
-    }
-    return found;
-}
-
-//--------------------------------------------------------------------------------------------------
-// Whether a unit is a ContDown, whatever variant. False for an empty
-// category, so code can be written ahead of the units existing.
-//--------------------------------------------------------------------------------------------------
-bool ObjectsGen_IsContDown (unit target) {
-    int i;
-
-    if (target == null) {
-        return false;
-    }
-    i = 0;
-    while (i < c_typesContDownCount) {
-        if (UnitGetType(target) == gvg_typesContDown[i]) {
             return true;
         }
         i = i + 1;
@@ -568,6 +492,82 @@ bool ObjectsGen_IsDevice_Basic (unit target) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// Every live Door unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanDoor () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesDoorCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesDoor[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Door, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsDoor (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesDoorCount) {
+        if (UnitGetType(target) == gvg_typesDoor[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live DoorDown unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanDoorDown () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesDoorDownCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesDoorDown[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a DoorDown, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsDoorDown (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesDoorDownCount) {
+        if (UnitGetType(target) == gvg_typesDoorDown[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
 // Every live Emp unit on the map, whichever variant and whoever owns it.
 // Works for runtime-spawned units too, unlike anything keyed on placed ids.
 //--------------------------------------------------------------------------------------------------
@@ -788,6 +788,44 @@ bool ObjectsGen_IsMarker_Spawn (unit target) {
     i = 0;
     while (i < c_typesMarker_SpawnCount) {
         if (UnitGetType(target) == gvg_typesMarker_Spawn[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live Panel unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanPanel () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesPanelCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesPanel[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Panel, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsPanel (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesPanelCount) {
+        if (UnitGetType(target) == gvg_typesPanel[i]) {
             return true;
         }
         i = i + 1;
@@ -1130,44 +1168,6 @@ bool ObjectsGen_IsTool (unit target) {
     i = 0;
     while (i < c_typesToolCount) {
         if (UnitGetType(target) == gvg_typesTool[i]) {
-            return true;
-        }
-        i = i + 1;
-    }
-    return false;
-}
-
-//--------------------------------------------------------------------------------------------------
-// Every live ToolDown unit on the map, whichever variant and whoever owns it.
-// Works for runtime-spawned units too, unlike anything keyed on placed ids.
-//--------------------------------------------------------------------------------------------------
-unitgroup ObjectsGen_ScanToolDown () {
-    unitgroup found;
-    int i;
-
-    found = UnitGroupEmpty();
-    i = 0;
-    while (i < c_typesToolDownCount) {
-        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesToolDown[i], c_playerAny,
-                                               RegionEntireMap(), null, 0));
-        i = i + 1;
-    }
-    return found;
-}
-
-//--------------------------------------------------------------------------------------------------
-// Whether a unit is a ToolDown, whatever variant. False for an empty
-// category, so code can be written ahead of the units existing.
-//--------------------------------------------------------------------------------------------------
-bool ObjectsGen_IsToolDown (unit target) {
-    int i;
-
-    if (target == null) {
-        return false;
-    }
-    i = 0;
-    while (i < c_typesToolDownCount) {
-        if (UnitGetType(target) == gvg_typesToolDown[i]) {
             return true;
         }
         i = i + 1;

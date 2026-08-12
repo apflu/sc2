@@ -55,23 +55,23 @@ INT32_MAX = 2**31 - 1
 # breaking the build.
 EXPECTED_CATEGORIES = [
     "Abno",
-    "Cont",
-    "ContDown",
     "Core",
     "CoreDown",
     "Debris",
     "Device",
     "DeviceDown",
+    "Door",
+    "DoorDown",
     "Emp",
     "Hero",
     "Marker",
+    "Panel",
     "Pile",
     "Recycler",
     "SCV",
     "SCV_Miner",
     "SCV_Worker",
     "Tool",
-    "ToolDown",
 ]
 
 HEADER = """//--------------------------------------------------------------------------------------------------

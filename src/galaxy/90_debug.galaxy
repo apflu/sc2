@@ -188,108 +188,99 @@ void Debug_ReportEmployees (int player) {
 //--------------------------------------------------------------------------------------------------
 // -cont
 //
-// One line per containment cell: what is in it, what grade, and which of the
-// three states it is in. The states are the point -- online, down with the
-// occupant loose, and down with it suppressed are three different situations
-// and only the middle one blocks repair.
+// One line per abnormality: grade, state, Qliphoth counter, and what its door
+// is doing. The state and the door are printed together because the pairing is
+// the whole mechanic -- an abnormality that has decided to leave and a door
+// that is still standing is the only situation where anybody has time to react.
 //--------------------------------------------------------------------------------------------------
+string Debug_CellStateName (int state) {
+    if (state == c_cellContained) { return "contained"; }
+    if (state == c_cellEscaping) { return "ESCAPING (on its door)"; }
+    if (state == c_cellLoose) { return "LOOSE"; }
+    if (state == c_cellReturning) { return "returning"; }
+    return "?";
+}
+
 void Debug_ReportCells (int player) {
-    unitgroup mine;
-    unit cell;
-    string variant;
+    unit abno;
+    unit door;
     string line;
-    int count;
-    int i;
+    int slot;
 
-    mine = Cont_AllOf(player);
-    count = UnitGroupCount(mine, c_unitCountAlive);
-
-    if (count == 0) {
-        Debug_Say(player, "cont: no Lob_Cont_* / Lob_Tool_* cells owned");
+    if (gv_cellCount == 0) {
+        Debug_Say(player, "cont: no Lob_Abno_* / Lob_Tool_* on the map");
         return;
     }
 
-    i = 1;
-    while (i <= count) {
-        cell = UnitGroupUnit(mine, i);
-        variant = Cont_Variant(cell);
+    slot = 0;
+    while (slot < gv_cellCount) {
+        abno = gvg_cellAbno[slot];
+        door = Cont_DoorAt(gvg_cellHome[slot]);
 
-        line = "cont " + variant;
-        if (Cont_IsTool(cell)) {
-            line = line + " [tool]";
-        }
-        else {
-            line = line + " [" + Risk_Name(Risk_OfType(c_contUpPrefix + variant)) + "]";
-        }
+        line = "cell " + IntToString(slot) + " " + UnitGetType(abno)
+               + " [" + Risk_Name(Risk_Of(abno)) + "]"
+               + " " + Debug_CellStateName(gvg_cellState[slot])
+               + " qlip=" + IntToString(Cont_Counter(abno));
 
-        if (ObjectsGen_IsCont(cell) || ObjectsGen_IsTool(cell)) {
-            line = line + " online";
+        if (door == null) {
+            line = line + " door=none";
         }
-        else if (Cont_VariantIsLoose(variant)) {
-            line = line + " BREACHED (suppress it before repairing)";
-        }
-        else {
-            line = line + " down, repairable ("
+        else if (ObjectsGen_IsDoor(door)) {
+            line = line + " door=up "
                    + IntToString(FixedToInt(
-                         UnitGetPropertyFixed(cell, c_unitPropLifePercent, true)))
-                   + "%)";
+                         UnitGetPropertyFixed(door, c_unitPropLifePercent, true)))
+                   + "% strain=" + IntToString(UnitBehaviorCount(door, c_doorStrainBuff));
+        }
+        else {
+            line = line + " door=DOWN";
         }
 
         Debug_Say(player, line);
-        i = i + 1;
+        slot = slot + 1;
     }
 }
 
 //--------------------------------------------------------------------------------------------------
-// -breach
+// -breach [slot]
 //
-// Drives the transition the meltdown clock will drive later. Selection first,
-// so a specific cell can be picked; otherwise every working cell the player
-// owns, which is the interesting case for watching the defence hold or not.
+// Drives the decision the meltdown clock will drive later: the abnormality
+// decides to leave. It still has to get through its own door, which is the part
+// worth watching.
 //--------------------------------------------------------------------------------------------------
-void Debug_BreachCells (int player) {
-    unitgroup selected;
-    unitgroup targets;
-    unit cell;
-    int count;
-    int i;
+void Debug_Breach (int player, string slotWord) {
+    int slot;
 
-    targets = UnitGroupEmpty();
-    selected = UnitGroupSelected(player);
-    count = UnitGroupCount(selected, c_unitCountAlive);
-    i = 1;
-    while (i <= count) {
-        cell = UnitGroupUnit(selected, i);
-        if (cell != null && (ObjectsGen_IsCont(cell) || ObjectsGen_IsTool(cell))) {
-            UnitGroupAdd(targets, cell);
-        }
-        i = i + 1;
-    }
-
-    if (UnitGroupCount(targets, c_unitCountAlive) == 0) {
-        count = UnitGroupCount(Cont_AllOf(player), c_unitCountAlive);
-        i = 1;
-        while (i <= count) {
-            cell = UnitGroupUnit(Cont_AllOf(player), i);
-            if (cell != null && (ObjectsGen_IsCont(cell) || ObjectsGen_IsTool(cell))) {
-                UnitGroupAdd(targets, cell);
-            }
-            i = i + 1;
-        }
-    }
-
-    count = UnitGroupCount(targets, c_unitCountAlive);
-    if (count == 0) {
-        Debug_Say(player, "breach: nothing of yours is contained right now");
+    if (gv_cellCount == 0) {
+        Debug_Say(player, "breach: nothing to let out");
         return;
     }
 
-    // Counting down: breaching morphs the cell away, which renumbers the group.
-    i = count;
-    while (i >= 1) {
-        Cont_Breach(UnitGroupUnit(targets, i));
-        i = i - 1;
+    slot = Debug_Int(slotWord, 0);
+    if (slot < 0 || slot >= gv_cellCount) {
+        Debug_Say(player, "breach: slot 0.." + IntToString(gv_cellCount - 1));
+        return;
     }
+
+    Cont_BeginEscape(gvg_cellAbno[slot]);
+    Debug_ReportCells(player);
+}
+
+//--------------------------------------------------------------------------------------------------
+// -qlip <slot> <n>
+//
+// The counter without the thing that moves it, since the thing that moves it is
+// the meltdown clock and work results, neither of which exists.
+//--------------------------------------------------------------------------------------------------
+void Debug_SetCounter (int player, string slotWord, string valueWord) {
+    int slot;
+
+    slot = Debug_Int(slotWord, -1);
+    if (slot < 0 || slot >= gv_cellCount) {
+        Debug_Say(player, "qlip: want a slot 0.." + IntToString(gv_cellCount - 1));
+        return;
+    }
+
+    Cont_SetCounter(gvg_cellAbno[slot], Debug_Int(valueWord, 0));
     Debug_ReportCells(player);
 }
 
@@ -379,8 +370,9 @@ void Debug_Help (int player) {
     Debug_Say(player, "-rank                   resync every rank readout");
     Debug_Say(player, "-status                 the economy/power/sector readout");
     Debug_Say(player, "-scan                   what the object tables can see");
-    Debug_Say(player, "-cont                   your containment cells and their state");
-    Debug_Say(player, "-breach                 let the selected cell's occupant out");
+    Debug_Say(player, "-cont                   every cell: grade, state, counter, door");
+    Debug_Say(player, "-breach [slot]          that abnormality decides to leave");
+    Debug_Say(player, "-qlip <slot> <n>        set a Qliphoth counter");
 }
 
 bool Debug_Chat_Func (bool testConds, bool runActions) {
@@ -431,7 +423,10 @@ bool Debug_Chat_Func (bool testConds, bool runActions) {
         Debug_ReportCells(player);
     }
     else if (StringEqual(command, "-breach", false)) {
-        Debug_BreachCells(player);
+        Debug_Breach(player, StringWord(message, 2));
+    }
+    else if (StringEqual(command, "-qlip", false)) {
+        Debug_SetCounter(player, StringWord(message, 2), StringWord(message, 3));
     }
     return true;
 }

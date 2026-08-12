@@ -188,4 +188,71 @@
         <VeterancyLevelArray MinVeterancyXP="12"/>
         <VeterancyLevelArray MinVeterancyXP="16"/>
     </CBehaviorVeterancy>
+
+    <!-- ============================================================
+         Containment.
+         See src/galaxy/13_containment.galaxy and docs/usr/containment.md.
+         ============================================================ -->
+
+    <!-- Contained. "在收容单元中的异想体是无敌的（不可被攻击），且不会做任何
+         事情。" — all of that is one Modification, so the state and every one
+         of its consequences are the same object, and the script only adds or
+         removes the state.
+
+         Removing it is the formal moment of escape. It goes back on the instant
+         the thing is suppressed, so nothing keeps hitting it during the walk
+         home. -->
+    <CBehaviorBuff id="Lob_Contained">
+        <EditorCategories value="AbilityorEffectType:Units"/>
+        <BehaviorFlags index="Permanent" value="1"/>
+        <Alignment value="Neutral"/>
+        <InfoIcon value="Assets\Textures\btn-ability-terran-holdfire.dds"/>
+        <Modification>
+            <StateFlags index="Invulnerable" value="1"/>
+            <StateFlags index="Uncommandable" value="1"/>
+            <StateFlags index="Passive" value="1"/>
+            <StateFlags index="SuppressAttack" value="1"/>
+        </Modification>
+    </CBehaviorBuff>
+
+    <!-- The Qliphoth counter, as a stack count.
+
+         A number the engine already stores, caps and draws with the count on
+         the icon — the same reason employee stats are stack counts. Nothing in
+         Galaxy keeps a copy.
+
+         MaxStackCount is well above anything an abnormality should carry; the
+         real per-abnormality default has nowhere to live yet, which the module
+         header says at length. -->
+    <CBehaviorBuff id="Lob_Qliphoth">
+        <EditorCategories value="AbilityorEffectType:Units"/>
+        <MaxStackCount value="20"/>
+        <BehaviorFlags index="Permanent" value="1"/>
+        <Alignment value="Neutral"/>
+        <InfoIcon value="Assets\Textures\btn-ability-terran-battlefieldawareness.dds"/>
+    </CBehaviorBuff>
+
+    <!-- Strain on a door its occupant is trying to get through.
+
+         "这一机制无法被修理阻拦，只能被短暂拖延" is a hard requirement, and a
+         fixed damage number cannot meet it: any fixed rate can be out-repaired
+         by enough SCVs. Removing life regeneration per stack can, because the
+         stacks keep coming. 13_containment.galaxy adds grade+1 stacks a period,
+         so an Aleph outruns a repair rate a Zayin never will, and no per-grade
+         damage table has to be invented to get there.
+
+         Cleared when the door is restored, since a restored door is a new unit.
+
+         The 0.5 is tuning, not design. It is the one number that decides how
+         long a door holds. -->
+    <CBehaviorBuff id="Lob_DoorStrain">
+        <EditorCategories value="AbilityorEffectType:Units"/>
+        <MaxStackCount value="200"/>
+        <BehaviorFlags index="Permanent" value="1"/>
+        <Alignment value="Negative"/>
+        <InfoIcon value="Assets\Textures\btn-ability-terran-stimpack-color.dds"/>
+        <Modification>
+            <VitalRegenArray index="Life" value="-0.5"/>
+        </Modification>
+    </CBehaviorBuff>
 </Catalog>
