@@ -20,7 +20,6 @@
         <PlaneArray index="Ground" value="1"/>
         <Collide index="Ground" value="1"/>
         <Collide index="Small" value="1"/>
-        <Attributes index="Armored" value="0"/>
         <Attributes index="Structure" value="1"/>
         <LifeStart value="100"/>
         <LifeMax value="100"/>
@@ -46,6 +45,29 @@
             <Charge Link="DestructibleGateDiagonalBLUR/Revive"/>
             <Cooldown Link="DestructibleGateDiagonalBLUR/Revive"/>
         </ReviveInfoBase>
+    </CUnit>
+    <CUnit id="ContainGateControl" parent="DESTRUCTIBLE">
+        <DeathRevealRadius value="3"/>
+        <Mob value="Campaign"/>
+        <FlagArray index="Turnable" value="1"/>
+        <FlagArray index="UseLineOfSight" value="1"/>
+        <FlagArray index="TownAlert" value="1"/>
+        <FlagArray index="Invulnerable" value="1"/>
+        <FlagArray index="Destructible" value="0"/>
+        <FlagArray index="NoPortraitTalk" value="1"/>
+        <FlagArray index="ArmorDisabledWhileConstructing" value="1"/>
+        <FogVisibility value="Dimmed"/>
+        <PlaneArray index="Ground" value="1"/>
+        <Collide index="Burrow" value="1"/>
+        <Collide index="Ground" value="1"/>
+        <Collide index="Structure" value="1"/>
+        <Collide index="Small" value="1"/>
+        <Attributes index="Structure" value="1"/>
+        <LifeStart value="50"/>
+        <LifeMax value="50"/>
+        <Footprint value="Footprint4x4Contour"/>
+        <PlacementFootprint value="Footprint4x4Contour"/>
+        <EditorCategories value="ObjectType:Destructible,ObjectFamily:Campaign"/>
     </CUnit>
     <CUnit id="Lob_Marker_Spawn" parent="DESTRUCTIBLE">
         <FlagArray index="Untargetable" value="1"/>
@@ -587,7 +609,6 @@
              and from Welfare Team, not from standing still. -->
         <EnergyMax value="20"/>
         <EnergyStart value="20"/>
-        <EnergyRegenRate value="0"/>
         <Speed value="2.25"/>
         <Acceleration value="1000"/>
         <LateralAcceleration value="46.0625"/>
