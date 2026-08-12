@@ -133,9 +133,26 @@ SC2 按固定文件名自动加载这个目录，新增一个 catalog 不需要�
 - `BehaviorArray`：`Lob_Attr_Fortitude` / `Lob_Attr_Prudence` / `Lob_Attr_Temperance` / `Lob_Attr_Justice` / `Lob_Rank`
 - 不带任何危险等级 attribute（`Light` / `Biological` 之类在本作里是等级，不是体型）
 - `Food` 置 0（补给就是电网，Marine 的 -1 会让每个员工偷偷耗电）
-- `EnergyMax` / `EnergyStart` 给一个基础值，`EnergyRegenRate` 置 0 —— **SP 就是 Energy 这条 vital**
+- `LifeStart` / `LifeMax` **置 1**，`EnergyMax` / `EnergyStart` **置 0**，`EnergyRegenRate` 置 0
 
-**SP = Energy。**引擎本来就有第二条 vital：面板会画、有上限、有当前值、behavior 能改，而员工不放技能，所以这条是白捡的。谨慎（`Lob_Attr_Prudence`）的 `Modification` 里一行 `VitalMaxArray index="Energy" value="1"` 就是"每点谨慎 +1 点 SP 上限"，Galaxy 一行都不用写。回复率为 0：SP 靠主休息室和福利部回，不靠站着不动。
+**属性直接就是那条 vital，不是加成。**
+
+| 属性 | 是什么 | 怎么实现 |
+|---|---|---|
+| 勇气 Fortitude | **最大生命** | `Modification` 里 `VitalMaxArray index="Life" value="1"` |
+| 谨慎 Prudence | **最大 SP** | `VitalMaxArray index="Energy" value="1"` |
+| 自律 Temperance | 工作速度 +1%/点、成功率 +0.2%/点 | Galaxy 侧的两条公式 |
+| 正义 Justice | 攻速与移速 | 待定 |
+
+所以单位自身的基础值必须**让位**：`LifeMax` 是 1 不是 45，`EnergyMax` 是 0。血条上的数字就是面板上的数字，不用在脑子里做加法。
+
+**那个 1 就是"员工必须有属性最小值"的原因。**单位在任何东西能给它设点数之前会存在一瞬间，那一瞬间 `LifeMax` 为 0 是活不下来的。所以基础值取"不为零的最小数"，`11_employee.galaxy` 在**创建事件**上播种属性（不是在 tick 上，那要等两秒）。
+
+`c_statMin` 是**下限**而不是初始值，因为培训部能把属性**往下压**——两者需要同一个答案：员工可以被弄差，但不能被文书工作弄死。
+
+播种之后还要**手动填满**：提高一条 vital 的上限**不会**同时提高当前值，否则员工会站在 1/21 血。
+
+SP 的回复率为 0 是故意的：SP 靠主休息室和福利部回，不靠站着不动。
 
 **白伤**（工作失败）就是扣这条 vital，和生命值没有任何关系——这正是重点：选错工作在人崩掉之前什么都看不出来。SP 归零挂 `Lob_Panicked`，那个 behavior 的 `Modification` **目前是空的**，因为设计说了疯狂会发生（§2.4、培训部 lv2、福利部白弹）但没说疯狂长什么样。
 
