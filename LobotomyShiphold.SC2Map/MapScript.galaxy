@@ -3708,14 +3708,19 @@ void Containment_Init () {
 
 // Both formulas are from docs/usr/mechanism.md and neither is invented:
 //
-//     speed   = base * (1 + (observationBonus + Temperance) / 100)
-//     success = preference + observationPoints/5, capped at 95, then penalties
+//     speed   = base * (1 + (observation + Temperance) / 100)
+//     success = preference + (observation + Temperance)/5, capped at 95,
+//               then penalties
 //
-// Two details in there are load-bearing. Speed takes Temperance's VALUE, not
-// its level -- it is the one place a point of a stat matters on its own rather
-// than only at a threshold. And work success moves in whole percents per five
-// points, so four points of bonus is worth exactly nothing; the integer divide
-// is the mechanic, not a rounding artefact.
+// Temperance is in both, which is the thing worth noticing about it: a point is
+// +1% work speed and +0.2% success at the same time. It is the only stat that
+// pays twice, and the only one whose VALUE matters rather than only the
+// threshold its level crosses -- everywhere else 30 and 44 of a stat are the
+// same number.
+//
+// Work success moves in whole percents per five points, so four points of bonus
+// is worth exactly nothing; the integer divide is the mechanic, not a rounding
+// artefact.
 //
 // The 95% cap is applied before penalties rather than after, which is why there
 // is always at least a 5% chance of failing and why penalties are so much worse
@@ -3824,8 +3829,7 @@ void Work_SetDefault (int player, int work) {
 // Seconds per box attempt.
 //
 // speed = base * (1 + (observation + Temperance) / 100), and the time for a
-// whole work is boxes/speed -- which is why Temperance is felt as the length of
-// the queue at a cell rather than as anything visible during one work.
+// whole work is boxes/speed.
 //--------------------------------------------------------------------------------------------------
 fixed Work_BoxInterval (unit emp, int index) {
     fixed speed;
@@ -3849,11 +3853,16 @@ fixed Work_BoxInterval (unit emp, int index) {
 //--------------------------------------------------------------------------------------------------
 int Work_SuccessChance (unit emp, int index, int work) {
     int chance;
-    int obs;
+    int points;
 
-    obs = Cont_ObservationOf(emp, index);
+    // Temperance counts as work-success points one for one, the same as an
+    // observation bonus does: a point of either is +0.2%, and five of either is
+    // the +1% the counter actually moves in.
+    points = AbnoGen_ObsSuccess(index, Cont_ObservationOf(emp, index))
+             + Emp_Stat(emp, c_statTemperance);
+
     chance = AbnoGen_Pref(index, work, Emp_StatLevel(emp, Work_Stat(work)))
-             + AbnoGen_ObsSuccess(index, obs) / c_workSuccessPerPercent;
+             + points / c_workSuccessPerPercent;
 
     if (chance > c_workSuccessCap) {
         chance = c_workSuccessCap;
