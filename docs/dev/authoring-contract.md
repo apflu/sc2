@@ -126,9 +126,9 @@ SC2 按固定文件名自动加载这个目录，新增一个 catalog 不需要�
 新建员工单位时要带上：
 
 - id 以 `Lob_Emp_` 开头
-- `BehaviorArray`：`Lob_Stat_Fortitude` / `Lob_Stat_Prudence` / `Lob_Stat_Temperance` / `Lob_Stat_Justice`
+- `BehaviorArray`：`Lob_Attr_Fortitude` / `Lob_Attr_Prudence` / `Lob_Attr_Temperance` / `Lob_Attr_Justice` / `Lob_Rank`
 - `Attributes` 里 `Light` 和 `Biological` 置 0（在本作里它们是危险等级，不是体型）
-- 不带武器（自卫武器是培训部 lv1 给的）
+- `Food` 置 0（补给就是电网，Marine 的 -1 会让每个员工偷偷耗电）
 
 **继承，不要展开。**编辑器"复制单位"会把父单位的字段全量拍平进新条目——`Lob_SCV_*` 就是这么来的，一个单位 60 行。手写时用 `parent=`，条目就变成一份相对基准单位的 diff，一眼能看出改了什么。数组字段按下标覆盖：
 
