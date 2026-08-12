@@ -2229,6 +2229,17 @@ const int c_rankCount = 5;
 // data side is only there to make EX representable.
 const int c_statCapDefault = 99;
 
+// The floor, and it is not decoration. Fortitude IS max life and Prudence IS
+// max SP, one point for one, so a stat of zero is a unit with one hit point and
+// no mind at all. The floor is what makes "the stat is the vital" safe to say.
+//
+// It is a floor rather than a starting value because Training Team can push a
+// stat DOWN, and the two need the same answer: an employee can be made worse,
+// and cannot be made into a corpse by paperwork.
+//
+// TUNING. Nothing states what a new employee is worth.
+const int c_statMin = 20;
+
 const string c_rankBehavior = "Lob_Rank";
 
 const fixed c_empPeriod = 2.0;
@@ -2253,6 +2264,7 @@ int[6] gvg_statLevelMin;
 int[5] gvg_rankMin;
 
 trigger gt_empTick;
+trigger gt_empCreated;
 
 string Emp_StatBehavior (int stat) {
     if (stat < 0 || stat >= c_statCount) {
@@ -2314,8 +2326,8 @@ void Emp_StatAdd (unit who, int stat, int delta) {
     cap = Emp_StatCap(who);
     have = Emp_Stat(who, stat);
     want = have + delta;
-    if (want < 0) {
-        want = 0;
+    if (want < c_statMin) {
+        want = c_statMin;
     }
     if (want > cap) {
         want = cap;
@@ -2422,6 +2434,49 @@ void Emp_SyncRank (unit who) {
         return;
     }
     UnitXPSetCurrentXP(who, c_rankBehavior, IntToFixed(Emp_LevelSum(who)));
+}
+
+//--------------------------------------------------------------------------------------------------
+// Brings a new employee up to the floor, and fills them up.
+//
+// On the creation event rather than on the tick, because between creation and
+// this the unit has one hit point: the base LifeMax is 1 so that instant is
+// survivable, and Fortitude supplies everything above it.
+//
+// Filling afterwards is not optional either. Raising a vital's maximum does not
+// raise what is currently in it, so an employee seeded but not filled would
+// stand there at 1 of 21 life.
+//--------------------------------------------------------------------------------------------------
+void Emp_Seed (unit who) {
+    int stat;
+
+    if (who == null || !UnitIsAlive(who)) {
+        return;
+    }
+
+    stat = 0;
+    while (stat < c_statCount) {
+        if (Emp_Stat(who, stat) < c_statMin) {
+            UnitSetAttributePoint(who, gvg_statBehavior[stat], c_attrBase, c_statMin);
+        }
+        stat = stat + 1;
+    }
+
+    UnitSetPropertyFixed(who, c_unitPropLife,
+                         UnitGetPropertyFixed(who, c_unitPropLifeMax, true));
+    UnitSetPropertyFixed(who, c_unitPropEnergy,
+                         UnitGetPropertyFixed(who, c_unitPropEnergyMax, true));
+    Emp_SyncRank(who);
+}
+
+bool Emp_Created_Func (bool testConds, bool runActions) {
+    if (!runActions) {
+        return true;
+    }
+    if (ObjectsGen_IsEmp(EventUnit())) {
+        Emp_Seed(EventUnit());
+    }
+    return true;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -2583,6 +2638,20 @@ bool Emp_Tick_Func (bool testConds, bool runActions) {
     return true;
 }
 
+void Emp_SeedAll () {
+    unitgroup all;
+    int count;
+    int i;
+
+    all = ObjectsGen_ScanEmp();
+    count = UnitGroupCount(all, c_unitCountAlive);
+    i = 1;
+    while (i <= count) {
+        Emp_Seed(UnitGroupUnit(all, i));
+        i = i + 1;
+    }
+}
+
 void Employee_Init () {
     gvg_statBehavior[c_statFortitude] = "Lob_Attr_Fortitude";
     gvg_statBehavior[c_statPrudence] = "Lob_Attr_Prudence";
@@ -2609,6 +2678,11 @@ void Employee_Init () {
     gvg_rankMin[2] = 9;
     gvg_rankMin[3] = 12;
     gvg_rankMin[4] = 16;
+
+    Emp_SeedAll();
+
+    gt_empCreated = TriggerCreate("Emp_Created_Func");
+    TriggerAddEventUnitCreated(gt_empCreated, null, null, null);
 
     gt_empTick = TriggerCreate("Emp_Tick_Func");
     TriggerAddEventTimePeriodic(gt_empTick, c_empPeriod, c_timeGame);
@@ -3708,14 +3782,19 @@ void Containment_Init () {
 
 // Both formulas are from docs/usr/mechanism.md and neither is invented:
 //
-//     speed   = base * (1 + (observationBonus + Temperance) / 100)
-//     success = preference + observationPoints/5, capped at 95, then penalties
+//     speed   = base * (1 + (observation + Temperance) / 100)
+//     success = preference + (observation + Temperance)/5, capped at 95,
+//               then penalties
 //
-// Two details in there are load-bearing. Speed takes Temperance's VALUE, not
-// its level -- it is the one place a point of a stat matters on its own rather
-// than only at a threshold. And work success moves in whole percents per five
-// points, so four points of bonus is worth exactly nothing; the integer divide
-// is the mechanic, not a rounding artefact.
+// Temperance is in both, which is the thing worth noticing about it: a point is
+// +1% work speed and +0.2% success at the same time. It is the only stat that
+// pays twice, and the only one whose VALUE matters rather than only the
+// threshold its level crosses -- everywhere else 30 and 44 of a stat are the
+// same number.
+//
+// Work success moves in whole percents per five points, so four points of bonus
+// is worth exactly nothing; the integer divide is the mechanic, not a rounding
+// artefact.
 //
 // The 95% cap is applied before penalties rather than after, which is why there
 // is always at least a 5% chance of failing and why penalties are so much worse
@@ -3824,8 +3903,7 @@ void Work_SetDefault (int player, int work) {
 // Seconds per box attempt.
 //
 // speed = base * (1 + (observation + Temperance) / 100), and the time for a
-// whole work is boxes/speed -- which is why Temperance is felt as the length of
-// the queue at a cell rather than as anything visible during one work.
+// whole work is boxes/speed.
 //--------------------------------------------------------------------------------------------------
 fixed Work_BoxInterval (unit emp, int index) {
     fixed speed;
@@ -3849,11 +3927,16 @@ fixed Work_BoxInterval (unit emp, int index) {
 //--------------------------------------------------------------------------------------------------
 int Work_SuccessChance (unit emp, int index, int work) {
     int chance;
-    int obs;
+    int points;
 
-    obs = Cont_ObservationOf(emp, index);
+    // Temperance counts as work-success points one for one, the same as an
+    // observation bonus does: a point of either is +0.2%, and five of either is
+    // the +1% the counter actually moves in.
+    points = AbnoGen_ObsSuccess(index, Cont_ObservationOf(emp, index))
+             + Emp_Stat(emp, c_statTemperance);
+
     chance = AbnoGen_Pref(index, work, Emp_StatLevel(emp, Work_Stat(work)))
-             + AbnoGen_ObsSuccess(index, obs) / c_workSuccessPerPercent;
+             + points / c_workSuccessPerPercent;
 
     if (chance > c_workSuccessCap) {
         chance = c_workSuccessCap;

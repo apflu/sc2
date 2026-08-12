@@ -91,10 +91,22 @@
          Icons are all from the Void (Mod) dependency chain. Two of the
          originals were campaign-only assets, which the map cannot resolve.
          ============================================================ -->
+    <!-- Fortitude IS max life, one point for one, the same way Prudence is max
+         SP. Not a bonus on top of a base: the unit's own LifeMax is 1, so the
+         number on the health bar is the number in the panel and there is nothing
+         to add up in your head.
+
+         That 1 is the reason employees have a minimum stat. A unit exists for an
+         instant before anything can set its points, and a LifeMax of 0 in that
+         instant is not survivable, so the base is the smallest number that is
+         not zero and 11_employee seeds the stats on the creation event. -->
     <CBehaviorAttribute id="Lob_Attr_Fortitude">
         <EditorCategories value="AbilityorEffectType:Units"/>
         <MaxPoints value="100"/>
         <InfoIcon value="Assets\Textures\btn-upgrade-terran-infantryarmorlevel1.dds"/>
+        <Modification>
+            <VitalMaxArray index="Life" value="1"/>
+        </Modification>
     </CBehaviorAttribute>
     <!-- Prudence is the only stat with its Modification filled in, because it is
          the only one whose target already exists: SP is the Energy vital, so a

@@ -612,8 +612,11 @@
         <Collide index="Ground" value="1"/>
         <Collide index="ForceField" value="1"/>
         <Collide index="Small" value="1"/>
-        <LifeStart value="45"/>
-        <LifeMax value="45"/>
+        <!-- 1, not 45. Fortitude IS max life, so the base has to get out of the
+             way or the bar stops matching the panel. One rather than zero
+             because a unit exists for an instant before its stats are seeded. -->
+        <LifeStart value="1"/>
+        <LifeMax value="1"/>
         <LifeArmorName value="Unit/LifeArmorName/TerranInfantryArmor"/>
         <!-- SP is the Energy vital. The engine already draws a second bar,
              already caps it, and already lets behaviors modify it, and an
@@ -622,8 +625,8 @@
              everybody starts with and is the one invented number in the pair.
              Regeneration is zero on purpose: SP comes back from the rest hall
              and from Welfare Team, not from standing still. -->
-        <EnergyMax value="20"/>
-        <EnergyStart value="20"/>
+        <EnergyMax value="0"/>
+        <EnergyStart value="0"/>
         <Speed value="2.25"/>
         <Acceleration value="1000"/>
         <LateralAcceleration value="46.0625"/>
