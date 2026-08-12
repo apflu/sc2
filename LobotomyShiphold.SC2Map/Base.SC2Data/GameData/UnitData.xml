@@ -50,6 +50,7 @@
         <DeathRevealRadius value="3"/>
         <Mob value="Campaign"/>
         <FlagArray index="Turnable" value="1"/>
+        <FlagArray index="Uncommandable" value="0"/>
         <FlagArray index="UseLineOfSight" value="1"/>
         <FlagArray index="TownAlert" value="1"/>
         <FlagArray index="Invulnerable" value="1"/>
