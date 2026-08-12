@@ -4146,16 +4146,10 @@ bool Work_Cast_Func (bool testConds, bool runActions) {
     door = EventUnitTargetUnit();
     owner = UnitGetOwner(emp);
 
-    // Registered on every stage and filtered here, rather than on Complete
-    // alone. Which stage a prepare-time ability actually reaches is the open
-    // question when nothing happens at all, and a handler that reports what it
-    // heard answers it in one cast rather than one round trip.
-    //
-    // To chat rather than the subtitle area, because several stages fire for
-    // one cast and the subtitle only ever shows the last of them.
-    UIDisplayMessage(PlayerGroupSingle(owner), c_messageAreaChat,
-                     StringToText("work: ability stage "
-                                  + IntToString(EventUnitAbilityStage())));
+    // Registered on every stage and filtered here rather than on Complete
+    // alone. A prepare-time cast walks -3, 0..5, -6, and knowing that took a
+    // trace through every stage; keeping the registration broad means the next
+    // question of that shape needs one line rather than a rebuild.
     if (EventUnitAbilityStage() != c_unitAbilStageComplete) {
         return true;
     }
@@ -4900,14 +4894,17 @@ const string c_debugPrefix = "-";
 
 trigger gt_debugChat;
 
-// The chat area rather than the debug area. The debug area is the obvious home
-// for this and was the first choice, but some of the DEBUG-tagged styles in
-// core's FontStyles are marked requiredtoload, so it is not certain to be
-// instantiated in a retail client -- and a font-style error that only some
-// builds produce is not worth the tidiness. Chat is always there, and it does
-// not get overwritten by the economy readout the way the subtitle area does.
+// The debug area, which is what it is for and which has room. Chat does not:
+// -emp and -cont are several lines each and they push the actual conversation
+// out of a window that is small to begin with.
+//
+// This went to chat for a while on a suspicion that the debug area was behind
+// "TextError: 无法找到字体样式[]", because some DEBUG-tagged styles in core's
+// FontStyles are marked requiredtoload. That suspicion is dead: the error was
+// an unescaped <s> in the old chat help text, and the debug area never had
+// anything to do with it.
 void Debug_Say (int player, string line) {
-    UIDisplayMessage(PlayerGroupSingle(player), c_messageAreaChat, StringToText(line));
+    UIDisplayMessage(PlayerGroupSingle(player), c_messageAreaDebug, StringToText(line));
 }
 
 //--------------------------------------------------------------------------------------------------

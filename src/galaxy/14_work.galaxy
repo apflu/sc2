@@ -474,16 +474,10 @@ bool Work_Cast_Func (bool testConds, bool runActions) {
     door = EventUnitTargetUnit();
     owner = UnitGetOwner(emp);
 
-    // Registered on every stage and filtered here, rather than on Complete
-    // alone. Which stage a prepare-time ability actually reaches is the open
-    // question when nothing happens at all, and a handler that reports what it
-    // heard answers it in one cast rather than one round trip.
-    //
-    // To chat rather than the subtitle area, because several stages fire for
-    // one cast and the subtitle only ever shows the last of them.
-    UIDisplayMessage(PlayerGroupSingle(owner), c_messageAreaChat,
-                     StringToText("work: ability stage "
-                                  + IntToString(EventUnitAbilityStage())));
+    // Registered on every stage and filtered here rather than on Complete
+    // alone. A prepare-time cast walks -3, 0..5, -6, and knowing that took a
+    // trace through every stage; keeping the registration broad means the next
+    // question of that shape needs one line rather than a rebuild.
     if (EventUnitAbilityStage() != c_unitAbilStageComplete) {
         return true;
     }
