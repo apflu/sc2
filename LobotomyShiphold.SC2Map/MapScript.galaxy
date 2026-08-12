@@ -40,6 +40,155 @@ const int c_abnoPlayer = 8;
 const int c_p0Player = 1;
 
 //--------------------------------------------------------------------------------------------------
+// src/galaxy/04_abno_gen.galaxy
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// GENERATED FILE -- DO NOT EDIT.
+//
+// Built from docs/usr/abnormality/*.md by tools/gen_abnormalities.py.
+// The design document is the data source; write the doc, rebuild, done.
+//--------------------------------------------------------------------------------------------------
+
+const int c_abnoCount = 2;
+string[2] gvg_abnoType;
+string[2] gvg_abnoName;
+int[2] gvg_abnoRisk;
+// -1 means the abnormality has no counter at all, which is not
+// the same as a counter that has run out.
+int[2] gvg_abnoCounter;
+int[2] gvg_abnoMaxBox;
+fixed[2] gvg_abnoBoxSpeed;
+fixed[2] gvg_abnoCooldown;
+// Lowest box count that still reads as this result.
+int[2] gvg_abnoGoodMin;
+int[2] gvg_abnoNormalMin;
+// Success chance per box, flattened: abnormality * 20 + work * 5 + (level-1).
+int[40] gvg_abnoPref;
+
+void AbnoGen_Init () {
+    gvg_abnoType[0] = "0_00_00";
+    gvg_abnoName[0] = "Standard Training-Dummy Rabbit";
+    gvg_abnoRisk[0] = 1;
+    gvg_abnoCounter[0] = -1;
+    gvg_abnoMaxBox[0] = 10;
+    gvg_abnoBoxSpeed[0] = 0.7;
+    gvg_abnoCooldown[0] = 10.0;
+    gvg_abnoGoodMin[0] = 0;
+    gvg_abnoNormalMin[0] = 0;
+    gvg_abnoPref[0] = 50;
+    gvg_abnoPref[1] = 50;
+    gvg_abnoPref[2] = 50;
+    gvg_abnoPref[3] = 50;
+    gvg_abnoPref[4] = 50;
+    gvg_abnoPref[5] = 50;
+    gvg_abnoPref[6] = 50;
+    gvg_abnoPref[7] = 50;
+    gvg_abnoPref[8] = 50;
+    gvg_abnoPref[9] = 50;
+    gvg_abnoPref[10] = 50;
+    gvg_abnoPref[11] = 50;
+    gvg_abnoPref[12] = 50;
+    gvg_abnoPref[13] = 50;
+    gvg_abnoPref[14] = 50;
+    gvg_abnoPref[15] = 50;
+    gvg_abnoPref[16] = 50;
+    gvg_abnoPref[17] = 50;
+    gvg_abnoPref[18] = 50;
+    gvg_abnoPref[19] = 50;
+    gvg_abnoType[1] = "O_03_03";
+    gvg_abnoName[1] = "One Sin and Hundreds of Good Deeds";
+    gvg_abnoRisk[1] = 0;
+    gvg_abnoCounter[1] = -1;
+    gvg_abnoMaxBox[1] = 10;
+    gvg_abnoBoxSpeed[1] = 0.3;
+    gvg_abnoCooldown[1] = 10.0;
+    gvg_abnoGoodMin[1] = 8;
+    gvg_abnoNormalMin[1] = 4;
+    gvg_abnoPref[20] = 50;
+    gvg_abnoPref[21] = 40;
+    gvg_abnoPref[22] = 30;
+    gvg_abnoPref[23] = 30;
+    gvg_abnoPref[24] = 30;
+    gvg_abnoPref[25] = 70;
+    gvg_abnoPref[26] = 70;
+    gvg_abnoPref[27] = 50;
+    gvg_abnoPref[28] = 50;
+    gvg_abnoPref[29] = 50;
+    gvg_abnoPref[30] = 70;
+    gvg_abnoPref[31] = 70;
+    gvg_abnoPref[32] = 70;
+    gvg_abnoPref[33] = 70;
+    gvg_abnoPref[34] = 70;
+    gvg_abnoPref[35] = 50;
+    gvg_abnoPref[36] = 40;
+    gvg_abnoPref[37] = 30;
+    gvg_abnoPref[38] = 30;
+    gvg_abnoPref[39] = 30;
+}
+
+//--------------------------------------------------------------------------------------------------
+// The table index of a unit type, or -1. This is also what makes a unit an
+// abnormality: having a row here, which means having a doc.
+//--------------------------------------------------------------------------------------------------
+int AbnoGen_IndexOfType (string unitType) {
+    int i;
+
+    i = 0;
+    while (i < c_abnoCount) {
+        if (gvg_abnoType[i] == unitType) {
+            return i;
+        }
+        i = i + 1;
+    }
+    return -1;
+}
+
+int AbnoGen_IndexOf (unit which) {
+    if (which == null) {
+        return -1;
+    }
+    return AbnoGen_IndexOfType(UnitGetType(which));
+}
+
+bool AbnoGen_Is (unit which) {
+    return AbnoGen_IndexOf(which) >= 0;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every abnormality alive on the map, whoever owns it.
+//--------------------------------------------------------------------------------------------------
+unitgroup AbnoGen_Scan () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_abnoCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_abnoType[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Success chance for one work type against one stat level (1..5). Level VI
+// (EX) reads as V, because the source tables stop at V.
+//--------------------------------------------------------------------------------------------------
+int AbnoGen_Pref (int index, int work, int statLevel) {
+    if (index < 0 || index >= c_abnoCount || work < 0 || work >= 4) {
+        return 0;
+    }
+    if (statLevel < 1) {
+        statLevel = 1;
+    }
+    if (statLevel > 5) {
+        statLevel = 5;
+    }
+    return gvg_abnoPref[index * 20 + work * 5 + statLevel - 1];
+}
+
+//--------------------------------------------------------------------------------------------------
 // src/galaxy/05_objects_gen.galaxy
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
@@ -1876,11 +2025,8 @@ void Sector_Init () {
 string Registry_ScanLine () {
     return "scan: hero=" + IntToString(UnitGroupCount(ObjectsGen_ScanHero(), c_unitCountAlive))
            + " emp=" + IntToString(UnitGroupCount(ObjectsGen_ScanEmp(), c_unitCountAlive))
-           + " abno=" + IntToString(UnitGroupCount(ObjectsGen_ScanAbno(), c_unitCountAlive))
-           + " tool=" + IntToString(UnitGroupCount(ObjectsGen_ScanTool(), c_unitCountAlive))
-           + " door=" + IntToString(UnitGroupCount(ObjectsGen_ScanDoor(), c_unitCountAlive))
-           + "up/" + IntToString(UnitGroupCount(ObjectsGen_ScanDoorDown(), c_unitCountAlive))
-           + "down"
+           + " abno=" + IntToString(UnitGroupCount(AbnoGen_Scan(), c_unitCountAlive))
+           + "/" + IntToString(c_abnoCount) + "known"
            + " debris=" + IntToString(UnitGroupCount(ObjectsGen_ScanDebris(), c_unitCountAlive))
            + " worker=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Worker(), c_unitCountAlive))
            + " miner=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Miner(), c_unitCountAlive))
@@ -2647,8 +2793,17 @@ void Departments_Init () {
 //   What suppression pays out, what work does, and the meltdown clock.
 //--------------------------------------------------------------------------------------------------
 
-const string c_doorUpPrefix = "Lob_Door_";
-const string c_doorDownPrefix = "Lob_DoorDown_";
+// The door types, named outright because the gate is a copy of a Blizzard
+// destructible gate and does not carry the Lob_ prefix the generated tables key
+// on. Renaming it Lob_Door_Horizontal in the editor would make this table go
+// away; until then, adding a door means adding a line here.
+//
+// A destructible gate is not the Lob_Device_/Lob_DeviceDown_ pair this module
+// first assumed. It has its own lowered state and its own revive, which is
+// closer to "大门降下 / 升起" than a type swap ever was -- so alive is raised,
+// dead is dropped, and no morph is involved.
+const int c_doorTypeCount = 1;
+string[1] gvg_doorType;
 
 const string c_containedBuff = "Lob_Contained";
 const string c_qliphothBuff = "Lob_Qliphoth";
@@ -2664,9 +2819,6 @@ const int c_cellMax = 32;
 // How far from an abnormality's home its door may stand.
 const fixed c_cellRadius = 12.0;
 
-// PLACEHOLDER. Every abnormality is supposed to bring its own, and some bring
-// none at all. See the header.
-const int c_qliphothDefault = 3;
 
 // Seconds between suppression and the return home.
 const fixed c_returnDelay = 8.0;
@@ -2736,14 +2888,40 @@ bool Cont_IsLoose (unit abno) {
 // dropped. Null while no door has been placed, which leaves an abnormality
 // contained by nothing but its own behavior -- inert, but visibly wrong.
 //--------------------------------------------------------------------------------------------------
+bool Cont_IsDoor (unit which) {
+    int i;
+
+    if (which == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_doorTypeCount) {
+        if (UnitGetType(which) == gvg_doorType[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+unitgroup Cont_AllDoors () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_doorTypeCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_doorType[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
 unit Cont_DoorAt (point home) {
-    unitgroup doors;
     unit door;
 
-    doors = ObjectsGen_ScanDoor();
-    UnitGroupAddUnitGroup(doors, ObjectsGen_ScanDoorDown());
-
-    door = UnitGroupClosestToPoint(doors, home);
+    door = UnitGroupClosestToPoint(Cont_AllDoors(), home);
     if (door == null) {
         return null;
     }
@@ -2764,7 +2942,10 @@ unit Cont_DoorOf (unit abno) {
 }
 
 bool Cont_DoorIsUp (unit abno) {
-    return ObjectsGen_IsDoor(Cont_DoorOf(abno));
+    unit door;
+
+    door = Cont_DoorOf(abno);
+    return door != null && UnitIsAlive(door);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -2774,6 +2955,24 @@ bool Cont_DoorIsUp (unit abno) {
 // number the engine already stores, already caps, and already draws on the
 // unit with the count on the icon. Nothing here keeps a parallel copy.
 //--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// The counter this abnormality starts and returns to, from its own doc.
+//
+// Zero for one that has none at all: "Qliphoth counter X" is not a counter of
+// zero, it is the absence of a counter, and an absent counter can never run
+// out. Nothing else has to know the difference, because a counter that is never
+// decremented never reaches zero anyway.
+//--------------------------------------------------------------------------------------------------
+int Cont_CounterDefault (unit abno) {
+    int index;
+
+    index = AbnoGen_IndexOf(abno);
+    if (index < 0 || gvg_abnoCounter[index] < 0) {
+        return 0;
+    }
+    return gvg_abnoCounter[index];
+}
+
 int Cont_Counter (unit abno) {
     if (abno == null) {
         return 0;
@@ -2856,7 +3055,7 @@ void Cont_BeginEscape (unit abno) {
     }
 
     door = Cont_DoorAt(gvg_cellHome[slot]);
-    if (door != null && ObjectsGen_IsDoor(door)) {
+    if (door != null && UnitIsAlive(door)) {
         gvg_cellState[slot] = c_cellEscaping;
         gvg_cellStrainAt[slot] = GameGetMissionTime() + c_strainPeriod;
 
@@ -2886,11 +3085,11 @@ void Cont_DropDoor (unit door) {
     point where;
     int slot;
 
-    if (door == null || !ObjectsGen_IsDoor(door)) {
+    if (door == null || !UnitIsAlive(door)) {
         return;
     }
     where = UnitGetPosition(door);
-    Downable_TakeDown(door, c_doorUpPrefix, c_doorDownPrefix);
+    UnitKill(door);
 
     slot = 0;
     while (slot < gv_cellCount) {
@@ -2944,19 +3143,24 @@ void Cont_Return (int slot) {
 
     UnitSetPosition(abno, gvg_cellHome[slot], false);
     Cont_SetContained(abno, true);
-    Cont_SetCounter(abno, c_qliphothDefault);
+    Cont_SetCounter(abno, Cont_CounterDefault(abno));
 
     // The door comes back whole and raised, which is not the same as being
     // repaired: the doc restores it outright on suppression.
+    // Whole and raised, which is not the same as repaired: the doc restores it
+    // outright on suppression. A dropped gate is a dead unit, so this is a
+    // revive rather than a heal; UnitRevive puts the same unit back rather than
+    // making a second one, which matters because the cell is found by proximity
+    // and two doors at one home would be ambiguous.
     door = Cont_DoorAt(gvg_cellHome[slot]);
-    if (door != null && ObjectsGen_IsDoorDown(door)) {
-        Downable_Morph(door,
-                       Downable_Retype(UnitGetType(door), c_doorDownPrefix, c_doorUpPrefix),
-                       UnitGetPropertyFixed(door, c_unitPropLifeMax, true));
+    if (door != null && !UnitIsAlive(door)) {
+        UnitRevive(door);
     }
-    else if (door != null) {
+    if (door != null) {
         UnitSetPropertyFixed(door, c_unitPropLife,
                              UnitGetPropertyFixed(door, c_unitPropLifeMax, true));
+        UnitBehaviorRemove(door, c_doorStrainBuff,
+                           UnitBehaviorCount(door, c_doorStrainBuff));
     }
 }
 
@@ -2972,11 +3176,11 @@ bool Cont_Fatal_Func (bool testConds, bool runActions) {
     }
 
     victim = EventUnit();
-    if (ObjectsGen_IsDoor(victim)) {
+    if (Cont_IsDoor(victim)) {
         Cont_DropDoor(victim);
         return true;
     }
-    if (ObjectsGen_IsAbno(victim) && Cont_IsLoose(victim)) {
+    if (AbnoGen_Is(victim) && Cont_IsLoose(victim)) {
         Cont_Suppress(victim);
     }
     return true;
@@ -3008,7 +3212,7 @@ bool Cont_Tick_Func (bool testConds, bool runActions) {
     while (slot < gv_cellCount) {
         if (gvg_cellState[slot] == c_cellEscaping && now >= gvg_cellStrainAt[slot]) {
             door = Cont_DoorAt(gvg_cellHome[slot]);
-            if (door == null || ObjectsGen_IsDoorDown(door)) {
+            if (door == null || !UnitIsAlive(door)) {
                 Cont_GoLoose(gvg_cellAbno[slot]);
             }
             else {
@@ -3039,8 +3243,7 @@ void Cont_BuildRegistry () {
 
     gv_cellCount = 0;
 
-    all = ObjectsGen_ScanAbno();
-    UnitGroupAddUnitGroup(all, ObjectsGen_ScanTool());
+    all = AbnoGen_Scan();
     count = UnitGroupCount(all, c_unitCountAlive);
 
     i = 1;
@@ -3051,7 +3254,7 @@ void Cont_BuildRegistry () {
             gvg_cellHome[gv_cellCount] = UnitGetPosition(abno);
             gvg_cellState[gv_cellCount] = c_cellContained;
             Cont_SetContained(abno, true);
-            Cont_SetCounter(abno, c_qliphothDefault);
+            Cont_SetCounter(abno, Cont_CounterDefault(abno));
             gv_cellCount = gv_cellCount + 1;
         }
         i = i + 1;
@@ -3059,6 +3262,8 @@ void Cont_BuildRegistry () {
 }
 
 void Containment_Init () {
+    gvg_doorType[0] = "ContainGateHorizontal";
+
     Cont_BuildRegistry();
 
     gt_cellFatal = TriggerCreate("Cont_Fatal_Func");
@@ -3888,7 +4093,8 @@ void Debug_ReportCells (int player) {
     int slot;
 
     if (gv_cellCount == 0) {
-        Debug_Say(player, "cont: no Lob_Abno_* / Lob_Tool_* on the map");
+        Debug_Say(player, "cont: no abnormality placed ("
+                          + IntToString(c_abnoCount) + " have docs)");
         return;
     }
 
@@ -3897,7 +4103,7 @@ void Debug_ReportCells (int player) {
         abno = gvg_cellAbno[slot];
         door = Cont_DoorAt(gvg_cellHome[slot]);
 
-        line = "cell " + IntToString(slot) + " " + UnitGetType(abno)
+        line = "cell " + IntToString(slot) + " " + gvg_abnoName[AbnoGen_IndexOf(abno)]
                + " [" + Risk_Name(Risk_Of(abno)) + "]"
                + " " + Debug_CellStateName(gvg_cellState[slot])
                + " qlip=" + IntToString(Cont_Counter(abno));
@@ -3905,7 +4111,7 @@ void Debug_ReportCells (int player) {
         if (door == null) {
             line = line + " door=none";
         }
-        else if (ObjectsGen_IsDoor(door)) {
+        else if (UnitIsAlive(door)) {
             line = line + " door=up "
                    + IntToString(FixedToInt(
                          UnitGetPropertyFixed(door, c_unitPropLifePercent, true)))
@@ -4127,6 +4333,7 @@ void Debug_Init () {
 //--------------------------------------------------------------------------------------------------
 void InitMap () {
     libNtve_InitLib();
+    AbnoGen_Init();
     ObjectsGen_Init();
     Sector_Init();
     Registry_Init();

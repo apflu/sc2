@@ -54,8 +54,17 @@
 //   What suppression pays out, what work does, and the meltdown clock.
 //--------------------------------------------------------------------------------------------------
 
-const string c_doorUpPrefix = "Lob_Door_";
-const string c_doorDownPrefix = "Lob_DoorDown_";
+// The door types, named outright because the gate is a copy of a Blizzard
+// destructible gate and does not carry the Lob_ prefix the generated tables key
+// on. Renaming it Lob_Door_Horizontal in the editor would make this table go
+// away; until then, adding a door means adding a line here.
+//
+// A destructible gate is not the Lob_Device_/Lob_DeviceDown_ pair this module
+// first assumed. It has its own lowered state and its own revive, which is
+// closer to "大门降下 / 升起" than a type swap ever was -- so alive is raised,
+// dead is dropped, and no morph is involved.
+const int c_doorTypeCount = 1;
+string[1] gvg_doorType;
 
 const string c_containedBuff = "Lob_Contained";
 const string c_qliphothBuff = "Lob_Qliphoth";
@@ -71,9 +80,6 @@ const int c_cellMax = 32;
 // How far from an abnormality's home its door may stand.
 const fixed c_cellRadius = 12.0;
 
-// PLACEHOLDER. Every abnormality is supposed to bring its own, and some bring
-// none at all. See the header.
-const int c_qliphothDefault = 3;
 
 // Seconds between suppression and the return home.
 const fixed c_returnDelay = 8.0;
@@ -143,14 +149,40 @@ bool Cont_IsLoose (unit abno) {
 // dropped. Null while no door has been placed, which leaves an abnormality
 // contained by nothing but its own behavior -- inert, but visibly wrong.
 //--------------------------------------------------------------------------------------------------
+bool Cont_IsDoor (unit which) {
+    int i;
+
+    if (which == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_doorTypeCount) {
+        if (UnitGetType(which) == gvg_doorType[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+unitgroup Cont_AllDoors () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_doorTypeCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_doorType[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
 unit Cont_DoorAt (point home) {
-    unitgroup doors;
     unit door;
 
-    doors = ObjectsGen_ScanDoor();
-    UnitGroupAddUnitGroup(doors, ObjectsGen_ScanDoorDown());
-
-    door = UnitGroupClosestToPoint(doors, home);
+    door = UnitGroupClosestToPoint(Cont_AllDoors(), home);
     if (door == null) {
         return null;
     }
@@ -171,7 +203,10 @@ unit Cont_DoorOf (unit abno) {
 }
 
 bool Cont_DoorIsUp (unit abno) {
-    return ObjectsGen_IsDoor(Cont_DoorOf(abno));
+    unit door;
+
+    door = Cont_DoorOf(abno);
+    return door != null && UnitIsAlive(door);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -181,6 +216,24 @@ bool Cont_DoorIsUp (unit abno) {
 // number the engine already stores, already caps, and already draws on the
 // unit with the count on the icon. Nothing here keeps a parallel copy.
 //--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// The counter this abnormality starts and returns to, from its own doc.
+//
+// Zero for one that has none at all: "Qliphoth counter X" is not a counter of
+// zero, it is the absence of a counter, and an absent counter can never run
+// out. Nothing else has to know the difference, because a counter that is never
+// decremented never reaches zero anyway.
+//--------------------------------------------------------------------------------------------------
+int Cont_CounterDefault (unit abno) {
+    int index;
+
+    index = AbnoGen_IndexOf(abno);
+    if (index < 0 || gvg_abnoCounter[index] < 0) {
+        return 0;
+    }
+    return gvg_abnoCounter[index];
+}
+
 int Cont_Counter (unit abno) {
     if (abno == null) {
         return 0;
@@ -263,7 +316,7 @@ void Cont_BeginEscape (unit abno) {
     }
 
     door = Cont_DoorAt(gvg_cellHome[slot]);
-    if (door != null && ObjectsGen_IsDoor(door)) {
+    if (door != null && UnitIsAlive(door)) {
         gvg_cellState[slot] = c_cellEscaping;
         gvg_cellStrainAt[slot] = GameGetMissionTime() + c_strainPeriod;
 
@@ -293,11 +346,11 @@ void Cont_DropDoor (unit door) {
     point where;
     int slot;
 
-    if (door == null || !ObjectsGen_IsDoor(door)) {
+    if (door == null || !UnitIsAlive(door)) {
         return;
     }
     where = UnitGetPosition(door);
-    Downable_TakeDown(door, c_doorUpPrefix, c_doorDownPrefix);
+    UnitKill(door);
 
     slot = 0;
     while (slot < gv_cellCount) {
@@ -351,19 +404,24 @@ void Cont_Return (int slot) {
 
     UnitSetPosition(abno, gvg_cellHome[slot], false);
     Cont_SetContained(abno, true);
-    Cont_SetCounter(abno, c_qliphothDefault);
+    Cont_SetCounter(abno, Cont_CounterDefault(abno));
 
     // The door comes back whole and raised, which is not the same as being
     // repaired: the doc restores it outright on suppression.
+    // Whole and raised, which is not the same as repaired: the doc restores it
+    // outright on suppression. A dropped gate is a dead unit, so this is a
+    // revive rather than a heal; UnitRevive puts the same unit back rather than
+    // making a second one, which matters because the cell is found by proximity
+    // and two doors at one home would be ambiguous.
     door = Cont_DoorAt(gvg_cellHome[slot]);
-    if (door != null && ObjectsGen_IsDoorDown(door)) {
-        Downable_Morph(door,
-                       Downable_Retype(UnitGetType(door), c_doorDownPrefix, c_doorUpPrefix),
-                       UnitGetPropertyFixed(door, c_unitPropLifeMax, true));
+    if (door != null && !UnitIsAlive(door)) {
+        UnitRevive(door);
     }
-    else if (door != null) {
+    if (door != null) {
         UnitSetPropertyFixed(door, c_unitPropLife,
                              UnitGetPropertyFixed(door, c_unitPropLifeMax, true));
+        UnitBehaviorRemove(door, c_doorStrainBuff,
+                           UnitBehaviorCount(door, c_doorStrainBuff));
     }
 }
 
@@ -379,11 +437,11 @@ bool Cont_Fatal_Func (bool testConds, bool runActions) {
     }
 
     victim = EventUnit();
-    if (ObjectsGen_IsDoor(victim)) {
+    if (Cont_IsDoor(victim)) {
         Cont_DropDoor(victim);
         return true;
     }
-    if (ObjectsGen_IsAbno(victim) && Cont_IsLoose(victim)) {
+    if (AbnoGen_Is(victim) && Cont_IsLoose(victim)) {
         Cont_Suppress(victim);
     }
     return true;
@@ -415,7 +473,7 @@ bool Cont_Tick_Func (bool testConds, bool runActions) {
     while (slot < gv_cellCount) {
         if (gvg_cellState[slot] == c_cellEscaping && now >= gvg_cellStrainAt[slot]) {
             door = Cont_DoorAt(gvg_cellHome[slot]);
-            if (door == null || ObjectsGen_IsDoorDown(door)) {
+            if (door == null || !UnitIsAlive(door)) {
                 Cont_GoLoose(gvg_cellAbno[slot]);
             }
             else {
@@ -446,8 +504,7 @@ void Cont_BuildRegistry () {
 
     gv_cellCount = 0;
 
-    all = ObjectsGen_ScanAbno();
-    UnitGroupAddUnitGroup(all, ObjectsGen_ScanTool());
+    all = AbnoGen_Scan();
     count = UnitGroupCount(all, c_unitCountAlive);
 
     i = 1;
@@ -458,7 +515,7 @@ void Cont_BuildRegistry () {
             gvg_cellHome[gv_cellCount] = UnitGetPosition(abno);
             gvg_cellState[gv_cellCount] = c_cellContained;
             Cont_SetContained(abno, true);
-            Cont_SetCounter(abno, c_qliphothDefault);
+            Cont_SetCounter(abno, Cont_CounterDefault(abno));
             gv_cellCount = gv_cellCount + 1;
         }
         i = i + 1;
@@ -466,6 +523,8 @@ void Cont_BuildRegistry () {
 }
 
 void Containment_Init () {
+    gvg_doorType[0] = "ContainGateHorizontal";
+
     Cont_BuildRegistry();
 
     gt_cellFatal = TriggerCreate("Cont_Fatal_Func");

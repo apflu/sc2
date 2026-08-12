@@ -1,0 +1,145 @@
+//--------------------------------------------------------------------------------------------------
+// GENERATED FILE -- DO NOT EDIT.
+//
+// Built from docs/usr/abnormality/*.md by tools/gen_abnormalities.py.
+// The design document is the data source; write the doc, rebuild, done.
+//--------------------------------------------------------------------------------------------------
+
+const int c_abnoCount = 2;
+string[2] gvg_abnoType;
+string[2] gvg_abnoName;
+int[2] gvg_abnoRisk;
+// -1 means the abnormality has no counter at all, which is not
+// the same as a counter that has run out.
+int[2] gvg_abnoCounter;
+int[2] gvg_abnoMaxBox;
+fixed[2] gvg_abnoBoxSpeed;
+fixed[2] gvg_abnoCooldown;
+// Lowest box count that still reads as this result.
+int[2] gvg_abnoGoodMin;
+int[2] gvg_abnoNormalMin;
+// Success chance per box, flattened: abnormality * 20 + work * 5 + (level-1).
+int[40] gvg_abnoPref;
+
+void AbnoGen_Init () {
+    gvg_abnoType[0] = "0_00_00";
+    gvg_abnoName[0] = "Standard Training-Dummy Rabbit";
+    gvg_abnoRisk[0] = 1;
+    gvg_abnoCounter[0] = -1;
+    gvg_abnoMaxBox[0] = 10;
+    gvg_abnoBoxSpeed[0] = 0.7;
+    gvg_abnoCooldown[0] = 10.0;
+    gvg_abnoGoodMin[0] = 0;
+    gvg_abnoNormalMin[0] = 0;
+    gvg_abnoPref[0] = 50;
+    gvg_abnoPref[1] = 50;
+    gvg_abnoPref[2] = 50;
+    gvg_abnoPref[3] = 50;
+    gvg_abnoPref[4] = 50;
+    gvg_abnoPref[5] = 50;
+    gvg_abnoPref[6] = 50;
+    gvg_abnoPref[7] = 50;
+    gvg_abnoPref[8] = 50;
+    gvg_abnoPref[9] = 50;
+    gvg_abnoPref[10] = 50;
+    gvg_abnoPref[11] = 50;
+    gvg_abnoPref[12] = 50;
+    gvg_abnoPref[13] = 50;
+    gvg_abnoPref[14] = 50;
+    gvg_abnoPref[15] = 50;
+    gvg_abnoPref[16] = 50;
+    gvg_abnoPref[17] = 50;
+    gvg_abnoPref[18] = 50;
+    gvg_abnoPref[19] = 50;
+    gvg_abnoType[1] = "O_03_03";
+    gvg_abnoName[1] = "One Sin and Hundreds of Good Deeds";
+    gvg_abnoRisk[1] = 0;
+    gvg_abnoCounter[1] = -1;
+    gvg_abnoMaxBox[1] = 10;
+    gvg_abnoBoxSpeed[1] = 0.3;
+    gvg_abnoCooldown[1] = 10.0;
+    gvg_abnoGoodMin[1] = 8;
+    gvg_abnoNormalMin[1] = 4;
+    gvg_abnoPref[20] = 50;
+    gvg_abnoPref[21] = 40;
+    gvg_abnoPref[22] = 30;
+    gvg_abnoPref[23] = 30;
+    gvg_abnoPref[24] = 30;
+    gvg_abnoPref[25] = 70;
+    gvg_abnoPref[26] = 70;
+    gvg_abnoPref[27] = 50;
+    gvg_abnoPref[28] = 50;
+    gvg_abnoPref[29] = 50;
+    gvg_abnoPref[30] = 70;
+    gvg_abnoPref[31] = 70;
+    gvg_abnoPref[32] = 70;
+    gvg_abnoPref[33] = 70;
+    gvg_abnoPref[34] = 70;
+    gvg_abnoPref[35] = 50;
+    gvg_abnoPref[36] = 40;
+    gvg_abnoPref[37] = 30;
+    gvg_abnoPref[38] = 30;
+    gvg_abnoPref[39] = 30;
+}
+
+//--------------------------------------------------------------------------------------------------
+// The table index of a unit type, or -1. This is also what makes a unit an
+// abnormality: having a row here, which means having a doc.
+//--------------------------------------------------------------------------------------------------
+int AbnoGen_IndexOfType (string unitType) {
+    int i;
+
+    i = 0;
+    while (i < c_abnoCount) {
+        if (gvg_abnoType[i] == unitType) {
+            return i;
+        }
+        i = i + 1;
+    }
+    return -1;
+}
+
+int AbnoGen_IndexOf (unit which) {
+    if (which == null) {
+        return -1;
+    }
+    return AbnoGen_IndexOfType(UnitGetType(which));
+}
+
+bool AbnoGen_Is (unit which) {
+    return AbnoGen_IndexOf(which) >= 0;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every abnormality alive on the map, whoever owns it.
+//--------------------------------------------------------------------------------------------------
+unitgroup AbnoGen_Scan () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_abnoCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_abnoType[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Success chance for one work type against one stat level (1..5). Level VI
+// (EX) reads as V, because the source tables stop at V.
+//--------------------------------------------------------------------------------------------------
+int AbnoGen_Pref (int index, int work, int statLevel) {
+    if (index < 0 || index >= c_abnoCount || work < 0 || work >= 4) {
+        return 0;
+    }
+    if (statLevel < 1) {
+        statLevel = 1;
+    }
+    if (statLevel > 5) {
+        statLevel = 5;
+    }
+    return gvg_abnoPref[index * 20 + work * 5 + statLevel - 1];
+}

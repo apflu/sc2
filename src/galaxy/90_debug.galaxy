@@ -208,7 +208,8 @@ void Debug_ReportCells (int player) {
     int slot;
 
     if (gv_cellCount == 0) {
-        Debug_Say(player, "cont: no Lob_Abno_* / Lob_Tool_* on the map");
+        Debug_Say(player, "cont: no abnormality placed ("
+                          + IntToString(c_abnoCount) + " have docs)");
         return;
     }
 
@@ -217,7 +218,7 @@ void Debug_ReportCells (int player) {
         abno = gvg_cellAbno[slot];
         door = Cont_DoorAt(gvg_cellHome[slot]);
 
-        line = "cell " + IntToString(slot) + " " + UnitGetType(abno)
+        line = "cell " + IntToString(slot) + " " + gvg_abnoName[AbnoGen_IndexOf(abno)]
                + " [" + Risk_Name(Risk_Of(abno)) + "]"
                + " " + Debug_CellStateName(gvg_cellState[slot])
                + " qlip=" + IntToString(Cont_Counter(abno));
@@ -225,7 +226,7 @@ void Debug_ReportCells (int player) {
         if (door == null) {
             line = line + " door=none";
         }
-        else if (ObjectsGen_IsDoor(door)) {
+        else if (UnitIsAlive(door)) {
             line = line + " door=up "
                    + IntToString(FixedToInt(
                          UnitGetPropertyFixed(door, c_unitPropLifePercent, true)))

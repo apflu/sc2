@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Catalog>
+    <!-- The containment door. Armored came along with the Blizzard gate this was
+         copied from, and in this map Armored is the HE risk grade — the door
+         would read as an HE abnormality to Risk_OfType and pick up every
+         "bonus vs HE" line in the game. Off. -->
     <CUnit id="ContainGateHorizontal">
         <Name value="Unit/Name/ContainGate"/>
         <Description value="Button/Tooltip/DestructibleGateDiagonalBLUR"/>
@@ -16,7 +20,7 @@
         <PlaneArray index="Ground" value="1"/>
         <Collide index="Ground" value="1"/>
         <Collide index="Small" value="1"/>
-        <Attributes index="Armored" value="1"/>
+        <Attributes index="Armored" value="0"/>
         <Attributes index="Structure" value="1"/>
         <LifeStart value="100"/>
         <LifeMax value="100"/>

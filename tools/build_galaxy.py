@@ -16,6 +16,7 @@ import re
 import sys
 from pathlib import Path
 
+import gen_abnormalities
 import gen_objects
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -55,6 +56,17 @@ def main() -> int:
     for u in upgrades:
         print(f"  upgrade {u['id']}: line {u['line']} lv{u['level']}"
               + (" (ally)" if u["ally"] else ""))
+
+    # The abnormality table comes from the design docs rather than the editor,
+    # so it is generated here too and its complaints are printed rather than
+    # swallowed: a doc and its unit are authored on different machines, and
+    # whether they agree is the one thing neither side can check alone.
+    _, abnormalities, notes = gen_abnormalities.generate()
+    print("generated src/galaxy/04_abno_gen.galaxy")
+    for e in abnormalities:
+        print(f"  abnormality {e['id']}: {e['name']}")
+    for note in notes:
+        print(f"  ! {note}")
 
     # The editor wires its own generated scripts into MapScript.galaxy (an
     # include plus an init call). This build rewrites that file wholesale, so
