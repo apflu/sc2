@@ -30,8 +30,10 @@ const int c_typesDeviceDown_BasicCount = 1;
 string[1] gvg_typesDeviceDown_Basic;
 const int c_typesDevice_BasicCount = 1;
 string[1] gvg_typesDevice_Basic;
-const int c_typesEmpCount = 0;
+const int c_typesEmpCount = 1;
 string[1] gvg_typesEmp;
+const int c_typesEmp_BasicCount = 1;
+string[1] gvg_typesEmp_Basic;
 const int c_typesHeroCount = 1;
 string[1] gvg_typesHero;
 const int c_typesHero_AgentCount = 1;
@@ -552,6 +554,44 @@ bool ObjectsGen_IsEmp (unit target) {
     i = 0;
     while (i < c_typesEmpCount) {
         if (UnitGetType(target) == gvg_typesEmp[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live Emp_Basic unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanEmp_Basic () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesEmp_BasicCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesEmp_Basic[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Emp_Basic, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsEmp_Basic (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesEmp_BasicCount) {
+        if (UnitGetType(target) == gvg_typesEmp_Basic[i]) {
             return true;
         }
         i = i + 1;
@@ -1081,6 +1121,8 @@ void ObjectsGen_Init () {
     gvg_typesDeviceDown[0] = "Lob_DeviceDown_Basic";
     gvg_typesDeviceDown_Basic[0] = "Lob_DeviceDown_Basic";
     gvg_typesDevice_Basic[0] = "Lob_Device_Basic";
+    gvg_typesEmp[0] = "Lob_Emp_Basic";
+    gvg_typesEmp_Basic[0] = "Lob_Emp_Basic";
     gvg_typesHero[0] = "Lob_Hero_Agent";
     gvg_typesHero_Agent[0] = "Lob_Hero_Agent";
     gvg_typesMarker[0] = "Lob_Marker_Spawn";

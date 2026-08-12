@@ -81,6 +81,27 @@ HEADER = """//------------------------------------------------------------------
 """
 
 
+def check_catalogs() -> None:
+    """Parse every catalog in GameData, not just the two that get read.
+
+    A malformed catalog is not a build error by itself — gen_objects only opens
+    UnitData and UpgradeData — so a broken BehaviorData or ActorData would sail
+    through the build and fail in the editor instead, a machine and a git round
+    trip away from whoever wrote it.
+
+    The recurring offender is "--" inside an XML comment, which is illegal and
+    which prose runs into constantly. Use an em dash.
+    """
+    data_dir = MAP / "Base.SC2Data" / "GameData"
+    if not data_dir.is_dir():
+        return
+    for path in sorted(data_dir.glob("*.xml")):
+        try:
+            ET.parse(path)
+        except ET.ParseError as exc:
+            raise SystemExit(f"{path.name}: {exc}") from exc
+
+
 def read_categories() -> dict[str, list[str]]:
     """Bucket custom unit types under every prefix of their id.
 
@@ -399,6 +420,7 @@ def build() -> str:
 
 
 def generate():
+    check_catalogs()
     categories = read_categories()
     groups = read_groups()
     regions = read_regions()

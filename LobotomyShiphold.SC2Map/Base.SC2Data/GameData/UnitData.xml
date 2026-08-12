@@ -247,18 +247,6 @@
         </CardLayouts>
         <EditorCategories value="ObjectType:Hero,ObjectFamily:Campaign"/>
     </CUnit>
-    <!-- The employee unit is authored in the editor, by copying an existing
-         unit, not written by hand here. A CUnit parented off Marine does NOT
-         inherit Marine's actor — actors bind by unitName — so a hand-written
-         entry comes out with no model, no muzzle flash and no sounds. Copying
-         in the editor brings all of that along.
-
-         What the copy has to carry, from docs/dev/authoring-contract.md:
-           id starting Lob_Emp_
-           BehaviorArray: Lob_Stat_Fortitude, Lob_Stat_Prudence,
-                          Lob_Stat_Temperance, Lob_Stat_Justice
-           Attributes Light and Biological set to 0 (they are risk grades here)
-           no weapon (Training Team lv1 is what grants one) -->
     <CUnit id="Lob_SCV_Unassigned">
         <DeathRevealRadius value="3"/>
         <Race value="Terr"/>
@@ -540,8 +528,13 @@
         <Collide index="Ground" value="1"/>
         <Collide index="ForceField" value="1"/>
         <Collide index="Small" value="1"/>
-        <Attributes index="Light" value="1"/>
-        <Attributes index="Biological" value="1"/>
+        <!-- Light and Biological are risk grades here (Teth / Zayin), not body
+             types, and the Marine this was copied from carries both. An
+             employee is not an abnormality, so they come off; left on, every
+             employee would read as two grades at once and Risk_OfType would
+             answer Teth for them. See docs/dev/authoring-contract.md. -->
+        <Attributes index="Light" value="0"/>
+        <Attributes index="Biological" value="0"/>
         <LifeStart value="45"/>
         <LifeMax value="45"/>
         <LifeArmorName value="Unit/LifeArmorName/TerranInfantryArmor"/>
@@ -551,7 +544,14 @@
         <StationaryTurningRate value="999.8437"/>
         <TurningRate value="999.8437"/>
         <Sight value="9"/>
-        <Food value="-1"/>
+        <!-- Power is the engine's supply meter in this map: devices carry
+             positive Food and the grid is derived from them. A Marine costs one
+             supply, so a copy of one silently makes every employee a power
+             drain. Zeroed to match Lob_Hero_Agent, which does the same for the
+             same reason. Employees AS a power sink is a real option and one the
+             baseline still owes a decision on — but then it is a number chosen
+             here, not one inherited from a Marine. -->
+        <Food value="0"/>
         <CostCategory value="Army"/>
         <CostResource index="Minerals" value="50"/>
         <RepairTime value="20"/>
@@ -564,6 +564,19 @@
         <AbilArray Link="move"/>
         <AbilArray Link="Stimpack"/>
         <WeaponArray Link="GuassRifle"/>
+        <!-- The four stats. One unit, four independent veterancy curves, each
+             with its own level and its own per-level Modification; the XP
+             natives address them by behavior name. src/galaxy/11_employee.galaxy
+             moves the numbers and applies none of their consequences.
+
+             DamageDealtXP and DamageTakenXP above are already 1 from the Marine
+             copy, and the behaviors zero every XPFraction, so nothing flows yet.
+             That is exactly the shape Training Team lv2 wants: it raises the
+             fraction from data and needs no script. -->
+        <BehaviorArray Link="Lob_Stat_Fortitude"/>
+        <BehaviorArray Link="Lob_Stat_Prudence"/>
+        <BehaviorArray Link="Lob_Stat_Temperance"/>
+        <BehaviorArray Link="Lob_Stat_Justice"/>
         <CardLayouts>
             <LayoutButtons Face="Move" Type="AbilCmd" AbilCmd="move,Move" Row="0" Column="0"/>
             <LayoutButtons Face="Stop" Type="AbilCmd" AbilCmd="stop,Stop" Row="0" Column="1"/>
