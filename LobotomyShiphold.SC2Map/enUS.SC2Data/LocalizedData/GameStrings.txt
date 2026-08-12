@@ -1,4 +1,5 @@
-﻿Abil/Name/Lob_Obs_1=Basic Information
+﻿Abil/Name/Interact=Interact
+Abil/Name/Lob_Obs_1=Basic Information
 Abil/Name/Lob_Obs_2=Work Preferences
 Abil/Name/Lob_Obs_3=Management Tips
 Abil/Name/Lob_Obs_4=Escape Information
@@ -39,8 +40,8 @@ Button/Tooltip/Lob_Obs_2=Not yet observed.
 Button/Tooltip/Lob_Obs_3=Not yet observed.
 Button/Tooltip/Lob_Obs_4=Not yet observed.
 Button/Tooltip/Lob_SCV_Miner=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
-Button/Tooltip/Lob_SCV_Unassigned2=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
 Button/Tooltip/Lob_SCV_Unassigned=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
+Button/Tooltip/Lob_SCV_Unassigned2=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
 Button/Tooltip/O_03_03=O-03-03<n/><n/><c val="FFE303">Detector</c>
 DocInfo/DescLong=Completely devoid of any description whatsoever.
 DocInfo/DescShort=Any

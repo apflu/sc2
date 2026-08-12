@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Catalog>
+    <CAbilInteract id="Interact">
+        <EditorCategories value="AbilityorEffectType:Units"/>
+    </CAbilInteract>
     <!-- Debug only. No cost, no cooldown, recastable to refresh. -->
     <CAbilEffectInstant id="Lob_Debug_Haste">
         <Flags index="Transient" value="1"/>
@@ -25,33 +28,25 @@
     <CAbilEffectInstant id="Lob_Obs_1">
         <EditorCategories value="AbilityorEffectType:Units"/>
         <Effect value="Lob_Nothing"/>
-        <Cost Resource="Minerals">
-            <Vital index="Life" value="0"/>
-        </Cost>
-        <CmdButtonArray index="Execute" DefaultButtonFace="Lob_Obs_1" Requirements=""/>
+        <Cost/>
+        <CmdButtonArray index="Execute" DefaultButtonFace="Lob_Obs_1"/>
     </CAbilEffectInstant>
     <CAbilEffectInstant id="Lob_Obs_2">
         <EditorCategories value="AbilityorEffectType:Units"/>
         <Effect value="Lob_Nothing"/>
-        <Cost Resource="Minerals">
-            <Vital index="Life" value="0"/>
-        </Cost>
-        <CmdButtonArray index="Execute" DefaultButtonFace="Lob_Obs_2" Requirements=""/>
+        <Cost/>
+        <CmdButtonArray index="Execute" DefaultButtonFace="Lob_Obs_2"/>
     </CAbilEffectInstant>
     <CAbilEffectInstant id="Lob_Obs_3">
         <EditorCategories value="AbilityorEffectType:Units"/>
         <Effect value="Lob_Nothing"/>
-        <Cost Resource="Minerals">
-            <Vital index="Life" value="0"/>
-        </Cost>
-        <CmdButtonArray index="Execute" DefaultButtonFace="Lob_Obs_3" Requirements=""/>
+        <Cost/>
+        <CmdButtonArray index="Execute" DefaultButtonFace="Lob_Obs_3"/>
     </CAbilEffectInstant>
     <CAbilEffectInstant id="Lob_Obs_4">
         <EditorCategories value="AbilityorEffectType:Units"/>
         <Effect value="Lob_Nothing"/>
-        <Cost Resource="Minerals">
-            <Vital index="Life" value="0"/>
-        </Cost>
-        <CmdButtonArray index="Execute" DefaultButtonFace="Lob_Obs_4" Requirements=""/>
+        <Cost/>
+        <CmdButtonArray index="Execute" DefaultButtonFace="Lob_Obs_4"/>
     </CAbilEffectInstant>
 </Catalog>
