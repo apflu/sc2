@@ -3000,6 +3000,312 @@ void Waves_Init () {
 }
 
 //--------------------------------------------------------------------------------------------------
+// src/galaxy/90_debug.galaxy
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// Chat commands.
+//
+// A test harness, not a feature. Everything here exists so that a mechanic can
+// be driven by hand in a running game before the system that will drive it for
+// real is written -- the alternative is testing employee stats only through a
+// work order that does not exist yet, which would mean the first time either
+// one runs is also the first time both run.
+//
+// Numbered last so it can call into anything.
+//
+// One trigger, one event per player, matching "-" loosely; every command is
+// then parsed out of the message text. Registering an event per command would
+// mean touching Init every time a command is added, and this file will collect
+// commands for as long as there are unfinished systems.
+//
+// Deliberately not gated behind a flag. It only reaches things a player already
+// owns, the map is not shipped from this branch, and a debug console that has
+// to be switched on is a debug console nobody switches on. When that stops
+// being true the gate goes in Debug_Init and nowhere else.
+//--------------------------------------------------------------------------------------------------
+
+const string c_debugPrefix = "-";
+
+trigger gt_debugChat;
+
+void Debug_Say (int player, string line) {
+    UIDisplayMessage(PlayerGroupSingle(player), c_messageAreaDebug, StringToText(line));
+}
+
+//--------------------------------------------------------------------------------------------------
+// Which stat a word means. -1 for "all", -2 for "not a stat".
+//--------------------------------------------------------------------------------------------------
+const int c_debugStatAll = -1;
+const int c_debugStatBad = -2;
+
+int Debug_StatFromWord (string word) {
+    if (StringEqual(word, "fort", false) || StringEqual(word, "f", false)) {
+        return c_statFortitude;
+    }
+    if (StringEqual(word, "prud", false) || StringEqual(word, "p", false)) {
+        return c_statPrudence;
+    }
+    if (StringEqual(word, "temp", false) || StringEqual(word, "t", false)) {
+        return c_statTemperance;
+    }
+    if (StringEqual(word, "just", false) || StringEqual(word, "j", false)) {
+        return c_statJustice;
+    }
+    if (StringEqual(word, "all", false) || StringEqual(word, "a", false)) {
+        return c_debugStatAll;
+    }
+    return c_debugStatBad;
+}
+
+string Debug_RankName (int rank) {
+    if (rank == 1) { return "I"; }
+    if (rank == 2) { return "II"; }
+    if (rank == 3) { return "III"; }
+    if (rank == 4) { return "IV"; }
+    if (rank == 5) { return "V"; }
+    return "?";
+}
+
+string Debug_StatLevelName (int level) {
+    if (level == 6) { return "EX"; }
+    return Debug_RankName(level);
+}
+
+//--------------------------------------------------------------------------------------------------
+// The employees in a player's current selection.
+//
+// Selection rather than a name or an index, because the point of the exercise
+// is to look at one specific unit's panel while changing it. Falling back to
+// every employee the player owns when nothing employee-ish is selected keeps
+// "-stat all 90" useful for setting up a scenario.
+//--------------------------------------------------------------------------------------------------
+unitgroup Debug_TargetEmployees (int player) {
+    unitgroup selected;
+    unitgroup found;
+    unit who;
+    int count;
+    int i;
+
+    found = UnitGroupEmpty();
+    selected = UnitGroupSelected(player);
+    count = UnitGroupCount(selected, c_unitCountAlive);
+
+    i = 1;
+    while (i <= count) {
+        who = UnitGroupUnit(selected, i);
+        if (who != null && ObjectsGen_IsEmp(who)) {
+            UnitGroupAdd(found, who);
+        }
+        i = i + 1;
+    }
+
+    if (UnitGroupCount(found, c_unitCountAlive) == 0) {
+        found = Emp_Of(player);
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Where a debug spawn goes: at the player's character, else at their core, else
+// wherever they are looking.
+//--------------------------------------------------------------------------------------------------
+point Debug_SpawnPoint (int player) {
+    unit core;
+
+    if (gv_hero != null && UnitIsAlive(gv_hero) && UnitGetOwner(gv_hero) == player) {
+        return UnitGetPosition(gv_hero);
+    }
+    core = Sector_AnyCore(player);
+    if (core != null) {
+        return UnitGetPosition(core);
+    }
+    return CameraGetTarget(player);
+}
+
+//--------------------------------------------------------------------------------------------------
+// -emp
+//
+// One line per employee: the four raw values, the four levels they land on,
+// their sum, and the rank that sum buys. Printed together on purpose -- the
+// thing worth checking is that the derivation agrees with the panel, and that
+// only shows up when every step of it is on screen at once.
+//--------------------------------------------------------------------------------------------------
+void Debug_ReportEmployees (int player) {
+    unitgroup mine;
+    unit who;
+    int count;
+    int i;
+    int stat;
+    int sum;
+    string line;
+
+    mine = Debug_TargetEmployees(player);
+    count = UnitGroupCount(mine, c_unitCountAlive);
+
+    if (count == 0) {
+        Debug_Say(player, "emp: none (spawn some with -emp spawn 3)");
+        return;
+    }
+
+    i = 1;
+    while (i <= count) {
+        who = UnitGroupUnit(mine, i);
+        line = "emp " + IntToString(i) + ":";
+        sum = 0;
+
+        stat = 0;
+        while (stat < c_statCount) {
+            line = line + " " + StringSub(Emp_StatName(stat), 1, 4)
+                   + "=" + IntToString(Emp_Stat(who, stat))
+                   + "(" + Debug_StatLevelName(Emp_StatLevel(who, stat)) + ")";
+            sum = sum + Emp_StatLevel(who, stat);
+            stat = stat + 1;
+        }
+
+        line = line + "  sum=" + IntToString(sum)
+               + " rank=" + Debug_RankName(Emp_Rank(who));
+        Debug_Say(player, line);
+        i = i + 1;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// -emp spawn [n]
+//--------------------------------------------------------------------------------------------------
+void Debug_SpawnEmployees (int player, int howMany) {
+    if (c_typesEmpCount == 0) {
+        Debug_Say(player, "emp: no Lob_Emp_* unit type is authored");
+        return;
+    }
+    if (howMany < 1) {
+        howMany = 1;
+    }
+
+    UnitCreate(howMany, gvg_typesEmp[0], c_unitCreateIgnorePlacement,
+               player, Debug_SpawnPoint(player), 270.0);
+    Debug_Say(player, "emp: spawned " + IntToString(howMany) + " " + gvg_typesEmp[0]);
+}
+
+//--------------------------------------------------------------------------------------------------
+// -stat <fort|prud|temp|just|all> <value>
+//
+// A leading + or - on the value makes it relative, which is the only way to
+// exercise Emp_StatAdd's signed path -- the one Training Team's "push a stat
+// back down" will use.
+//--------------------------------------------------------------------------------------------------
+void Debug_SetStat (int player, string whichWord, string valueWord) {
+    unitgroup mine;
+    unit who;
+    int which;
+    int value;
+    int count;
+    int i;
+    int stat;
+    bool relative;
+    string firstChar;
+
+    which = Debug_StatFromWord(whichWord);
+    if (which == c_debugStatBad) {
+        Debug_Say(player, "stat: want fort|prud|temp|just|all");
+        return;
+    }
+
+    firstChar = StringSub(valueWord, 1, 1);
+    relative = firstChar == "+" || firstChar == "-";
+    if (firstChar == "+") {
+        // StringToInt does not have to know what a leading + means.
+        valueWord = StringSub(valueWord, 2, StringLength(valueWord));
+    }
+    value = StringToInt(valueWord);
+
+    mine = Debug_TargetEmployees(player);
+    count = UnitGroupCount(mine, c_unitCountAlive);
+
+    i = 1;
+    while (i <= count) {
+        who = UnitGroupUnit(mine, i);
+        stat = 0;
+        while (stat < c_statCount) {
+            if (which == c_debugStatAll || which == stat) {
+                if (relative) {
+                    Emp_StatAdd(who, stat, value);
+                }
+                else {
+                    // Through StatAdd rather than RawSet, so the clamp applies
+                    // to a debug command exactly as it does to a work result.
+                    Emp_StatAdd(who, stat, value - Emp_Stat(who, stat));
+                }
+            }
+            stat = stat + 1;
+        }
+        Emp_SyncRank(who);
+        i = i + 1;
+    }
+
+    Debug_ReportEmployees(player);
+}
+
+void Debug_Help (int player) {
+    Debug_Say(player, "-emp                    stats of the selected employees");
+    Debug_Say(player, "-emp spawn [n]          spawn n employees at your character");
+    Debug_Say(player, "-stat <s> <v>           set a stat; s = fort|prud|temp|just|all");
+    Debug_Say(player, "-stat <s> +5 / -5       move it instead of setting it");
+    Debug_Say(player, "-rank                   resync every rank buff");
+}
+
+bool Debug_Chat_Func (bool testConds, bool runActions) {
+    string message;
+    string command;
+    int player;
+
+    if (!runActions) {
+        return true;
+    }
+
+    player = EventPlayer();
+    message = EventChatMessage(false);
+
+    // The event matches loosely, so a message that merely contains a hyphen
+    // gets here too. A command has to start with one.
+    if (StringSub(message, 1, 1) != c_debugPrefix) {
+        return true;
+    }
+
+    command = StringWord(message, 1);
+
+    if (StringEqual(command, "-help", false)) {
+        Debug_Help(player);
+    }
+    else if (StringEqual(command, "-emp", false)) {
+        if (StringEqual(StringWord(message, 2), "spawn", false)) {
+            Debug_SpawnEmployees(player, StringToInt(StringWord(message, 3)));
+        }
+        else {
+            Debug_ReportEmployees(player);
+        }
+    }
+    else if (StringEqual(command, "-stat", false)) {
+        Debug_SetStat(player, StringWord(message, 2), StringWord(message, 3));
+    }
+    else if (StringEqual(command, "-rank", false)) {
+        Emp_Tick_Func(false, true);
+        Debug_ReportEmployees(player);
+    }
+    return true;
+}
+
+void Debug_Init () {
+    int player;
+
+    gt_debugChat = TriggerCreate("Debug_Chat_Func");
+    player = 1;
+    while (player <= 15) {
+        TriggerAddEventChatMessage(gt_debugChat, player, c_debugPrefix, false);
+        player = player + 1;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
 // Map Initialization
 //--------------------------------------------------------------------------------------------------
 void InitMap () {
@@ -3015,4 +3321,5 @@ void InitMap () {
     Workers_Init();
     Economy_Init();
     Waves_Init();
+    Debug_Init();
 }

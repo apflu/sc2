@@ -1,14 +1,28 @@
-﻿Button/Name/Lob_Debug_Haste=DEBUG: Haste
+Behavior/Name/Lob_Rank_1=Rank I
+Behavior/Name/Lob_Rank_2=Rank II
+Behavior/Name/Lob_Rank_3=Rank III
+Behavior/Name/Lob_Rank_4=Rank IV
+Behavior/Name/Lob_Rank_5=Rank V
+Behavior/Name/Lob_Stat_Fortitude=Fortitude
+Behavior/Name/Lob_Stat_Justice=Justice
+Behavior/Name/Lob_Stat_Prudence=Prudence
+Behavior/Name/Lob_Stat_Temperance=Temperance
+Behavior/Tooltip/Lob_Rank_1=Employee rank, from the sum of the four stat levels.
+Behavior/Tooltip/Lob_Stat_Fortitude=<c val="ffff8a">勇气</c> - health. Raised by working abnormalities.
+Behavior/Tooltip/Lob_Stat_Justice=<c val="ffff8a">正义</c> - attack speed. Raised by working abnormalities.
+Behavior/Tooltip/Lob_Stat_Prudence=<c val="ffff8a">谨慎</c> - mental resilience. Raised by working abnormalities.
+Behavior/Tooltip/Lob_Stat_Temperance=<c val="ffff8a">自律</c> - work speed. Raised by working abnormalities.
 Button/Tooltip/Lob_CoreDown_Basic=Inner layer lost. Repair it to bring your sector back.
 Button/Tooltip/Lob_Core_Basic=The heart of your inner layer. Department passives and rest hall recovery run off it.
 Button/Tooltip/Lob_Debris_Normal=Barrier that can be destroyed to allow access to new areas.
 Button/Tooltip/Lob_Debug_Haste=Debug only. 10x attack speed, 2x move speed, 10 minutes. Recast to refresh.<n/><n/><c val="ffff8a">Anything measured while this is up is not the real loop.</c>
 Button/Tooltip/Lob_DeviceDown_Basic=Offline. Off the power grid until repaired. Cannot be attacked while down.
 Button/Tooltip/Lob_Device_Basic=Contains upgrades for Terran infantry and structures. <n/><n/><c val="ffff8a">Enables:</c><n/>- Missile Turrets from SCVs<n/>- Sensor Towers from SCVs<n/>- Planetary Fortresses from Command Centers
+Button/Tooltip/Lob_Emp_Basic=An employee. Send them to work an abnormality; the four stats grow from the work itself.<n/><n/><c val="ffff8a">They do not come back.</c>
 Button/Tooltip/Lob_Hero_Agent=Your character. Clears debris, repairs devices, and holds the line -- one pair of hands for all three.
 Button/Tooltip/Lob_SCV_Miner=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
-Button/Tooltip/Lob_SCV_Unassigned=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
 Button/Tooltip/Lob_SCV_Unassigned2=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
+Button/Tooltip/Lob_SCV_Unassigned=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
 DocInfo/DescLong=Completely devoid of any description whatsoever.
 DocInfo/DescShort=Any
 DocInfo/Name=Just Another StarCraft II Map
@@ -21,13 +35,14 @@ Unit/Name/Lob_Debris_4x4HighlightTooltip=Attack this to destroy it
 Unit/Name/Lob_Debris_Normal=Lob_Debris_Normal
 Unit/Name/Lob_DeviceDown_Basic=Lob_DeviceDown_Basic (offline)
 Unit/Name/Lob_Device_Basic=Lob_Device_Basic
+Unit/Name/Lob_Emp_Basic=Employee
 Unit/Name/Lob_Hero_Agent=Agent
 Unit/Name/Lob_Marker_Spawn=Lob_Marker_Spawn
 Unit/Name/Lob_Pile_Ore=Salvage Pile
 Unit/Name/Lob_Recycler_Basic=Recycler
 Unit/Name/Lob_SCV_Miner=Lob_SCV_Miner
-Unit/Name/Lob_SCV_Unassigned=Lob_SCV_Unassigned
 Unit/Name/Lob_SCV_Unassigned2=Lob_SCV_Worker
+Unit/Name/Lob_SCV_Unassigned=Lob_SCV_Unassigned
 Unit/Name/Lob_SCV_Worker=Lob_SCV_Worker
 Upgrade/Name/Malkuth_Upg2_1=Malkuth_Recall_1
 Upgrade/Name/Malkuth_Upg2_1_Ally=Malkuth_Recall_1_Ally
@@ -37,3 +52,4 @@ e_unitAttributeBiological=Zayin
 e_unitAttributeLight=Teth
 e_unitAttributePsionic=WAW
 e_unitAttributeUser1=Aleph
+﻿Button/Name/Lob_Debug_Haste=DEBUG: Haste

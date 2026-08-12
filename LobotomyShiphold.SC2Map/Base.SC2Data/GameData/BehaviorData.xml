@@ -76,6 +76,20 @@
              I  0    II 30    III 45    IV 65    V 85    EX 100
                       +30       +15       +20      +20      +15
 
+         Every XPFraction is zero, so the ONLY thing that moves a stat is an
+         explicit call. Stock CBehaviorVeterancy defaults Kills to 1, which
+         would have employees quietly training themselves on zerglings — and
+         that is not a bug to avoid, it is Training Team lv2 ("员工和玩家单位
+         对虫潮造成伤害时也同时被动提高属性"), so it has to be off until that
+         upgrade turns it on. When it does, it raises DamageDealt from here
+         through an EffectArray row and needs no script. UnitXPGainEnable is the
+         per-unit switch if a finer one is ever wanted.
+
+         CombineXP is off, also against the stock default. It is on for units
+         that carry one veterancy, where it cannot matter; these carry four, and
+         four curves that share a pool would not be four curves. Worth watching
+         in the first test that levels really do move independently.
+
          from docs/usr/quests_unlocks.md. Galaxy holds those same absolute
          thresholds because the sum rule in agents-and-abnormalities.md 2.4 has
          to be readable next to its justification; if one side is edited the
@@ -84,6 +98,11 @@
          ============================================================ -->
     <CBehaviorVeterancy id="Lob_Stat_Fortitude">
         <EditorCategories value="AbilityorEffectType:Units"/>
+        <InfoIcon value="Assets\Textures\btn-ability-terran-defensivematrix.dds"/>
+        <Flags index="CombineXP" value="0"/>
+        <XPFraction index="Kills" value="0"/>
+        <XPFraction index="DamageDealt" value="0"/>
+        <XPFraction index="DamageTaken" value="0"/>
         <VeterancyLevelArray/>
         <VeterancyLevelArray MinVeterancyXP="30"/>
         <VeterancyLevelArray MinVeterancyXP="15"/>
@@ -93,6 +112,11 @@
     </CBehaviorVeterancy>
     <CBehaviorVeterancy id="Lob_Stat_Prudence">
         <EditorCategories value="AbilityorEffectType:Units"/>
+        <InfoIcon value="Assets\Textures\btn-ability-terran-battlefieldawareness.dds"/>
+        <Flags index="CombineXP" value="0"/>
+        <XPFraction index="Kills" value="0"/>
+        <XPFraction index="DamageDealt" value="0"/>
+        <XPFraction index="DamageTaken" value="0"/>
         <VeterancyLevelArray/>
         <VeterancyLevelArray MinVeterancyXP="30"/>
         <VeterancyLevelArray MinVeterancyXP="15"/>
@@ -102,6 +126,11 @@
     </CBehaviorVeterancy>
     <CBehaviorVeterancy id="Lob_Stat_Temperance">
         <EditorCategories value="AbilityorEffectType:Units"/>
+        <InfoIcon value="Assets\Textures\btn-ability-terran-holdfire.dds"/>
+        <Flags index="CombineXP" value="0"/>
+        <XPFraction index="Kills" value="0"/>
+        <XPFraction index="DamageDealt" value="0"/>
+        <XPFraction index="DamageTaken" value="0"/>
         <VeterancyLevelArray/>
         <VeterancyLevelArray MinVeterancyXP="30"/>
         <VeterancyLevelArray MinVeterancyXP="15"/>
@@ -111,6 +140,11 @@
     </CBehaviorVeterancy>
     <CBehaviorVeterancy id="Lob_Stat_Justice">
         <EditorCategories value="AbilityorEffectType:Units"/>
+        <InfoIcon value="Assets\Textures\btn-ability-terran-ignorearmor.dds"/>
+        <Flags index="CombineXP" value="0"/>
+        <XPFraction index="Kills" value="0"/>
+        <XPFraction index="DamageDealt" value="0"/>
+        <XPFraction index="DamageTaken" value="0"/>
         <VeterancyLevelArray/>
         <VeterancyLevelArray MinVeterancyXP="30"/>
         <VeterancyLevelArray MinVeterancyXP="15"/>
@@ -130,7 +164,7 @@
          push a stat back DOWN and the rank has to follow it down. -->
     <CBehaviorBuff id="Lob_Rank_1">
         <Alignment value="Neutral"/>
-        <InfoIcon value="Assets\Textures\btn-unit-terran-scv.dds"/>
+        <InfoIcon value="Assets\Textures\btn-ability-terran-setrallypoint.dds"/>
     </CBehaviorBuff>
     <CBehaviorBuff id="Lob_Rank_2" parent="Lob_Rank_1"/>
     <CBehaviorBuff id="Lob_Rank_3" parent="Lob_Rank_1"/>
