@@ -1,5 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Catalog>
+    <CUnit id="ContainGateHorizontal">
+        <Name value="Unit/Name/DestructibleGateDiagonalBLUR"/>
+        <Description value="Button/Tooltip/DestructibleGateDiagonalBLUR"/>
+        <DeathRevealRadius value="3"/>
+        <ReviveType value="DestructibleGateDiagonalBLUR"/>
+        <Facing value="270"/>
+        <FlagArray index="Turnable" value="0"/>
+        <FlagArray index="CreateVisible" value="1"/>
+        <FlagArray index="UseLineOfSight" value="1"/>
+        <FlagArray index="Destructible" value="1"/>
+        <FlagArray index="NoPortraitTalk" value="1"/>
+        <FlagArray index="ArmorDisabledWhileConstructing" value="1"/>
+        <FogVisibility value="Snapshot"/>
+        <PlaneArray index="Ground" value="1"/>
+        <Collide index="Ground" value="1"/>
+        <Collide index="Small" value="1"/>
+        <Attributes index="Armored" value="1"/>
+        <Attributes index="Structure" value="1"/>
+        <LifeStart value="100"/>
+        <LifeMax value="100"/>
+        <LifeArmor value="1"/>
+        <OccludeHeight value="2"/>
+        <AbilArray Link="DestructibleGateStraightHorizontalLowered"/>
+        <BehaviorArray Link="DestructibleGateCapture"/>
+        <CardLayouts>
+            <LayoutButtons Face="Cancel" Type="AbilCmd" AbilCmd="BuildInProgress,Cancel" Row="2" Column="4"/>
+            <LayoutButtons Face="Cancel" Type="AbilCmd" AbilCmd="BuildInProgress,Cancel" Row="2" Column="4"/>
+            <LayoutButtons Face="GateOpen" Type="AbilCmd" AbilCmd="DestructibleGateStraightHorizontalLowered,Execute" Row="2" Column="3"/>
+        </CardLayouts>
+        <Footprint value="FootprintWallHorizontalFF"/>
+        <MinimapRadius value="0"/>
+        <EditorCategories value="ObjectType:Destructible,ObjectFamily:Melee"/>
+        <TacticalAI value="DestructibleGateDiagonalBLUR"/>
+        <LeaderAlias value="DestructibleGateDiagonalBLUR"/>
+        <HotkeyAlias value="DestructibleGateDiagonalBLUR"/>
+        <SelectAlias value="DestructibleGateDiagonalBLUR"/>
+        <SubgroupAlias value="DestructibleGateDiagonalBLUR"/>
+        <AIEvaluateAlias value="DestructibleGateDiagonalBLUR"/>
+        <ReviveInfoBase>
+            <Charge Link="DestructibleGateDiagonalBLUR/Revive"/>
+            <Cooldown Link="DestructibleGateDiagonalBLUR/Revive"/>
+        </ReviveInfoBase>
+    </CUnit>
     <CUnit id="Lob_Marker_Spawn" parent="DESTRUCTIBLE">
         <FlagArray index="Untargetable" value="1"/>
         <FlagArray index="Undetectable" value="1"/>
@@ -528,13 +571,6 @@
         <Collide index="Ground" value="1"/>
         <Collide index="ForceField" value="1"/>
         <Collide index="Small" value="1"/>
-        <!-- Light and Biological are risk grades here (Teth / Zayin), not body
-             types, and the Marine this was copied from carries both. An
-             employee is not an abnormality, so they come off; left on, every
-             employee would read as two grades at once and Risk_OfType would
-             answer Teth for them. See docs/dev/authoring-contract.md. -->
-        <Attributes index="Light" value="0"/>
-        <Attributes index="Biological" value="0"/>
         <LifeStart value="45"/>
         <LifeMax value="45"/>
         <LifeArmorName value="Unit/LifeArmorName/TerranInfantryArmor"/>
@@ -544,14 +580,6 @@
         <StationaryTurningRate value="999.8437"/>
         <TurningRate value="999.8437"/>
         <Sight value="9"/>
-        <!-- Power is the engine's supply meter in this map: devices carry
-             positive Food and the grid is derived from them. A Marine costs one
-             supply, so a copy of one silently makes every employee a power
-             drain. Zeroed to match Lob_Hero_Agent, which does the same for the
-             same reason. Employees AS a power sink is a real option and one the
-             baseline still owes a decision on — but then it is a number chosen
-             here, not one inherited from a Marine. -->
-        <Food value="0"/>
         <CostCategory value="Army"/>
         <CostResource index="Minerals" value="50"/>
         <RepairTime value="20"/>
@@ -611,5 +639,73 @@
         </Fidget>
         <TauntDuration index="Cheer" value="5"/>
         <TauntDuration index="Dance" value="5"/>
+    </CUnit>
+    <CUnit id="O_03_03">
+        <DeathRevealRadius value="3"/>
+        <Race value="Prot"/>
+        <Mob value="Multiplayer"/>
+        <FlagArray index="Movable" value="0"/>
+        <FlagArray index="PreventDestroy" value="1"/>
+        <FlagArray index="Invulnerable" value="1"/>
+        <FlagArray index="ArmySelect" value="1"/>
+        <PlaneArray index="Air" value="1"/>
+        <Collide index="Flying" value="1"/>
+        <Attributes index="Biological" value="1"/>
+        <LifeStart value="40"/>
+        <LifeMax value="40"/>
+        <LifeArmorName value="Unit/LifeArmorName/ProtossPlating"/>
+        <ShieldsStart value="20"/>
+        <ShieldsMax value="20"/>
+        <ShieldRegenDelay value="10"/>
+        <ShieldRegenRate value="2"/>
+        <ShieldArmorName value="Unit/ShieldArmorName/ProtossPlasmaShields"/>
+        <Mover value="Fly"/>
+        <Speed value="1.875"/>
+        <Acceleration value="2.125"/>
+        <Sight value="11"/>
+        <Height value="3.75"/>
+        <VisionHeight value="4"/>
+        <Food value="-1"/>
+        <CostCategory value="Army"/>
+        <CostResource index="Minerals" value="25"/>
+        <CostResource index="Vespene" value="75"/>
+        <RepairTime value="40"/>
+        <AttackTargetPriority value="20"/>
+        <DamageDealtXP value="1"/>
+        <DamageTakenXP value="1"/>
+        <KillXP value="20"/>
+        <AbilArray Link="stop"/>
+        <AbilArray Link="move"/>
+        <BehaviorArray Link="Detector11"/>
+        <CardLayouts>
+            <LayoutButtons Face="Move" Type="AbilCmd" AbilCmd="move,Move" Row="0" Column="0"/>
+            <LayoutButtons Face="Stop" Type="AbilCmd" AbilCmd="stop,Stop" Row="0" Column="1"/>
+            <LayoutButtons Face="MoveHoldPosition" Type="AbilCmd" AbilCmd="move,HoldPos" Row="0" Column="2"/>
+            <LayoutButtons Face="MovePatrol" Type="AbilCmd" AbilCmd="move,Patrol" Row="0" Column="3"/>
+            <LayoutButtons Face="Attack" Type="AbilCmd" AbilCmd="attack,Execute" Row="0" Column="4"/>
+            <LayoutButtons Face="AcquireMove" Type="AbilCmd" AbilCmd="move,AcquireMove" Row="0" Column="4"/>
+            <LayoutButtons Face="Detector" Type="Passive" Row="2" Column="3"/>
+        </CardLayouts>
+        <ScoreMake value="100"/>
+        <ScoreKill value="100"/>
+        <ScoreResult value="BuildOrder"/>
+        <SubgroupPriority value="4"/>
+        <EditorCategories value="ObjectType:Unit,ObjectFamily:Melee"/>
+        <AIEvalFactor value="0"/>
+        <GlossaryCategory value="Unit/Category/ProtossUnits"/>
+        <GlossaryPriority value="110"/>
+        <GlossaryStrongArray value="Banshee"/>
+        <GlossaryStrongArray value="Roach"/>
+        <GlossaryStrongArray value="DarkTemplar"/>
+        <GlossaryWeakArray value="MissileTurret"/>
+        <GlossaryWeakArray value="SporeCrawler"/>
+        <GlossaryWeakArray value="PhotonCannon"/>
+        <HotkeyCategory value="Unit/Category/ProtossUnits"/>
+    </CUnit>
+    <CUnit id="0_00_00" parent="Critter">
+        <Description value="Button/Tooltip/Critter0_00_00"/>
+        <Mob value="Multiplayer"/>
+        <Attributes index="Light" value="1"/>
+        <Attributes index="Biological" value="0"/>
     </CUnit>
 </Catalog>

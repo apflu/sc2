@@ -1,5 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Catalog>
+    <CActorUnit id="ContainGateStraightHorizontal" parent="GenericUnitGate" unitName="ContainGateHorizontal" alt="Lowered">
+        <Model value="DestructibleGateStraight"/>
+        <DeathArray index="Normal" SoundLink="DestructibleGateDeath"/>
+        <BarOffset value="22"/>
+        <BarWidth value="45"/>
+        <GroupIcon>
+            <Image value="Assets\Textures\Wireframe-Terran-DestructibleGate.dds"/>
+        </GroupIcon>
+        <GroupSoundArray index="What" value="DestructibleGateDiagonalBLURGroupWhat"/>
+        <GroupSoundArray index="Yes" value="DestructibleGateDiagonalBLURGroupYes"/>
+        <GroupSoundArray index="Attack" value="DestructibleGateDiagonalBLURGroupAttack"/>
+        <GroupSoundArray index="Board" value="DestructibleGateDiagonalBLURGroupBoard"/>
+        <HighlightTooltip value="Unit/Name/DestructibleGateDiagonalBLUR"/>
+        <SoundArray index="Birth" value="DestructibleGateDiagonalBLURBirth"/>
+        <SoundArray index="Ready" value="DestructibleGateDiagonalBLURReady"/>
+        <SoundArray index="Help" value="DestructibleGateDiagonalBLURHelp"/>
+        <SoundArray index="What" value="DestructibleGateDiagonalBLURWhat"/>
+        <SoundArray index="Yes" value="DestructibleGateDiagonalBLURYes"/>
+        <SoundArray index="Attack" value="DestructibleGateDiagonalBLURAttack"/>
+        <SoundArray index="Pissed" value="DestructibleGateDiagonalBLURPissed"/>
+        <SoundArray index="Movement" value="DestructibleGateDiagonalBLURMovement"/>
+        <SoundArray index="Turning" value="DestructibleGateDiagonalBLURTurning"/>
+        <SoundArray index="Board" value="DestructibleGateDiagonalBLURBoard"/>
+        <SoundArray index="Click" value="DestructibleGateDiagonalBLURClick"/>
+        <SoundArray index="ClickError" value="DestructibleGateDiagonalBLURClickError"/>
+        <SoundArray index="Highlight" value="DestructibleGateDiagonalBLURHighlight"/>
+        <UnitFlags index="ShowBlobShadow" value="0"/>
+        <Wireframe>
+            <Image value="Assets\Textures\Wireframe-Terran-DestructibleGate.dds"/>
+        </Wireframe>
+    </CActorUnit>
     <CActorUnit id="Lob_Marker_Spawn" parent="GenericUnitStandardNoAutoSoundLinks" unitName="Lob_Marker_Spawn">
         <Model value="Beacon_Terran"/>
         <BuildModel value="Beacon_Terran"/>
@@ -377,6 +408,79 @@
         <UnitIcon value="Assets\Textures\btn-unit-terran-marine.dds"/>
         <Wireframe>
             <Image value="Assets\Textures\Wireframe-Terran-Marine.dds"/>
+        </Wireframe>
+    </CActorUnit>
+    <CActorUnit id="O_03_03" parent="GenericUnitStandard" unitName="O_03_03">
+        <Aliases value="_UnitMedium"/>
+        <Macros value="PhysicsDeathsSwarmAir"/>
+        <On Terms="Behavior.WarpInEffect15.On" Send="ModelSwap ObserverWarpIn"/>
+        <On Terms="Behavior.WarpInEffect15.On" Send="$Birth"/>
+        <On Terms="Behavior.WarpInEffect15.Off" Send="ModelSwap Observer"/>
+        <On Terms="Behavior.WarpInEffect15.Off" Send="AnimBaselineStart"/>
+        <On Terms="UnitHeightUpdate.*.Land" Send="Create Observer_Land"/>
+        <Model value="Observer"/>
+        <AnimBlendTime value="1.200000"/>
+        <ModelFlags index="OutlineEmitter" value="1"/>
+        <BuildModel value="Observer"/>
+        <DeathArray index="Normal" ModelLink="ObserverDeath" SoundLink="Observer_Explode"/>
+        <DeathCustoms ModelLink="ObserverDeathRagdoll" Name="RagdollBasic" PhysicsMatchKeysOrdered="BasicAir,Basic">
+            <BodySquibs Name="Basic" Model="ProtossTinyRobotSquibDeathRagdoll"/>
+        </DeathCustoms>
+        <DeathCustoms Name="RagdollNuke" InheritsFrom="RagdollBasic">
+            <BodySquibs Name="Fire"/>
+        </DeathCustoms>
+        <DeathCustoms Name="RagdollFire" InheritsFrom="RagdollBasic">
+            <BodySquibs Name="Fire"/>
+        </DeathCustoms>
+        <DeathCustoms Name="RagdollAcid" InheritsFrom="RagdollBasic">
+            <BodySquibs Name="Acid"/>
+        </DeathCustoms>
+        <DeathCustoms Name="RagdollOverkillDPRH" InheritsFrom="RagdollBasic"/>
+        <DeathCustoms Name="RagdollOverkillDOI" InheritsFrom="RagdollBasic"/>
+        <DeathCustoms Name="RagdollMidair" InheritsFrom="RagdollBasic"/>
+        <PhysicsMatchKeysOrdered value="BasicAir,Basic"/>
+        <PlacementModel value="Observer"/>
+        <PortraitModel value="ObserverPortrait"/>
+        <BarOffset value="40"/>
+        <BarWidth value="42"/>
+        <GroupIcon>
+            <Image value="Assets\Textures\Wireframe-Protoss-Observer.dds"/>
+        </GroupIcon>
+        <HeroIcon value="Assets\Textures\btn-unit-protoss-observer.dds"/>
+        <LifeArmorIcon value="Assets\Textures\btn-upgrade-protoss-airarmorlevel0.dds"/>
+        <SoundArray index="Ready" value="Observer_Ready"/>
+        <SoundArray index="What" value="Observer_What"/>
+        <SoundArray index="Yes" value="Observer_Yes"/>
+        <SoundArray index="Pissed" value="Observer_Pissed"/>
+        <UnitIcon value="Assets\Textures\btn-unit-protoss-observer.dds"/>
+        <Wireframe>
+            <Image value="Assets\Textures\Wireframe-Protoss-Observer.dds"/>
+        </Wireframe>
+        <WireframeShield>
+            <Image value="Assets\Textures\Wireframe-Protoss-Observer-Shield01.dds"/>
+            <Image value="Assets\Textures\Wireframe-Protoss-Observer-Shield02.dds"/>
+            <Image value="Assets\Textures\Wireframe-Protoss-Observer-Shield03.dds"/>
+        </WireframeShield>
+    </CActorUnit>
+    <CActorUnit id="0_00_00" parent="GenericUnitCritter" unitName="0_00_00">
+        <Aliases value="_UnitSmall"/>
+        <Model value="UtilityBot"/>
+        <BuildModel value="UtilityBot"/>
+        <DeathArray index="Normal" ModelLink="UtilityBotDeath" SoundLink="Terran_ExplosionSmall"/>
+        <PlacementModel value="UtilityBot"/>
+        <PortraitModel value="UtilityBotPortrait"/>
+        <WalkAnimMoveSpeed value="1.1992"/>
+        <BarOffset value="40"/>
+        <BarWidth value="36"/>
+        <GroupIcon>
+            <Image value="Assets\Textures\Wireframe-critter-utilitybot.dds"/>
+        </GroupIcon>
+        <SoundArray index="What" value="UtilityBot_What"/>
+        <SoundArray index="Yes" value="UtilityBot_What"/>
+        <SoundArray index="Attack" value="UtilityBot_What"/>
+        <UnitIcon value="Assets\Textures\Wireframe-critter-utilitybot.dds"/>
+        <Wireframe>
+            <Image value="Assets\Textures\Wireframe-critter-utilitybot.dds"/>
         </Wireframe>
     </CActorUnit>
 </Catalog>
