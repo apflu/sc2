@@ -106,7 +106,7 @@ void AbnoGen_Init () {
     gvg_abnoObsCost[5] = 8;
     gvg_abnoLore[5] = "Success per box, by the matching stat's level:<n/>        I   II  III IV  V<n/>Instinct   50  40  30  30  30 <n/>Insight    70  70  50  50  50 <n/>Attachment 70  70  70  70  70 <n/>Repression 50  40  30  30  30 ";
     gvg_abnoObsCost[6] = 8;
-    gvg_abnoLore[6] = "1  One Sin and Hundreds of Good Deeds will restore the employee’s mental state when the work result is Good. <name>, who received this benediction, commented that it felt refreshing.<n/>2  After the maximum number of PE-Boxes was produced with One Sin and Hundreds of Good Deeds, it restored the mental health of every employee in the department.";
+    gvg_abnoLore[6] = "1  One Sin and Hundreds of Good Deeds will restore the employee’s mental state when the work result is Good. &lt;name&gt;, who received this benediction, commented that it felt refreshing.<n/>2  After the maximum number of PE-Boxes was produced with One Sin and Hundreds of Good Deeds, it restored the mental health of every employee in the department.";
     gvg_abnoObsCost[7] = 8;
     gvg_abnoLore[7] = "Qliphoth counter X<n/>Non-Escaping Entity";
     gvg_abnoPref[20] = 50;

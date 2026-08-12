@@ -209,8 +209,13 @@ def parse_lore(text: str) -> list[str]:
             line = re.sub(r"^\(Cost:.*\)$", "", line).strip()
             if line:
                 lines.append(line)
-        joined = "<n/>".join(lines).replace("\t", " ")
-        joined = joined.replace("\\", "").replace('"', "'")
+        # SC2 parses < > in displayed text as markup, and the wiki leaves
+        # placeholders like <name> in its prose. A bare <name> reads as a tag,
+        # and an unknown or empty tag is the "font style []" error. Escaped
+        # before the newline separator goes in, so ours survives and theirs
+        # does not.
+        joined = "<n/>".join(l.replace("<", "&lt;").replace(">", "&gt;") for l in lines)
+        joined = joined.replace("\t", " ").replace("\\", "").replace('"', "'")
         out.append(joined[:900])
     return out
 

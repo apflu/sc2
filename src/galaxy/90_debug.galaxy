@@ -506,21 +506,110 @@ void Debug_SetStat (int player, string whichWord, string valueWord) {
     Debug_ReportEmployees(player);
 }
 
+//--------------------------------------------------------------------------------------------------
+// The command reference, in the help panel rather than in chat.
+//
+// Placeholders are written NAME and VALUE rather than <name> and <value>, and
+// that is not a style preference. SC2 parses < > in displayed text as markup:
+// <s> is the font style tag, and a style tag with no val asks for the style
+// named "", which is where "TextError: 无法找到字体样式[]" came from. The old
+// chat help printed "-stat <s> <v>", so that error fired every time somebody
+// typed -help. Any angle bracket in text that reaches a player has to be
+// escaped or avoided.
+//
+// It used to print itself into the chat window, and it had quietly stopped
+// being a reference: the list outgrew the panel, so it scrolled its own top
+// off, and a list you can only read the bottom of is worse than no list. The
+// help panel is paged, scrollable and already bound to F12, and it is where a
+// player looks for "what can I do".
+//
+// The descriptions say what the mechanic is rather than only what the syntax
+// is, because there is room for that here and it is what somebody reading this
+// actually wants. Half of these commands stand in for a system that does not
+// exist yet, and which one is which is worth knowing.
+//
+// Added once at init, to everybody. Nothing removes them; the panel is not a
+// place state lives.
+//--------------------------------------------------------------------------------------------------
+void Debug_Tip (string title, string body, string icon) {
+    HelpPanelAddTip(PlayerGroupAll(), StringToText(title), StringToText(body),
+                    StringToText(""), icon);
+}
+
+void Debug_BuildHelp () {
+    Debug_Tip(
+        "Debug console",
+        "Type these into chat. Everything here is a test harness: it drives a "
+        + "mechanic by hand so it can be watched before the system that will "
+        + "drive it for real exists.<n/><n/>"
+        + "Nothing here reaches anything a player does not already own.",
+        "Assets\\Textures\\btn-ability-terran-battlefieldawareness.dds");
+
+    Debug_Tip(
+        "Employees",
+        "<c val=\"ffff8a\">-emp</c>  the selected employees: four stats, the level "
+        + "each lands on, their sum, the rank that sum buys, and SP.<n/>"
+        + "<c val=\"ffff8a\">-emp spawn [n]</c>  spawn n at your character.<n/>"
+        + "<c val=\"ffff8a\">-stat NAME VALUE</c>  set a stat. s is fort, prud, temp, just or all.<n/>"
+        + "<c val=\"ffff8a\">-stat NAME +5</c>  move it instead of setting it; negatives work.<n/>"
+        + "<c val=\"ffff8a\">-sp N</c>  move SP. -sp -30 is how panic gets tested.<n/><n/>"
+        + "Rank is the SUM of the four stat levels, not the lowest, so a "
+        + "three-stat specialist with one stat left deliberately low is still "
+        + "rank V. Abnormalities that require a stat to stay BELOW some value "
+        + "depend on that.",
+        "Assets\\Textures\\btn-upgrade-terran-infantryarmorlevel1.dds");
+
+    Debug_Tip(
+        "Containment",
+        "<c val=\"ffff8a\">-cont</c>  every cell: grade, state, Qliphoth counter, "
+        + "observation, and what its door is doing.<n/>"
+        + "<c val=\"ffff8a\">-breach [slot]</c>  that abnormality decides to leave. It "
+        + "still has to get through its own door, which is the part worth watching.<n/>"
+        + "<c val=\"ffff8a\">-qlip SLOT N</c>  set a Qliphoth counter.<n/>"
+        + "<c val=\"ffff8a\">-obs SLOT</c>  buy the next encyclopedia section with the "
+        + "PE-Boxes taken out of that abnormality.<n/><n/>"
+        + "Suppression is defeat, not death: a beaten abnormality goes home, its "
+        + "counter resets and its door comes back whole. A breach costs "
+        + "employees, time and everybody's attention, and never a slot.",
+        "Assets\\Textures\\btn-ability-terran-holdfire.dds");
+
+    Debug_Tip(
+        "Work",
+        "Select an employee, press Work, click a containment door. One second of "
+        + "casting, then the boxes start.<n/><n/>"
+        + "<c val=\"ffff8a\">-work TYPE</c>  what the next one will do: inst, insi, atta "
+        + "or repr. Prints each abnormality's odds for all four at your "
+        + "employees' current levels, so the choice needs no wiki.<n/><n/>"
+        + "One roll per box. The chance is keyed to the LEVEL of the stat that "
+        + "work uses, so 30 and 44 of a stat are the same to an abnormality. A "
+        + "missed box is White damage to SP, which has nothing to do with the "
+        + "health bar -- a badly chosen work costs nothing visible until the "
+        + "person breaks.",
+        "Assets\\Textures\\btn-upgrade-terran-infantryweaponslevel1.dds");
+
+    Debug_Tip(
+        "Energy, and how this ends",
+        "<c val=\"ffff8a\">-energy</c>  the meter.  <c val=\"ffff8a\">-energy N</c>  add to it.  "
+        + "<c val=\"ffff8a\">-energy submit</c>  end the game.<n/><n/>"
+        + "Every box pays twice: once into your own stock for that one "
+        + "abnormality's encyclopedia, and the same amount again into a pool the "
+        + "whole table shares. Filling the pool is the win condition, so studying "
+        + "abnormalities and winning are the same activity.<n/><n/>"
+        + "Nothing is ever spent out of the pool and nobody's rate depends on "
+        + "anybody else's. It is a scoreboard, not a wallet.",
+        "Assets\\Textures\\btn-ability-terran-stimpack-color.dds");
+
+    Debug_Tip(
+        "The world",
+        "<c val=\"ffff8a\">-status</c>  debris, ore, power, devices, sector, energy.<n/>"
+        + "<c val=\"ffff8a\">-scan</c>  what the generated object tables can actually see.<n/><n/>"
+        + "If -scan shows a type count above zero next to a group count of zero, "
+        + "the build did not run after the last editor save.",
+        "Assets\\Textures\\btn-ability-terran-battlefieldawareness.dds");
+}
+
 void Debug_Help (int player) {
-    Debug_Say(player, "-emp                    stats of the selected employees");
-    Debug_Say(player, "-emp spawn [n]          spawn n employees at your character");
-    Debug_Say(player, "-stat <s> <v>           set a stat; s = fort|prud|temp|just|all");
-    Debug_Say(player, "-stat <s> +5 / -5       move it instead of setting it");
-    Debug_Say(player, "-rank                   resync every rank readout");
-    Debug_Say(player, "-status                 the economy/power/sector readout");
-    Debug_Say(player, "-scan                   what the object tables can see");
-    Debug_Say(player, "-cont                   every cell: grade, state, counter, door");
-    Debug_Say(player, "-breach [slot]          that abnormality decides to leave");
-    Debug_Say(player, "-qlip <slot> <n>        set a Qliphoth counter");
-    Debug_Say(player, "-work <type>            what a door-bound employee will do");
-    Debug_Say(player, "-energy [n|submit]      the win condition");
-    Debug_Say(player, "-sp <n>                 move the selected employees' SP");
-    Debug_Say(player, "-obs <slot>             buy the next encyclopedia section");
+    Debug_Say(player, "the command list is in the help panel -- press F12");
 }
 
 bool Debug_Chat_Func (bool testConds, bool runActions) {
@@ -593,6 +682,8 @@ bool Debug_Chat_Func (bool testConds, bool runActions) {
 
 void Debug_Init () {
     int player;
+
+    Debug_BuildHelp();
 
     gt_debugChat = TriggerCreate("Debug_Chat_Func");
     player = 1;
