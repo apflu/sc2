@@ -29,12 +29,23 @@
 //   employee's SP, and there is no SP. The roll is made and the damage is
 //   counted so that adding SP later is one line rather than a redesign.
 //
-//   Work speed does not yet respond to Temperance or to observation level.
-//   The docs give bonuses as flat "+5 Work Speed" against a base stated in
-//   boxes per second, and the two are not in the same unit anywhere I can
-//   check. Inventing the conversion would put a made-up curve underneath every
-//   abnormality at once, so the interval is 1/boxSpeed and the multiplier has
-//   a named home waiting for it.
+//   Observation level is always 0. The bonuses are parsed and the formulas read
+//   them, but nothing tracks what a player has observed yet.
+//
+// Both formulas are from docs/usr/mechanism.md and neither is invented:
+//
+//     speed   = base * (1 + (observationBonus + Temperance) / 100)
+//     success = preference + observationPoints/5, capped at 95, then penalties
+//
+// Two details in there are load-bearing. Speed takes Temperance's VALUE, not
+// its level -- it is the one place a point of a stat matters on its own rather
+// than only at a threshold. And work success moves in whole percents per five
+// points, so four points of bonus is worth exactly nothing; the integer divide
+// is the mechanic, not a rounding artefact.
+//
+// The 95% cap is applied before penalties rather than after, which is why there
+// is always at least a 5% chance of failing and why penalties are so much worse
+// than the same number of bonus points is good.
 //--------------------------------------------------------------------------------------------------
 
 const int c_workInstinct = 0;
@@ -59,6 +70,19 @@ const int c_workGainNormal = 2;
 const int c_workGainGood = 3;
 
 const fixed c_workTick = 0.25;
+
+// White damage for a missed box. O-03-03's own line, and its Details say the
+// surrounding numbers are the default for every abnormality; nothing yet
+// carries a different one, so this is shared until one does.
+const int c_workWhiteMin = 1;
+const int c_workWhiteMax = 2;
+
+// Work success is counted in points and paid out in whole percents.
+const int c_workSuccessPerPercent = 5;
+
+// The cap is applied before penalties, so it is a ceiling on bonuses rather
+// than on the final number.
+const int c_workSuccessCap = 95;
 
 const int c_workMax = 32;
 
@@ -246,8 +270,7 @@ bool Work_Begin (unit emp, unit abno, int work) {
     gvg_workType[gv_workCount] = work;
     gvg_workBoxes[gv_workCount] = 0;
     gvg_workDone[gv_workCount] = 0;
-    gvg_workNextBox[gv_workCount] =
-        GameGetMissionTime() + 1.0 / gvg_abnoBoxSpeed[index];
+    gvg_workNextBox[gv_workCount] = GameGetMissionTime() + Work_BoxInterval(emp, index);
     gv_workCount = gv_workCount + 1;
 
     UnitIssueOrder(emp, OrderTargetingPoint(AbilityCommand("stop", 0),
@@ -346,32 +369,73 @@ void Work_Finish (int slot) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// Seconds per box attempt.
+//
+// speed = base * (1 + (observation + Temperance) / 100), and the time for a
+// whole work is boxes/speed -- which is why Temperance is felt as the length of
+// the queue at a cell rather than as anything visible during one work.
+//--------------------------------------------------------------------------------------------------
+fixed Work_BoxInterval (unit emp, int index) {
+    fixed speed;
+
+    speed = gvg_abnoBoxSpeed[index]
+            * (1.0 + IntToFixed(AbnoGen_ObsSpeed(index, Cont_ObservationOf(emp, index))
+                                + Emp_Stat(emp, c_statTemperance)) / 100.0);
+    if (speed <= 0.0) {
+        return 1.0;
+    }
+    return 1.0 / speed;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Percent chance for one box.
+//
+// Bonuses first, then the cap, then penalties. There are no penalties yet, but
+// the order is the mechanic rather than an implementation detail: capping
+// before them is what makes a penalty permanently lower the best case, and what
+// guarantees the 5% failure that no amount of preparation removes.
+//--------------------------------------------------------------------------------------------------
+int Work_SuccessChance (unit emp, int index, int work) {
+    int chance;
+    int obs;
+
+    obs = Cont_ObservationOf(emp, index);
+    chance = AbnoGen_Pref(index, work, Emp_StatLevel(emp, Work_Stat(work)))
+             + AbnoGen_ObsSuccess(index, obs) / c_workSuccessPerPercent;
+
+    if (chance > c_workSuccessCap) {
+        chance = c_workSuccessCap;
+    }
+    return chance;
+}
+
+//--------------------------------------------------------------------------------------------------
 // One box attempt.
 //
-// The chance is the abnormality's own preference for this work against this
-// employee's LEVEL in the matching stat, straight out of its doc. Level, not
-// value: the source tables are indexed I to V, which is also why an employee
-// with 30 Prudence and one with 44 are the same to an abnormality, and why the
-// thresholds are worth caring about.
+// The preference behind it is indexed by the employee's LEVEL in the matching
+// stat, straight out of the abnormality's doc. Level, not value: the source
+// tables are I to V, which is why an employee with 30 Prudence and one with 44
+// are the same to an abnormality, and why the thresholds are worth caring about.
 //--------------------------------------------------------------------------------------------------
 void Work_RollBox (int slot) {
     unit emp;
     int index;
-    int chance;
 
     emp = gvg_workEmp[slot];
     index = AbnoGen_IndexOf(gvg_workAbno[slot]);
-    chance = AbnoGen_Pref(index, gvg_workType[slot],
-                          Emp_StatLevel(emp, Work_Stat(gvg_workType[slot])));
 
     gvg_workDone[slot] = gvg_workDone[slot] + 1;
-    if (RandomInt(1, 100) <= chance) {
+    if (RandomInt(1, 100) <= Work_SuccessChance(emp, index, gvg_workType[slot])) {
         gvg_workBoxes[slot] = gvg_workBoxes[slot] + 1;
     }
-    // A missed box is White 1-2 to the employee's SP. There is no SP yet, so
-    // nothing is applied -- but this is the only place it will ever go.
+    else {
+        // A missed box is White damage. White is the damage that goes to the
+        // mind rather than the body, which is why this is the whole cost of
+        // choosing the wrong work: nothing about it shows on a health bar.
+        SP_Damage(emp, RandomInt(c_workWhiteMin, c_workWhiteMax));
+    }
 
-    gvg_workNextBox[slot] = GameGetMissionTime() + 1.0 / gvg_abnoBoxSpeed[index];
+    gvg_workNextBox[slot] = GameGetMissionTime() + Work_BoxInterval(emp, index);
 }
 
 //--------------------------------------------------------------------------------------------------

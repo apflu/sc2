@@ -64,6 +64,11 @@ int[2] gvg_abnoGoodMin;
 int[2] gvg_abnoNormalMin;
 // Success chance per box, flattened: abnormality * 20 + work * 5 + (level-1).
 int[40] gvg_abnoPref;
+// Cumulative observation bonuses, flattened: abnormality * 5 + observation
+// level. Work speed is a percentage of the base; work success is in points,
+// five to the percent.
+int[10] gvg_abnoObsSpeed;
+int[10] gvg_abnoObsSuccess;
 
 void AbnoGen_Init () {
     gvg_abnoType[0] = "0_00_00";
@@ -75,6 +80,16 @@ void AbnoGen_Init () {
     gvg_abnoCooldown[0] = 10.0;
     gvg_abnoGoodMin[0] = 0;
     gvg_abnoNormalMin[0] = 0;
+    gvg_abnoObsSpeed[0] = 0;
+    gvg_abnoObsSuccess[0] = 0;
+    gvg_abnoObsSpeed[1] = 0;
+    gvg_abnoObsSuccess[1] = 0;
+    gvg_abnoObsSpeed[2] = 0;
+    gvg_abnoObsSuccess[2] = 0;
+    gvg_abnoObsSpeed[3] = 0;
+    gvg_abnoObsSuccess[3] = 0;
+    gvg_abnoObsSpeed[4] = 0;
+    gvg_abnoObsSuccess[4] = 0;
     gvg_abnoPref[0] = 50;
     gvg_abnoPref[1] = 50;
     gvg_abnoPref[2] = 50;
@@ -104,6 +119,16 @@ void AbnoGen_Init () {
     gvg_abnoCooldown[1] = 10.0;
     gvg_abnoGoodMin[1] = 8;
     gvg_abnoNormalMin[1] = 4;
+    gvg_abnoObsSpeed[5] = 0;
+    gvg_abnoObsSuccess[5] = 0;
+    gvg_abnoObsSpeed[6] = 0;
+    gvg_abnoObsSuccess[6] = 5;
+    gvg_abnoObsSpeed[7] = 5;
+    gvg_abnoObsSuccess[7] = 5;
+    gvg_abnoObsSpeed[8] = 5;
+    gvg_abnoObsSuccess[8] = 10;
+    gvg_abnoObsSpeed[9] = 10;
+    gvg_abnoObsSuccess[9] = 10;
     gvg_abnoPref[20] = 50;
     gvg_abnoPref[21] = 40;
     gvg_abnoPref[22] = 30;
@@ -186,6 +211,35 @@ int AbnoGen_Pref (int index, int work, int statLevel) {
         statLevel = 5;
     }
     return gvg_abnoPref[index * 20 + work * 5 + statLevel - 1];
+}
+
+//--------------------------------------------------------------------------------------------------
+// Cumulative observation bonuses at an observation level (0 = unobserved).
+//--------------------------------------------------------------------------------------------------
+int AbnoGen_ObsSpeed (int index, int obs) {
+    if (index < 0 || index >= c_abnoCount) {
+        return 0;
+    }
+    if (obs < 0) {
+        obs = 0;
+    }
+    if (obs > 4) {
+        obs = 4;
+    }
+    return gvg_abnoObsSpeed[index * 5 + obs];
+}
+
+int AbnoGen_ObsSuccess (int index, int obs) {
+    if (index < 0 || index >= c_abnoCount) {
+        return 0;
+    }
+    if (obs < 0) {
+        obs = 0;
+    }
+    if (obs > 4) {
+        obs = 4;
+    }
+    return gvg_abnoObsSuccess[index * 5 + obs];
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -2092,6 +2146,15 @@ void Registry_Init () {
 //   The sum rule. Employee rank is the SUM of the four stat levels, not the
 //   minimum -- see Emp_Rank, where the reason is written down.
 //
+// SP lives here too, because SP is a vital of the same person and Prudence is
+// what sets its ceiling -- one more per-point Modification, no script.
+//
+// SP is the Energy vital. Not a script number with a bar drawn next to it: the
+// engine already has a second vital that the unit panel draws, that behaviors
+// can modify, and that has max, current and regeneration. Employees cast
+// nothing, so it was free, and taking it means the Welfare Team's white rounds
+// are a heal effect rather than a special case.
+//
 // Permanent death needs no code. Nothing respawns an employee, and that is the
 // whole of the death penalty; Central Command's replenishment is a separate
 // system priced against it.
@@ -2118,6 +2181,8 @@ const int c_statCapDefault = 99;
 const string c_rankBehavior = "Lob_Rank";
 
 const fixed c_empPeriod = 2.0;
+
+const string c_panicBuff = "Lob_Panicked";
 
 // The attribute behavior is what the panel draws; the point behavior is what
 // holds the number. Only the second is ever read or written.
@@ -2315,6 +2380,70 @@ void Emp_SyncRank (unit who) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// SP.
+//
+// White damage is damage to the mind. It has no relationship to the health bar,
+// which is the point: a work chosen badly costs nothing you can see until the
+// person breaks, and that delay is what makes the choice feel like a judgement
+// rather than a trade.
+//
+// Panic is a behavior applied at zero and removed above it, so the state and
+// its consequences are one object -- the same arrangement as Lob_Contained. What
+// panic actually does is authored in that behavior's Modification and is empty
+// for now: the design says it happens (2.4, and Training Team lv2 has an
+// upgrade for not panicking at the sight of an HE), but not what it looks like.
+//--------------------------------------------------------------------------------------------------
+int Emp_SP (unit who) {
+    if (who == null) {
+        return 0;
+    }
+    return FixedToInt(UnitGetPropertyFixed(who, c_unitPropEnergy, true));
+}
+
+int Emp_SPMax (unit who) {
+    if (who == null) {
+        return 0;
+    }
+    return FixedToInt(UnitGetPropertyFixed(who, c_unitPropEnergyMax, true));
+}
+
+bool Emp_IsPanicked (unit who) {
+    return who != null && UnitHasBehavior2(who, c_panicBuff);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Moves SP, clamped into [0, max]. Signed, so healing and white damage are the
+// same call and the clamp has one home.
+//--------------------------------------------------------------------------------------------------
+void SP_Add (unit who, int delta) {
+    int value;
+    int cap;
+
+    if (who == null || !UnitIsAlive(who)) {
+        return;
+    }
+
+    cap = Emp_SPMax(who);
+    value = Emp_SP(who) + delta;
+    if (value < 0) {
+        value = 0;
+    }
+    if (value > cap) {
+        value = cap;
+    }
+    UnitSetPropertyFixed(who, c_unitPropEnergy, IntToFixed(value));
+    Buffs_Set(who, c_panicBuff, value <= 0 && cap > 0);
+}
+
+void SP_Damage (unit who, int amount) {
+    SP_Add(who, -amount);
+}
+
+void SP_Restore (unit who, int amount) {
+    SP_Add(who, amount);
+}
+
+//--------------------------------------------------------------------------------------------------
 // One player's employees.
 //
 // A scan, not a roster. The units on the map are the roster, so there is no
@@ -2401,6 +2530,9 @@ bool Emp_Tick_Func (bool testConds, bool runActions) {
     i = 1;
     while (i <= count) {
         Emp_SyncRank(UnitGroupUnit(all, i));
+        // Zero on purpose, so an employee whose Prudence just went up does not
+        // become panicked by having a ceiling raised out from under a full bar.
+        SP_Add(UnitGroupUnit(all, i), 0);
         i = i + 1;
     }
     return true;
@@ -2949,6 +3081,20 @@ bool Cont_DoorIsUp (unit abno) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// How far a player has observed an abnormality, 0 (unseen) to 4 (fully
+// unlocked).
+//
+// Always 0 until the encyclopedia exists. It is a stub with a real signature
+// rather than a constant sprinkled through the callers, because every formula
+// that reads it -- work speed, work success, the name shown on the selection
+// screen, cross-department restrictions -- should be written against the real
+// question now and get the real answer later without being touched.
+//--------------------------------------------------------------------------------------------------
+int Cont_ObservationOf (unit who, int abnoIndex) {
+    return 0;
+}
+
+//--------------------------------------------------------------------------------------------------
 // The Qliphoth counter, as the stack count of a behavior.
 //
 // Same trick as employee stats, and for the same reason: a stack count is a
@@ -3307,12 +3453,23 @@ void Containment_Init () {
 //   employee's SP, and there is no SP. The roll is made and the damage is
 //   counted so that adding SP later is one line rather than a redesign.
 //
-//   Work speed does not yet respond to Temperance or to observation level.
-//   The docs give bonuses as flat "+5 Work Speed" against a base stated in
-//   boxes per second, and the two are not in the same unit anywhere I can
-//   check. Inventing the conversion would put a made-up curve underneath every
-//   abnormality at once, so the interval is 1/boxSpeed and the multiplier has
-//   a named home waiting for it.
+//   Observation level is always 0. The bonuses are parsed and the formulas read
+//   them, but nothing tracks what a player has observed yet.
+//
+// Both formulas are from docs/usr/mechanism.md and neither is invented:
+//
+//     speed   = base * (1 + (observationBonus + Temperance) / 100)
+//     success = preference + observationPoints/5, capped at 95, then penalties
+//
+// Two details in there are load-bearing. Speed takes Temperance's VALUE, not
+// its level -- it is the one place a point of a stat matters on its own rather
+// than only at a threshold. And work success moves in whole percents per five
+// points, so four points of bonus is worth exactly nothing; the integer divide
+// is the mechanic, not a rounding artefact.
+//
+// The 95% cap is applied before penalties rather than after, which is why there
+// is always at least a 5% chance of failing and why penalties are so much worse
+// than the same number of bonus points is good.
 //--------------------------------------------------------------------------------------------------
 
 const int c_workInstinct = 0;
@@ -3337,6 +3494,19 @@ const int c_workGainNormal = 2;
 const int c_workGainGood = 3;
 
 const fixed c_workTick = 0.25;
+
+// White damage for a missed box. O-03-03's own line, and its Details say the
+// surrounding numbers are the default for every abnormality; nothing yet
+// carries a different one, so this is shared until one does.
+const int c_workWhiteMin = 1;
+const int c_workWhiteMax = 2;
+
+// Work success is counted in points and paid out in whole percents.
+const int c_workSuccessPerPercent = 5;
+
+// The cap is applied before penalties, so it is a ceiling on bonuses rather
+// than on the final number.
+const int c_workSuccessCap = 95;
 
 const int c_workMax = 32;
 
@@ -3524,8 +3694,7 @@ bool Work_Begin (unit emp, unit abno, int work) {
     gvg_workType[gv_workCount] = work;
     gvg_workBoxes[gv_workCount] = 0;
     gvg_workDone[gv_workCount] = 0;
-    gvg_workNextBox[gv_workCount] =
-        GameGetMissionTime() + 1.0 / gvg_abnoBoxSpeed[index];
+    gvg_workNextBox[gv_workCount] = GameGetMissionTime() + Work_BoxInterval(emp, index);
     gv_workCount = gv_workCount + 1;
 
     UnitIssueOrder(emp, OrderTargetingPoint(AbilityCommand("stop", 0),
@@ -3624,32 +3793,73 @@ void Work_Finish (int slot) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// Seconds per box attempt.
+//
+// speed = base * (1 + (observation + Temperance) / 100), and the time for a
+// whole work is boxes/speed -- which is why Temperance is felt as the length of
+// the queue at a cell rather than as anything visible during one work.
+//--------------------------------------------------------------------------------------------------
+fixed Work_BoxInterval (unit emp, int index) {
+    fixed speed;
+
+    speed = gvg_abnoBoxSpeed[index]
+            * (1.0 + IntToFixed(AbnoGen_ObsSpeed(index, Cont_ObservationOf(emp, index))
+                                + Emp_Stat(emp, c_statTemperance)) / 100.0);
+    if (speed <= 0.0) {
+        return 1.0;
+    }
+    return 1.0 / speed;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Percent chance for one box.
+//
+// Bonuses first, then the cap, then penalties. There are no penalties yet, but
+// the order is the mechanic rather than an implementation detail: capping
+// before them is what makes a penalty permanently lower the best case, and what
+// guarantees the 5% failure that no amount of preparation removes.
+//--------------------------------------------------------------------------------------------------
+int Work_SuccessChance (unit emp, int index, int work) {
+    int chance;
+    int obs;
+
+    obs = Cont_ObservationOf(emp, index);
+    chance = AbnoGen_Pref(index, work, Emp_StatLevel(emp, Work_Stat(work)))
+             + AbnoGen_ObsSuccess(index, obs) / c_workSuccessPerPercent;
+
+    if (chance > c_workSuccessCap) {
+        chance = c_workSuccessCap;
+    }
+    return chance;
+}
+
+//--------------------------------------------------------------------------------------------------
 // One box attempt.
 //
-// The chance is the abnormality's own preference for this work against this
-// employee's LEVEL in the matching stat, straight out of its doc. Level, not
-// value: the source tables are indexed I to V, which is also why an employee
-// with 30 Prudence and one with 44 are the same to an abnormality, and why the
-// thresholds are worth caring about.
+// The preference behind it is indexed by the employee's LEVEL in the matching
+// stat, straight out of the abnormality's doc. Level, not value: the source
+// tables are I to V, which is why an employee with 30 Prudence and one with 44
+// are the same to an abnormality, and why the thresholds are worth caring about.
 //--------------------------------------------------------------------------------------------------
 void Work_RollBox (int slot) {
     unit emp;
     int index;
-    int chance;
 
     emp = gvg_workEmp[slot];
     index = AbnoGen_IndexOf(gvg_workAbno[slot]);
-    chance = AbnoGen_Pref(index, gvg_workType[slot],
-                          Emp_StatLevel(emp, Work_Stat(gvg_workType[slot])));
 
     gvg_workDone[slot] = gvg_workDone[slot] + 1;
-    if (RandomInt(1, 100) <= chance) {
+    if (RandomInt(1, 100) <= Work_SuccessChance(emp, index, gvg_workType[slot])) {
         gvg_workBoxes[slot] = gvg_workBoxes[slot] + 1;
     }
-    // A missed box is White 1-2 to the employee's SP. There is no SP yet, so
-    // nothing is applied -- but this is the only place it will ever go.
+    else {
+        // A missed box is White damage. White is the damage that goes to the
+        // mind rather than the body, which is why this is the whole cost of
+        // choosing the wrong work: nothing about it shows on a health bar.
+        SP_Damage(emp, RandomInt(c_workWhiteMin, c_workWhiteMax));
+    }
 
-    gvg_workNextBox[slot] = GameGetMissionTime() + 1.0 / gvg_abnoBoxSpeed[index];
+    gvg_workNextBox[slot] = GameGetMissionTime() + Work_BoxInterval(emp, index);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -4552,7 +4762,11 @@ void Debug_ReportEmployees (int player) {
 
         line = line + "  sum=" + IntToString(sum)
                + " rank=" + Debug_RankName(Emp_Rank(who))
-               + " panel=" + IntToString(UnitXPGetCurrentLevel(who, c_rankBehavior));
+               + " panel=" + IntToString(UnitXPGetCurrentLevel(who, c_rankBehavior))
+               + " sp=" + IntToString(Emp_SP(who)) + "/" + IntToString(Emp_SPMax(who));
+        if (Emp_IsPanicked(who)) {
+            line = line + " PANICKED";
+        }
         Debug_Say(player, line);
         i = i + 1;
     }
@@ -4637,6 +4851,27 @@ void Debug_Breach (int player, string slotWord) {
 
     Cont_BeginEscape(gvg_cellAbno[slot]);
     Debug_ReportCells(player);
+}
+
+//--------------------------------------------------------------------------------------------------
+// -sp <n>
+//
+// Signed, so -sp -30 is how panic gets tested without waiting for thirty failed
+// boxes.
+//--------------------------------------------------------------------------------------------------
+void Debug_SP (int player, string word) {
+    unitgroup mine;
+    int count;
+    int i;
+
+    mine = Debug_TargetEmployees(player);
+    count = UnitGroupCount(mine, c_unitCountAlive);
+    i = 1;
+    while (i <= count) {
+        SP_Add(UnitGroupUnit(mine, i), Debug_Int(word, 0));
+        i = i + 1;
+    }
+    Debug_ReportEmployees(player);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -4839,6 +5074,7 @@ void Debug_Help (int player) {
     Debug_Say(player, "-qlip <slot> <n>        set a Qliphoth counter");
     Debug_Say(player, "-work <type>            what a door-bound employee will do");
     Debug_Say(player, "-energy [n|submit]      the win condition");
+    Debug_Say(player, "-sp <n>                 move the selected employees' SP");
 }
 
 bool Debug_Chat_Func (bool testConds, bool runActions) {
@@ -4890,6 +5126,9 @@ bool Debug_Chat_Func (bool testConds, bool runActions) {
     }
     else if (StringEqual(command, "-breach", false)) {
         Debug_Breach(player, StringWord(message, 2));
+    }
+    else if (StringEqual(command, "-sp", false)) {
+        Debug_SP(player, StringWord(message, 2));
     }
     else if (StringEqual(command, "-work", false)) {
         Debug_Work(player, StringWord(message, 2));

@@ -127,8 +127,13 @@ SC2 按固定文件名自动加载这个目录，新增一个 catalog 不需要�
 
 - id 以 `Lob_Emp_` 开头
 - `BehaviorArray`：`Lob_Attr_Fortitude` / `Lob_Attr_Prudence` / `Lob_Attr_Temperance` / `Lob_Attr_Justice` / `Lob_Rank`
-- `Attributes` 里 `Light` 和 `Biological` 置 0（在本作里它们是危险等级，不是体型）
+- 不带任何危险等级 attribute（`Light` / `Biological` 之类在本作里是等级，不是体型）
 - `Food` 置 0（补给就是电网，Marine 的 -1 会让每个员工偷偷耗电）
+- `EnergyMax` / `EnergyStart` 给一个基础值，`EnergyRegenRate` 置 0 —— **SP 就是 Energy 这条 vital**
+
+**SP = Energy。**引擎本来就有第二条 vital：面板会画、有上限、有当前值、behavior 能改，而员工不放技能，所以这条是白捡的。谨慎（`Lob_Attr_Prudence`）的 `Modification` 里一行 `VitalMaxArray index="Energy" value="1"` 就是"每点谨慎 +1 点 SP 上限"，Galaxy 一行都不用写。回复率为 0：SP 靠主休息室和福利部回，不靠站着不动。
+
+**白伤**（工作失败）就是扣这条 vital，和生命值没有任何关系——这正是重点：选错工作在人崩掉之前什么都看不出来。SP 归零挂 `Lob_Panicked`，那个 behavior 的 `Modification` **目前是空的**，因为设计说了疯狂会发生（§2.4、培训部 lv2、福利部白弹）但没说疯狂长什么样。
 
 ### 收容单元
 

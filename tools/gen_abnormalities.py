@@ -93,6 +93,40 @@ def parse_prefs(body: str) -> dict[str, list[int]]:
     return prefs
 
 
+def parse_observation(body: str) -> tuple[list[int], list[int]]:
+    """Cumulative work-speed and work-success bonuses by observation level.
+
+    The section reads as four blocks, one per level, each naming its bonus with
+    an icon filename in front of it. The icon is what disambiguates: the wiki
+    writes the speed bonus as "+5" and the success bonus as "+5%", but
+    mechanism.md is explicit that work success is counted in points at five
+    points to the percent, so the "%" is the wiki being loose and the number is
+    points either way. Keying off WorkSpeedIcon / WorkSuccessIcon rather than
+    off the punctuation avoids having to decide that per line.
+
+    Index 0 is unobserved, so both arrays are five long and start at zero.
+    """
+    speed = [0, 0, 0, 0, 0]
+    success = [0, 0, 0, 0, 0]
+    level = 0
+    for line in body.splitlines():
+        m = re.match(r"^\s*(I|II|III|IV)\s*$", line.strip())
+        if m:
+            level = {"I": 1, "II": 2, "III": 3, "IV": 4}[m.group(1)]
+            continue
+        if level == 0:
+            continue
+        for icon, table in (("WorkSpeedIcon", speed), ("WorkSuccessIcon", success)):
+            hit = re.search(rf"{icon}\.png[^+\-]*([+-]\s*\d+)", line)
+            if hit:
+                table[level] += int(hit.group(1).replace(" ", ""))
+    # Levels are cumulative: reaching III means you also have I and II.
+    for table in (speed, success):
+        for i in range(1, 5):
+            table[i] += table[i - 1]
+    return speed, success
+
+
 def parse(path: Path) -> dict:
     text = path.read_text(encoding="utf-8")
     lines = [l.strip() for l in text.splitlines() if l.strip()]
@@ -128,6 +162,7 @@ def parse(path: Path) -> dict:
         "good_min": int(good.group(1)) if good else 0,
         "normal_min": int(normal.group(1)) if normal else 0,
         "prefs": parse_prefs(section(text, "Abnormality Work Preferences")),
+        "obs": parse_observation(section(text, "Observation Level")),
     }
 
 
@@ -199,7 +234,12 @@ def build(entries: list[dict]) -> str:
     out.append(f"int[{n}] gvg_abnoGoodMin;\n")
     out.append(f"int[{n}] gvg_abnoNormalMin;\n")
     out.append("// Success chance per box, flattened: abnormality * 20 + work * 5 + (level-1).\n")
-    out.append(f"int[{max(len(entries) * 20, 1)}] gvg_abnoPref;\n\n")
+    out.append(f"int[{max(len(entries) * 20, 1)}] gvg_abnoPref;\n")
+    out.append("// Cumulative observation bonuses, flattened: abnormality * 5 + observation\n"
+               "// level. Work speed is a percentage of the base; work success is in points,\n"
+               "// five to the percent.\n")
+    out.append(f"int[{max(len(entries) * 5, 1)}] gvg_abnoObsSpeed;\n")
+    out.append(f"int[{max(len(entries) * 5, 1)}] gvg_abnoObsSuccess;\n\n")
 
     for i, e in enumerate(entries):
         fills.append(f'    gvg_abnoType[{i}] = "{e["id"]}";')
@@ -211,6 +251,10 @@ def build(entries: list[dict]) -> str:
         fills.append(f"    gvg_abnoCooldown[{i}] = {e['cooldown']};")
         fills.append(f"    gvg_abnoGoodMin[{i}] = {e['good_min']};")
         fills.append(f"    gvg_abnoNormalMin[{i}] = {e['normal_min']};")
+        obs_speed, obs_success = e["obs"]
+        for lvl in range(5):
+            fills.append(f"    gvg_abnoObsSpeed[{i * 5 + lvl}] = {obs_speed[lvl]};")
+            fills.append(f"    gvg_abnoObsSuccess[{i * 5 + lvl}] = {obs_success[lvl]};")
         for w, work in enumerate(WORKS):
             row = e["prefs"].get(work, [50] * 5)
             for lvl, pct in enumerate(row):
@@ -275,6 +319,33 @@ def build(entries: list[dict]) -> str:
         "        statLevel = 5;\n"
         "    }\n"
         "    return gvg_abnoPref[index * 20 + work * 5 + statLevel - 1];\n"
+        "}\n\n"
+        "//--------------------------------------------------------------------------------------------------\n"
+        "// Cumulative observation bonuses at an observation level (0 = unobserved).\n"
+        "//--------------------------------------------------------------------------------------------------\n"
+        "int AbnoGen_ObsSpeed (int index, int obs) {\n"
+        "    if (index < 0 || index >= c_abnoCount) {\n"
+        "        return 0;\n"
+        "    }\n"
+        "    if (obs < 0) {\n"
+        "        obs = 0;\n"
+        "    }\n"
+        "    if (obs > 4) {\n"
+        "        obs = 4;\n"
+        "    }\n"
+        "    return gvg_abnoObsSpeed[index * 5 + obs];\n"
+        "}\n\n"
+        "int AbnoGen_ObsSuccess (int index, int obs) {\n"
+        "    if (index < 0 || index >= c_abnoCount) {\n"
+        "        return 0;\n"
+        "    }\n"
+        "    if (obs < 0) {\n"
+        "        obs = 0;\n"
+        "    }\n"
+        "    if (obs > 4) {\n"
+        "        obs = 4;\n"
+        "    }\n"
+        "    return gvg_abnoObsSuccess[index * 5 + obs];\n"
         "}\n"
     )
     return "".join(out)
@@ -298,6 +369,7 @@ if __name__ == "__main__":
         print(
             f"  {e['id']:<10} {grade:<6} qliphoth={counter:<3} "
             f"box={e['speed']}/s x{e['max_box']} good>={e['good_min']} "
+            f"obs=+{e['obs'][0][4]}spd/+{e['obs'][1][4]}suc "
             f"prefs={'yes' if e['prefs'] else 'MISSING'}  {e['name']}"
         )
     for note in notes:

@@ -210,6 +210,20 @@ bool Cont_DoorIsUp (unit abno) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// How far a player has observed an abnormality, 0 (unseen) to 4 (fully
+// unlocked).
+//
+// Always 0 until the encyclopedia exists. It is a stub with a real signature
+// rather than a constant sprinkled through the callers, because every formula
+// that reads it -- work speed, work success, the name shown on the selection
+// screen, cross-department restrictions -- should be written against the real
+// question now and get the real answer later without being touched.
+//--------------------------------------------------------------------------------------------------
+int Cont_ObservationOf (unit who, int abnoIndex) {
+    return 0;
+}
+
+//--------------------------------------------------------------------------------------------------
 // The Qliphoth counter, as the stack count of a behavior.
 //
 // Same trick as employee stats, and for the same reason: a stack count is a

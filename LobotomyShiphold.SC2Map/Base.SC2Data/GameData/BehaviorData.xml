@@ -104,10 +104,21 @@
             <AttributeChangeArray Attribute="Lob_Attr_Fortitude" Points="1"/>
         </Modification>
     </CBehaviorBuff>
+    <!-- Prudence is the only stat with its Modification filled in, because it is
+         the only one whose target already exists: SP is the Energy vital, so a
+         point of Prudence is a point of SP ceiling and nothing in Galaxy has to
+         know that. One for one is a choice, but it is the choice that needs no
+         curve — the number on the panel IS the number of points of mind.
+
+         Fortitude wants VitalMaxArray Life and Justice wants attack speed; both
+         are waiting on someone to decide how much, not on a mechanism. -->
     <CBehaviorAttribute id="Lob_Attr_Prudence">
         <EditorCategories value="AbilityorEffectType:Units"/>
         <MaxPoints value="100"/>
         <InfoIcon value="Assets\Textures\btn-ability-terran-battlefieldawareness.dds"/>
+        <Modification>
+            <VitalMaxArray index="Energy" value="1"/>
+        </Modification>
     </CBehaviorAttribute>
     <CBehaviorBuff id="Lob_Point_Prudence">
         <EditorCategories value="AbilityorEffectType:Units"/>
@@ -254,5 +265,23 @@
         <Modification>
             <VitalRegenArray index="Life" value="-0.5"/>
         </Modification>
+    </CBehaviorBuff>
+
+    <!-- Panicked: SP has run out.
+
+         Applied at zero and removed above it by 11_employee.galaxy, so the
+         state and its consequences are one object, the same arrangement as
+         Lob_Contained.
+
+         The Modification is EMPTY, and that is the honest state of it. The
+         design says panic happens — 2.4 leans on it, Training Team lv2 sells an
+         upgrade for not panicking at the sight of an HE, and Welfare Team sells
+         the cure — but nothing anywhere says what a panicked employee does.
+         Whatever it turns out to be goes here, and no Galaxy changes. -->
+    <CBehaviorBuff id="Lob_Panicked">
+        <EditorCategories value="AbilityorEffectType:Units"/>
+        <BehaviorFlags index="Permanent" value="1"/>
+        <Alignment value="Negative"/>
+        <InfoIcon value="Assets\Textures\btn-ability-terran-stimpack-color.dds"/>
     </CBehaviorBuff>
 </Catalog>

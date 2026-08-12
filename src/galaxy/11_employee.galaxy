@@ -48,6 +48,15 @@
 //   The sum rule. Employee rank is the SUM of the four stat levels, not the
 //   minimum -- see Emp_Rank, where the reason is written down.
 //
+// SP lives here too, because SP is a vital of the same person and Prudence is
+// what sets its ceiling -- one more per-point Modification, no script.
+//
+// SP is the Energy vital. Not a script number with a bar drawn next to it: the
+// engine already has a second vital that the unit panel draws, that behaviors
+// can modify, and that has max, current and regeneration. Employees cast
+// nothing, so it was free, and taking it means the Welfare Team's white rounds
+// are a heal effect rather than a special case.
+//
 // Permanent death needs no code. Nothing respawns an employee, and that is the
 // whole of the death penalty; Central Command's replenishment is a separate
 // system priced against it.
@@ -74,6 +83,8 @@ const int c_statCapDefault = 99;
 const string c_rankBehavior = "Lob_Rank";
 
 const fixed c_empPeriod = 2.0;
+
+const string c_panicBuff = "Lob_Panicked";
 
 // The attribute behavior is what the panel draws; the point behavior is what
 // holds the number. Only the second is ever read or written.
@@ -271,6 +282,70 @@ void Emp_SyncRank (unit who) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// SP.
+//
+// White damage is damage to the mind. It has no relationship to the health bar,
+// which is the point: a work chosen badly costs nothing you can see until the
+// person breaks, and that delay is what makes the choice feel like a judgement
+// rather than a trade.
+//
+// Panic is a behavior applied at zero and removed above it, so the state and
+// its consequences are one object -- the same arrangement as Lob_Contained. What
+// panic actually does is authored in that behavior's Modification and is empty
+// for now: the design says it happens (2.4, and Training Team lv2 has an
+// upgrade for not panicking at the sight of an HE), but not what it looks like.
+//--------------------------------------------------------------------------------------------------
+int Emp_SP (unit who) {
+    if (who == null) {
+        return 0;
+    }
+    return FixedToInt(UnitGetPropertyFixed(who, c_unitPropEnergy, true));
+}
+
+int Emp_SPMax (unit who) {
+    if (who == null) {
+        return 0;
+    }
+    return FixedToInt(UnitGetPropertyFixed(who, c_unitPropEnergyMax, true));
+}
+
+bool Emp_IsPanicked (unit who) {
+    return who != null && UnitHasBehavior2(who, c_panicBuff);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Moves SP, clamped into [0, max]. Signed, so healing and white damage are the
+// same call and the clamp has one home.
+//--------------------------------------------------------------------------------------------------
+void SP_Add (unit who, int delta) {
+    int value;
+    int cap;
+
+    if (who == null || !UnitIsAlive(who)) {
+        return;
+    }
+
+    cap = Emp_SPMax(who);
+    value = Emp_SP(who) + delta;
+    if (value < 0) {
+        value = 0;
+    }
+    if (value > cap) {
+        value = cap;
+    }
+    UnitSetPropertyFixed(who, c_unitPropEnergy, IntToFixed(value));
+    Buffs_Set(who, c_panicBuff, value <= 0 && cap > 0);
+}
+
+void SP_Damage (unit who, int amount) {
+    SP_Add(who, -amount);
+}
+
+void SP_Restore (unit who, int amount) {
+    SP_Add(who, amount);
+}
+
+//--------------------------------------------------------------------------------------------------
 // One player's employees.
 //
 // A scan, not a roster. The units on the map are the roster, so there is no
@@ -357,6 +432,9 @@ bool Emp_Tick_Func (bool testConds, bool runActions) {
     i = 1;
     while (i <= count) {
         Emp_SyncRank(UnitGroupUnit(all, i));
+        // Zero on purpose, so an employee whose Prudence just went up does not
+        // become panicked by having a ceiling raised out from under a full bar.
+        SP_Add(UnitGroupUnit(all, i), 0);
         i = i + 1;
     }
     return true;

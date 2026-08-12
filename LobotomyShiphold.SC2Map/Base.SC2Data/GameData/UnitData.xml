@@ -578,6 +578,16 @@
         <LifeStart value="45"/>
         <LifeMax value="45"/>
         <LifeArmorName value="Unit/LifeArmorName/TerranInfantryArmor"/>
+        <!-- SP is the Energy vital. The engine already draws a second bar,
+             already caps it, and already lets behaviors modify it, and an
+             employee casts nothing, so it was free. Prudence adds one point of
+             ceiling each from its own Modification; this 20 is the floor
+             everybody starts with and is the one invented number in the pair.
+             Regeneration is zero on purpose: SP comes back from the rest hall
+             and from Welfare Team, not from standing still. -->
+        <EnergyMax value="20"/>
+        <EnergyStart value="20"/>
+        <EnergyRegenRate value="0"/>
         <Speed value="2.25"/>
         <Acceleration value="1000"/>
         <LateralAcceleration value="46.0625"/>

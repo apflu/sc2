@@ -20,6 +20,11 @@ int[2] gvg_abnoGoodMin;
 int[2] gvg_abnoNormalMin;
 // Success chance per box, flattened: abnormality * 20 + work * 5 + (level-1).
 int[40] gvg_abnoPref;
+// Cumulative observation bonuses, flattened: abnormality * 5 + observation
+// level. Work speed is a percentage of the base; work success is in points,
+// five to the percent.
+int[10] gvg_abnoObsSpeed;
+int[10] gvg_abnoObsSuccess;
 
 void AbnoGen_Init () {
     gvg_abnoType[0] = "0_00_00";
@@ -31,6 +36,16 @@ void AbnoGen_Init () {
     gvg_abnoCooldown[0] = 10.0;
     gvg_abnoGoodMin[0] = 0;
     gvg_abnoNormalMin[0] = 0;
+    gvg_abnoObsSpeed[0] = 0;
+    gvg_abnoObsSuccess[0] = 0;
+    gvg_abnoObsSpeed[1] = 0;
+    gvg_abnoObsSuccess[1] = 0;
+    gvg_abnoObsSpeed[2] = 0;
+    gvg_abnoObsSuccess[2] = 0;
+    gvg_abnoObsSpeed[3] = 0;
+    gvg_abnoObsSuccess[3] = 0;
+    gvg_abnoObsSpeed[4] = 0;
+    gvg_abnoObsSuccess[4] = 0;
     gvg_abnoPref[0] = 50;
     gvg_abnoPref[1] = 50;
     gvg_abnoPref[2] = 50;
@@ -60,6 +75,16 @@ void AbnoGen_Init () {
     gvg_abnoCooldown[1] = 10.0;
     gvg_abnoGoodMin[1] = 8;
     gvg_abnoNormalMin[1] = 4;
+    gvg_abnoObsSpeed[5] = 0;
+    gvg_abnoObsSuccess[5] = 0;
+    gvg_abnoObsSpeed[6] = 0;
+    gvg_abnoObsSuccess[6] = 5;
+    gvg_abnoObsSpeed[7] = 5;
+    gvg_abnoObsSuccess[7] = 5;
+    gvg_abnoObsSpeed[8] = 5;
+    gvg_abnoObsSuccess[8] = 10;
+    gvg_abnoObsSpeed[9] = 10;
+    gvg_abnoObsSuccess[9] = 10;
     gvg_abnoPref[20] = 50;
     gvg_abnoPref[21] = 40;
     gvg_abnoPref[22] = 30;
@@ -142,4 +167,33 @@ int AbnoGen_Pref (int index, int work, int statLevel) {
         statLevel = 5;
     }
     return gvg_abnoPref[index * 20 + work * 5 + statLevel - 1];
+}
+
+//--------------------------------------------------------------------------------------------------
+// Cumulative observation bonuses at an observation level (0 = unobserved).
+//--------------------------------------------------------------------------------------------------
+int AbnoGen_ObsSpeed (int index, int obs) {
+    if (index < 0 || index >= c_abnoCount) {
+        return 0;
+    }
+    if (obs < 0) {
+        obs = 0;
+    }
+    if (obs > 4) {
+        obs = 4;
+    }
+    return gvg_abnoObsSpeed[index * 5 + obs];
+}
+
+int AbnoGen_ObsSuccess (int index, int obs) {
+    if (index < 0 || index >= c_abnoCount) {
+        return 0;
+    }
+    if (obs < 0) {
+        obs = 0;
+    }
+    if (obs > 4) {
+        obs = 4;
+    }
+    return gvg_abnoObsSuccess[index * 5 + obs];
 }

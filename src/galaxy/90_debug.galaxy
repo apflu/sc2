@@ -179,7 +179,11 @@ void Debug_ReportEmployees (int player) {
 
         line = line + "  sum=" + IntToString(sum)
                + " rank=" + Debug_RankName(Emp_Rank(who))
-               + " panel=" + IntToString(UnitXPGetCurrentLevel(who, c_rankBehavior));
+               + " panel=" + IntToString(UnitXPGetCurrentLevel(who, c_rankBehavior))
+               + " sp=" + IntToString(Emp_SP(who)) + "/" + IntToString(Emp_SPMax(who));
+        if (Emp_IsPanicked(who)) {
+            line = line + " PANICKED";
+        }
         Debug_Say(player, line);
         i = i + 1;
     }
@@ -264,6 +268,27 @@ void Debug_Breach (int player, string slotWord) {
 
     Cont_BeginEscape(gvg_cellAbno[slot]);
     Debug_ReportCells(player);
+}
+
+//--------------------------------------------------------------------------------------------------
+// -sp <n>
+//
+// Signed, so -sp -30 is how panic gets tested without waiting for thirty failed
+// boxes.
+//--------------------------------------------------------------------------------------------------
+void Debug_SP (int player, string word) {
+    unitgroup mine;
+    int count;
+    int i;
+
+    mine = Debug_TargetEmployees(player);
+    count = UnitGroupCount(mine, c_unitCountAlive);
+    i = 1;
+    while (i <= count) {
+        SP_Add(UnitGroupUnit(mine, i), Debug_Int(word, 0));
+        i = i + 1;
+    }
+    Debug_ReportEmployees(player);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -466,6 +491,7 @@ void Debug_Help (int player) {
     Debug_Say(player, "-qlip <slot> <n>        set a Qliphoth counter");
     Debug_Say(player, "-work <type>            what a door-bound employee will do");
     Debug_Say(player, "-energy [n|submit]      the win condition");
+    Debug_Say(player, "-sp <n>                 move the selected employees' SP");
 }
 
 bool Debug_Chat_Func (bool testConds, bool runActions) {
@@ -517,6 +543,9 @@ bool Debug_Chat_Func (bool testConds, bool runActions) {
     }
     else if (StringEqual(command, "-breach", false)) {
         Debug_Breach(player, StringWord(message, 2));
+    }
+    else if (StringEqual(command, "-sp", false)) {
+        Debug_SP(player, StringWord(message, 2));
     }
     else if (StringEqual(command, "-work", false)) {
         Debug_Work(player, StringWord(message, 2));
