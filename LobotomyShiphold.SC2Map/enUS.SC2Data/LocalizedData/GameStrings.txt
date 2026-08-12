@@ -1,17 +1,13 @@
-﻿Behavior/Name/Lob_Rank_1=Rank I
-Behavior/Name/Lob_Rank_2=Rank II
-Behavior/Name/Lob_Rank_3=Rank III
-Behavior/Name/Lob_Rank_4=Rank IV
-Behavior/Name/Lob_Rank_5=Rank V
-Behavior/Name/Lob_Stat_Fortitude=Fortitude
-Behavior/Name/Lob_Stat_Justice=Justice
-Behavior/Name/Lob_Stat_Prudence=Prudence
-Behavior/Name/Lob_Stat_Temperance=Temperance
-Behavior/Tooltip/Lob_Rank_1=Employee rank, from the sum of the four stat levels.
-Behavior/Tooltip/Lob_Stat_Fortitude=<c val="ffff8a">勇气</c> - health. Raised by working abnormalities.
-Behavior/Tooltip/Lob_Stat_Justice=<c val="ffff8a">正义</c> - attack speed. Raised by working abnormalities.
-Behavior/Tooltip/Lob_Stat_Prudence=<c val="ffff8a">谨慎</c> - mental resilience. Raised by working abnormalities.
-Behavior/Tooltip/Lob_Stat_Temperance=<c val="ffff8a">自律</c> - work speed. Raised by working abnormalities.
+﻿Behavior/Name/Lob_Rank=Rank
+Behavior/PrimaryName/Lob_Attr_Fortitude=Fortitude
+Behavior/PrimaryName/Lob_Attr_Justice=Justice
+Behavior/PrimaryName/Lob_Attr_Prudence=Prudence
+Behavior/PrimaryName/Lob_Attr_Temperance=Temperance
+Behavior/PrimaryTooltip/Lob_Attr_Fortitude=<c val="ffff8a">勇气</c> - health.
+Behavior/PrimaryTooltip/Lob_Attr_Justice=<c val="ffff8a">正义</c> - attack speed.
+Behavior/PrimaryTooltip/Lob_Attr_Prudence=<c val="ffff8a">谨慎</c> - mental resilience.
+Behavior/PrimaryTooltip/Lob_Attr_Temperance=<c val="ffff8a">自律</c> - work speed.
+Behavior/Tooltip/Lob_Rank=Employee rank, from the sum of the four attribute levels.
 Button/Name/Lob_Debug_Haste=DEBUG: Haste
 Button/Tooltip/Lob_CoreDown_Basic=Inner layer lost. Repair it to bring your sector back.
 Button/Tooltip/Lob_Core_Basic=The heart of your inner layer. Department passives and rest hall recovery run off it.
@@ -22,8 +18,8 @@ Button/Tooltip/Lob_Device_Basic=Contains upgrades for Terran infantry and struct
 Button/Tooltip/Lob_Emp_Basic=An employee. Send them to work an abnormality; the four stats grow from the work itself.<n/><n/><c val="ffff8a">They do not come back.</c>
 Button/Tooltip/Lob_Hero_Agent=Your character. Clears debris, repairs devices, and holds the line -- one pair of hands for all three.
 Button/Tooltip/Lob_SCV_Miner=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
-Button/Tooltip/Lob_SCV_Unassigned=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
 Button/Tooltip/Lob_SCV_Unassigned2=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
+Button/Tooltip/Lob_SCV_Unassigned=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
 DocInfo/DescLong=Completely devoid of any description whatsoever.
 DocInfo/DescShort=Any
 DocInfo/Name=Just Another StarCraft II Map

@@ -52,122 +52,87 @@
     <!-- ============================================================
          Employee stats.
 
-         The four stats are four CBehaviorVeterancy on the same unit. The XP
-         natives address a veterancy by behavior name, so one unit carries four
-         independent curves, each with its own level, its own per-level
-         Modification and its own UI. A work result is one UnitXPSetCurrentXP
-         call and the effect of levelling up needs no script at all — it is the
-         Modification rows below.
+         Four CBehaviorAttribute, one per stat. The engine already has this
+         exact concept: a unit's attribute points ARE the behavior's stack
+         count, MaxPoints caps them, the per-point Modification is the effect,
+         and the InfoPaneHero layout in core reserves AttributeLabel1..5 down
+         the right-hand side of the hero pane to display them. War3's
+         STR/AGI/INT are these; so is anything else that has ever shown a named
+         number on a unit panel without custom UI.
 
-         That is why the stat's effect belongs HERE and not in Galaxy. Fortitude
-         is life, Justice is attack speed, Temperance is work speed, Prudence is
-         SP; all four have engine-side homes, so src/galaxy/11_employee.galaxy
-         moves the number and never applies its consequence.
+         This replaces four CBehaviorVeterancy, which was the wrong home. The
+         XP natives do address a veterancy by name, so four curves on one unit
+         did work — but the hero pane SUMS the levels of every veterancy a unit
+         carries, so four fresh stats read as "level 4, 0/120" instead of as
+         four stats. The aggregate was never a bug to route around; it is the
+         panel doing what it is for. So the sum belongs to rank, below, and the
+         stats move to the catalog built for stats.
 
-         The Modification rows are deliberately empty for now. Two of the four
-         targets do not exist yet (there is no SP vital and no work ability),
-         and inventing numbers for the other two would put made-up balance in
-         the one place nobody would think to look for it later.
+         MaxPoints is 100 so EX is representable. Galaxy still clamps to 99 by
+         default, which is what keeps EX behind whatever ends up lifting it.
 
-         MinVeterancyXP is per-level, not cumulative — stock DehakaVeterancy
-         has 100 on every row and levels every 100 XP. So the increments below
-         are the differences of the design thresholds:
+         Modification is empty on all four. Fortitude is life, Justice is attack
+         speed, Temperance is work speed, Prudence is SP; the first two have
+         engine-side homes today and the other two do not exist yet, and a
+         number invented here would be balance hidden in the last place anyone
+         would look. When they land, they land here, per point, no script.
 
-             I  0    II 30    III 45    IV 65    V 85    EX 100
-                      +30       +15       +20      +20      +15
-
-         Every XPFraction is zero, so the ONLY thing that moves a stat is an
-         explicit call. Stock CBehaviorVeterancy defaults Kills to 1, which
-         would have employees quietly training themselves on zerglings — and
-         that is not a bug to avoid, it is Training Team lv2 ("员工和玩家单位
-         对虫潮造成伤害时也同时被动提高属性"), so it has to be off until that
-         upgrade turns it on. When it does, it raises DamageDealt from here
-         through an EffectArray row and needs no script. UnitXPGainEnable is the
-         per-unit switch if a finer one is ever wanted.
-
-         CombineXP is off, also against the stock default. It is on for units
-         that carry one veterancy, where it cannot matter; these carry four, and
-         four curves that share a pool would not be four curves. Worth watching
-         in the first test that levels really do move independently.
-
-         from docs/usr/quests_unlocks.md. Galaxy holds those same absolute
-         thresholds because the sum rule in agents-and-abnormalities.md 2.4 has
-         to be readable next to its justification; if one side is edited the
-         other must follow. The default cap is 99, so EX is unreachable until
-         something lifts it — that is the design, not an oversight.
+         Nothing moves a stat except an explicit call: points are stack counts,
+         so there is no passive gain to switch off. Training Team lv2 ("对虫潮
+         造成伤害时也同时被动提高属性") becomes a trigger that adds points,
+         which is the honest shape for it anyway.
          ============================================================ -->
-    <CBehaviorVeterancy id="Lob_Stat_Fortitude">
+    <CBehaviorAttribute id="Lob_Attr_Fortitude">
         <EditorCategories value="AbilityorEffectType:Units"/>
+        <MaxPoints value="100"/>
         <InfoIcon value="Assets\Textures\btn-ability-terran-defensivematrix.dds"/>
-        <Flags index="CombineXP" value="0"/>
-        <XPFraction index="Kills" value="0"/>
-        <XPFraction index="DamageDealt" value="0"/>
-        <XPFraction index="DamageTaken" value="0"/>
-        <VeterancyLevelArray/>
-        <VeterancyLevelArray MinVeterancyXP="30"/>
-        <VeterancyLevelArray MinVeterancyXP="15"/>
-        <VeterancyLevelArray MinVeterancyXP="20"/>
-        <VeterancyLevelArray MinVeterancyXP="20"/>
-        <VeterancyLevelArray MinVeterancyXP="15"/>
-    </CBehaviorVeterancy>
-    <CBehaviorVeterancy id="Lob_Stat_Prudence">
+    </CBehaviorAttribute>
+    <CBehaviorAttribute id="Lob_Attr_Prudence">
         <EditorCategories value="AbilityorEffectType:Units"/>
+        <MaxPoints value="100"/>
         <InfoIcon value="Assets\Textures\btn-ability-terran-battlefieldawareness.dds"/>
-        <Flags index="CombineXP" value="0"/>
-        <XPFraction index="Kills" value="0"/>
-        <XPFraction index="DamageDealt" value="0"/>
-        <XPFraction index="DamageTaken" value="0"/>
-        <VeterancyLevelArray/>
-        <VeterancyLevelArray MinVeterancyXP="30"/>
-        <VeterancyLevelArray MinVeterancyXP="15"/>
-        <VeterancyLevelArray MinVeterancyXP="20"/>
-        <VeterancyLevelArray MinVeterancyXP="20"/>
-        <VeterancyLevelArray MinVeterancyXP="15"/>
-    </CBehaviorVeterancy>
-    <CBehaviorVeterancy id="Lob_Stat_Temperance">
+    </CBehaviorAttribute>
+    <CBehaviorAttribute id="Lob_Attr_Temperance">
         <EditorCategories value="AbilityorEffectType:Units"/>
+        <MaxPoints value="100"/>
         <InfoIcon value="Assets\Textures\btn-ability-terran-holdfire.dds"/>
-        <Flags index="CombineXP" value="0"/>
-        <XPFraction index="Kills" value="0"/>
-        <XPFraction index="DamageDealt" value="0"/>
-        <XPFraction index="DamageTaken" value="0"/>
-        <VeterancyLevelArray/>
-        <VeterancyLevelArray MinVeterancyXP="30"/>
-        <VeterancyLevelArray MinVeterancyXP="15"/>
-        <VeterancyLevelArray MinVeterancyXP="20"/>
-        <VeterancyLevelArray MinVeterancyXP="20"/>
-        <VeterancyLevelArray MinVeterancyXP="15"/>
-    </CBehaviorVeterancy>
-    <CBehaviorVeterancy id="Lob_Stat_Justice">
+    </CBehaviorAttribute>
+    <CBehaviorAttribute id="Lob_Attr_Justice">
         <EditorCategories value="AbilityorEffectType:Units"/>
+        <MaxPoints value="100"/>
         <InfoIcon value="Assets\Textures\btn-ability-terran-ignorearmor.dds"/>
+    </CBehaviorAttribute>
+
+    <!-- Employee rank, as the unit's one veterancy.
+
+         Rank is the sum of the four stat levels, and the hero pane's level
+         display is a sum over veterancy behaviors — so with exactly one
+         veterancy on the unit, the native level readout IS the rank and the
+         experience bar IS the progress toward the next one. That is what the
+         five rank buffs were faking, and they are gone.
+
+         XP is fed the sum of the four stat levels (4 at minimum, 24 at all-EX)
+         by src/galaxy/11_employee.galaxy. The thresholds below are the design's
+         6 / 9 / 12 / 16 expressed as per-level increments, since MinVeterancyXP
+         is an increment rather than a running total:
+
+             I  (sum 4-5)    II 6    III 9    IV 12    V 16
+                              +6      +3       +3       +4
+
+         Every XPFraction is zero: rank is derived, so nothing may feed it
+         except the line that recomputes it. A kill that nudged this would put
+         the panel out of step with Emp_Rank, which is the number every rule
+         actually reads. -->
+    <CBehaviorVeterancy id="Lob_Rank">
+        <EditorCategories value="AbilityorEffectType:Units"/>
         <Flags index="CombineXP" value="0"/>
         <XPFraction index="Kills" value="0"/>
         <XPFraction index="DamageDealt" value="0"/>
         <XPFraction index="DamageTaken" value="0"/>
         <VeterancyLevelArray/>
-        <VeterancyLevelArray MinVeterancyXP="30"/>
-        <VeterancyLevelArray MinVeterancyXP="15"/>
-        <VeterancyLevelArray MinVeterancyXP="20"/>
-        <VeterancyLevelArray MinVeterancyXP="20"/>
-        <VeterancyLevelArray MinVeterancyXP="15"/>
+        <VeterancyLevelArray MinVeterancyXP="6"/>
+        <VeterancyLevelArray MinVeterancyXP="3"/>
+        <VeterancyLevelArray MinVeterancyXP="3"/>
+        <VeterancyLevelArray MinVeterancyXP="4"/>
     </CBehaviorVeterancy>
-
-    <!-- Employee rank, I to V.
-         A readout, not an effect: rank is the sum of the four stat levels and
-         is therefore derived, so nothing here may modify anything. Its job is
-         to put the rank on the unit's buff bar and in its tooltip without a
-         line of custom UI, and to give a data-side hook to anything that wants
-         to key off rank later.
-         Applied and removed through 07_buffs.galaxy like everything else that
-         has to be able to stop, which matters here because Training Team can
-         push a stat back DOWN and the rank has to follow it down. -->
-    <CBehaviorBuff id="Lob_Rank_1">
-        <Alignment value="Neutral"/>
-        <InfoIcon value="Assets\Textures\btn-ability-terran-setrallypoint.dds"/>
-    </CBehaviorBuff>
-    <CBehaviorBuff id="Lob_Rank_2" parent="Lob_Rank_1"/>
-    <CBehaviorBuff id="Lob_Rank_3" parent="Lob_Rank_1"/>
-    <CBehaviorBuff id="Lob_Rank_4" parent="Lob_Rank_1"/>
-    <CBehaviorBuff id="Lob_Rank_5" parent="Lob_Rank_1"/>
 </Catalog>

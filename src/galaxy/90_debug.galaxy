@@ -165,7 +165,8 @@ void Debug_ReportEmployees (int player) {
         }
 
         line = line + "  sum=" + IntToString(sum)
-               + " rank=" + Debug_RankName(Emp_Rank(who));
+               + " rank=" + Debug_RankName(Emp_Rank(who))
+               + " panel=" + IntToString(UnitXPGetCurrentLevel(who, c_rankBehavior));
         Debug_Say(player, line);
         i = i + 1;
     }
@@ -233,9 +234,7 @@ void Debug_SetStat (int player, string whichWord, string valueWord) {
                     Emp_StatAdd(who, stat, value);
                 }
                 else {
-                    // Through StatAdd rather than RawSet, so the clamp applies
-                    // to a debug command exactly as it does to a work result.
-                    Emp_StatAdd(who, stat, value - Emp_Stat(who, stat));
+                    Emp_StatSet(who, stat, value);
                 }
             }
             stat = stat + 1;
@@ -252,7 +251,7 @@ void Debug_Help (int player) {
     Debug_Say(player, "-emp spawn [n]          spawn n employees at your character");
     Debug_Say(player, "-stat <s> <v>           set a stat; s = fort|prud|temp|just|all");
     Debug_Say(player, "-stat <s> +5 / -5       move it instead of setting it");
-    Debug_Say(player, "-rank                   resync every rank buff");
+    Debug_Say(player, "-rank                   resync every rank readout");
     Debug_Say(player, "-status                 the economy/power/sector readout");
     Debug_Say(player, "-scan                   what the object tables can see");
 }

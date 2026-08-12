@@ -564,19 +564,18 @@
         <AbilArray Link="move"/>
         <AbilArray Link="Stimpack"/>
         <WeaponArray Link="GuassRifle"/>
-        <!-- The four stats. One unit, four independent veterancy curves, each
-             with its own level and its own per-level Modification; the XP
-             natives address them by behavior name. src/galaxy/11_employee.galaxy
-             moves the numbers and applies none of their consequences.
-
-             DamageDealtXP and DamageTakenXP above are already 1 from the Marine
-             copy, and the behaviors zero every XPFraction, so nothing flows yet.
-             That is exactly the shape Training Team lv2 wants: it raises the
-             fraction from data and needs no script. -->
-        <BehaviorArray Link="Lob_Stat_Fortitude"/>
-        <BehaviorArray Link="Lob_Stat_Prudence"/>
-        <BehaviorArray Link="Lob_Stat_Temperance"/>
-        <BehaviorArray Link="Lob_Stat_Justice"/>
+        <!-- The four stats, as attribute points, and rank as the one veterancy.
+             Both display themselves: the stats fill AttributeLabel1..4 down the
+             right of the hero pane, and rank drives the pane's level readout and
+             experience bar, because that readout sums the levels of every
+             veterancy the unit carries and this unit carries exactly one.
+             src/galaxy/11_employee.galaxy moves the numbers and applies none of
+             their consequences. -->
+        <BehaviorArray Link="Lob_Attr_Fortitude"/>
+        <BehaviorArray Link="Lob_Attr_Prudence"/>
+        <BehaviorArray Link="Lob_Attr_Temperance"/>
+        <BehaviorArray Link="Lob_Attr_Justice"/>
+        <BehaviorArray Link="Lob_Rank"/>
         <CardLayouts>
             <LayoutButtons Face="Move" Type="AbilCmd" AbilCmd="move,Move" Row="0" Column="0"/>
             <LayoutButtons Face="Stop" Type="AbilCmd" AbilCmd="stop,Stop" Row="0" Column="1"/>

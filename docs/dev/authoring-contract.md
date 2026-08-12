@@ -224,31 +224,28 @@ Structure  Hover  Heroic  Summoned  User1  MapBoss
 
 **编辑器侧具体挂在哪个字段上待定**，等真的开始录异想体时再定。在那之前不要为了"先有个地方放"而随便选一个通道——上一次凭空推导出 User2 就是这么来的。
 
-### 员工属性 = 四条 veterancy
+### 员工属性 = CBehaviorAttribute，等级 = 一条 veterancy
 
-四项属性是**同一个单位上的四个 `CBehaviorVeterancy`**。XP 的 native 按 behavior 名字寻址，所以一个单位能挂四条互不干涉的曲线，各有各的等级、各有各的每级 `Modification`、各有各的 UI。
+**属性点数就是 behavior 的层数。**`CBehaviorAttribute` 是引擎里现成的这个概念：`UnitBehaviorCount` 读点数，`UnitBehaviorAdd`/`Remove` 改点数，`MaxPoints` 是上限，**每点的效果写在 `Modification` 里**。War3 的 STR/AGI/INT 就是这个目录。
 
 | 属性 | behavior | 落到引擎的哪里 |
 |---|---|---|
-| 勇气 Fortitude | `Lob_Stat_Fortitude` | 生命 |
-| 谨慎 Prudence | `Lob_Stat_Prudence` | SP（还不存在） |
-| 自律 Temperance | `Lob_Stat_Temperance` | 工作速度（还不存在） |
-| 正义 Justice | `Lob_Stat_Justice` | 攻速 |
+| 勇气 Fortitude | `Lob_Attr_Fortitude` | 生命 |
+| 谨慎 Prudence | `Lob_Attr_Prudence` | SP（还不存在） |
+| 自律 Temperance | `Lob_Attr_Temperance` | 工作速度（还不存在） |
+| 正义 Justice | `Lob_Attr_Justice` | 攻速 |
 
-**属性升级的效果写在 behavior 的 `Modification` 里，不写在 Galaxy 里。**`11_employee.galaxy` 只搬数字，从不施加数字的后果。目前四行 `Modification` 全是空的——四个落点有两个还不存在，而给另外两个编数值等于把杜撰的平衡塞进最没人会去翻的地方。
+**它自己会显示。**`core.sc2mod/base.sc2data/UI/Layout/UI/InfoPaneHero.SC2Layout` 里有 `AttributeLabel1..5`，锚在面板右半边，专门给这个用。显示名读 `Behavior/PrimaryName/<id>`，tooltip 读 `Behavior/PrimaryTooltip/<id>`（见 core 的 `CBehaviorAttribute default` 条目）。**不需要自己画 UI。**
 
-**`MinVeterancyXP` 是每级增量，不是累计值**（原版 `DehakaVeterancy` 每行都是 100，即每 100 XP 升一级）。所以设计文档里的绝对阈值要换算成差分：
+**等级用一条 veterancy，`Lob_Rank`。**英雄面板的等级读数是**单位上所有 veterancy 等级的求和**——所以单位只挂一条时，那条的等级就是面板等级，那条的经验条就是升级进度。而员工等级本来就是求和，两边天然一致。
 
-```
-I  0    II 30    III 45    IV 65    V 85    EX 100
-         +30       +15       +20      +20      +15
-```
+> 走过的弯路：四项属性一开始做成了四条 veterancy。XP native 确实能按名字寻址、四条曲线确实能共存，但面板把它们**加起来**，于是四项全新的属性在面板上读作"4 级，0/120"。那不是要绕开的障碍，是面板在干它该干的事；它想要的就是等级，那就把等级给它。
 
-**这套阈值在两边各写了一份**：数据侧是增量，Galaxy 侧是绝对值。改一边必须改另一边。Galaxy 侧留绝对值是因为"员工等级取属性等级之**和**"这条不变量必须和它的理由写在一起（`agents-and-abnormalities.md` §2.4），而两条规则读同一张表就不会自相矛盾。
+阈值两边各一份：Galaxy 侧是**绝对值**（属性 30/45/65/85/100），`Lob_Rank` 的 `VeterancyLevelArray` 是**增量**（`MinVeterancyXP` 是每级增量，不是累计值）。改一边必须改另一边。
 
-单项默认上限 99，所以 EX（100）默认够不着——这是设计，第六级的存在意义就是给某个升级去解锁。
+`MaxPoints` 设 100 让 EX 可表示，但 Galaxy 侧默认 clamp 到 99——真正卡住 EX 的是后者。
 
-**员工的等级读数是 behavior，不是 UI。**`Lob_Rank_1..5` 通过 `07_buffs.galaxy` 挂上去，等级掉下来时也会跟着摘掉（培训部能把属性**调低**）。它不许带任何 `Modification`——等级是派生量。
+`Lob_Rank` 的 `XPFraction` 全为 0：等级是派生量，除了重算它的那行以外不许有别的东西喂它，否则面板会和 `Emp_Rank` 脱节，而每条规则读的是后者。
 
 **永久死亡不需要代码**：没有任何东西复活员工。中央本部的补充速率就是照着这个定价的。
 
