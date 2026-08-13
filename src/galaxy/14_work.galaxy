@@ -108,14 +108,6 @@ int[16] gvg_workDefault;
 // Cooldown per cell, keyed the same way 13_containment keys its cells.
 fixed[32] gvg_workReadyAt;
 
-// Energy. The same amount as every box produced, into one pool for the whole
-// table, and the win condition is filling it. Not a wallet -- nothing is spent
-// out of it and no player's rate is affected by another's, so it does not touch
-// the no-shared-wallet principle. It is a scoreboard the table fills together.
-int gv_energy;
-int gv_energyGoal;
-bool gv_energySubmitted;
-
 const string c_workAbil = "Interact";
 
 trigger gt_workTick;
@@ -192,46 +184,6 @@ int Work_SuccessChance (unit emp, int index, int work) {
         chance = c_workSuccessCap;
     }
     return chance;
-}
-
-//--------------------------------------------------------------------------------------------------
-// Energy, and the end of the game.
-//
-// Boxes pay twice: once into the player's private stock for that abnormality's
-// encyclopedia, and the same amount again into this. So a table that studies
-// its abnormalities is also a table that is winning, and neither is bought at
-// the expense of the other.
-//
-// Submitting is a decision rather than an automatic end, because the threshold
-// being reachable does not mean it is the right moment -- there may be an
-// abnormality loose, or one more work worth finishing.
-//--------------------------------------------------------------------------------------------------
-void Work_AddEnergy (int amount) {
-    gv_energy = gv_energy + amount;
-}
-
-bool Work_CanSubmit () {
-    return gv_energy >= gv_energyGoal && !gv_energySubmitted;
-}
-
-void Work_Submit (int player) {
-    int other;
-
-    if (!Work_CanSubmit()) {
-        return;
-    }
-    gv_energySubmitted = true;
-
-    UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle,
-                     StringToText("energy delivered -- the ship makes it out"));
-
-    other = 1;
-    while (other <= 15) {
-        if (Dept_Of(other) != c_deptNone) {
-            GameOver(other, c_gameOverVictory, true, true);
-        }
-        other = other + 1;
-    }
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -399,7 +351,12 @@ void Work_Finish (int slot) {
     // Boxes pay twice, into two things that never mix: this player's stock for
     // this abnormality's encyclopedia, and the table's shared energy.
     Cont_AddBoxes(owner, index, boxes);
-    Work_AddEnergy(boxes);
+    Energy_Add(boxes);
+
+    // Clears a meltdown flag if this cell was named. Any result counts, Bad
+    // included: what a meltdown asks for is that somebody went, not that it went
+    // well. A work that fails already costs the employee their SP.
+    Melt_NoteWork(abno);
 
     if (cell >= 0) {
         gvg_workReadyAt[cell] = GameGetMissionTime() + gvg_abnoCooldown[index];
@@ -573,12 +530,6 @@ void Work_Init () {
     gvg_workStat[c_workRepression] = c_statJustice;
 
     gv_workCount = 0;
-    gv_energy = 0;
-    gv_energySubmitted = false;
-
-    // PLACEHOLDER. Design says the goal scales with difficulty, and difficulty
-    // is the lobby's business, which does not exist yet.
-    gv_energyGoal = 200;
 
     player = 1;
     while (player <= 15) {

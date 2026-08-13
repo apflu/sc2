@@ -247,6 +247,60 @@ void Debug_ReportCells (int player) {
             line = line + " door=DOWN";
         }
 
+        if (Melt_IsFlagged(slot)) {
+            if (Melt_IsDone(slot)) {
+                line = line + " melt=named,worked";
+            }
+            else {
+                line = line + " melt=NAMED";
+            }
+        }
+
+        Debug_Say(player, line);
+        slot = slot + 1;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// -melt [now]
+//
+// The clock, and a way to make it fire without waiting out the countdown.
+//
+// Prints the owner of every cell as well, because ownership is spatial -- panel
+// first, nearest core second -- and a cell that silently belongs to nobody is
+// a cell that is never named, which looks exactly like a broken meltdown.
+//--------------------------------------------------------------------------------------------------
+void Debug_Meltdown (int player, string word) {
+    int slot;
+    int owner;
+    string line;
+
+    if (StringEqual(word, "now", false)) {
+        Melt_Advance();
+    }
+
+    Debug_Say(player, "meltdown level " + IntToString(Melt_Level())
+                      + "  next in " + IntToString(FixedToInt(Melt_SecondsLeft())) + "s"
+                      + "  naming " + IntToString(Melt_Targets()) + " per player"
+                      + "  handled=" + IntToString(Melt_HandledBy(player)));
+
+    slot = 0;
+    while (slot < gv_cellCount) {
+        owner = Melt_OwnerOf(slot);
+        line = "  cell " + IntToString(slot) + " "
+               + gvg_abnoName[AbnoGen_IndexOf(gvg_cellAbno[slot])] + " owner=";
+        if (owner == 0) {
+            line = line + "NOBODY (no panel, no core)";
+        }
+        else {
+            line = line + IntToString(owner);
+        }
+        if (Melt_IsFlagged(slot)) {
+            line = line + " NAMED";
+            if (Melt_IsDone(slot)) {
+                line = line + " (worked)";
+            }
+        }
         Debug_Say(player, line);
         slot = slot + 1;
     }
@@ -392,8 +446,8 @@ void Debug_Work (int player, string word) {
 //--------------------------------------------------------------------------------------------------
 void Debug_Energy (int player, string word) {
     if (StringEqual(word, "submit", false)) {
-        if (Work_CanSubmit()) {
-            Work_Submit(player);
+        if (Energy_CanSubmit()) {
+            Energy_Submit(player);
         }
         else {
             Debug_Say(player, "energy: not enough yet");
@@ -401,10 +455,10 @@ void Debug_Energy (int player, string word) {
         return;
     }
     if (word != "") {
-        Work_AddEnergy(Debug_Int(word, 0));
+        Energy_Add(Debug_Int(word, 0));
     }
     // Galaxy has no conditional expression, so this is two statements.
-    if (Work_CanSubmit()) {
+    if (Energy_CanSubmit()) {
         Debug_Say(player, "energy " + IntToString(gv_energy) + "/"
                           + IntToString(gv_energyGoal) + "  -- -energy submit to end it");
         return;
@@ -591,6 +645,20 @@ void Debug_BuildHelp () {
         "Assets\\Textures\\btn-upgrade-terran-infantryweaponslevel1.dds");
 
     Debug_Tip(
+        "Meltdown",
+        "<c val=\"ffff8a\">-melt</c>  the clock, and who owns each cell.<n/>"
+        + "<c val=\"ffff8a\">-melt now</c>  resolve this round and start the next one.<n/><n/>"
+        + "Every 40 seconds a meltdown names cells in each player's own sector. "
+        + "A named cell has to be worked before the countdown runs out -- any "
+        + "result counts, Bad included, because what it asks is that somebody "
+        + "went. A cell that is missed has its Qliphoth counter set to zero, not "
+        + "reduced, and the table loses a share of the energy pool.<n/><n/>"
+        + "The clock is shared but the named cells are yours. A neighbour who "
+        + "ignores theirs breaches their own abnormality, and what reaches you "
+        + "is a fight -- never a cut to your income or your employees.",
+        "Assets\\Textures\\btn-ability-terran-nuclearstrike.dds");
+
+    Debug_Tip(
         "Energy, and how this ends",
         "<c val=\"ffff8a\">-energy</c>  the meter.  <c val=\"ffff8a\">-energy N</c>  add to it.  "
         + "<c val=\"ffff8a\">-energy submit</c>  end the game.<n/><n/>"
@@ -676,6 +744,9 @@ bool Debug_Chat_Func (bool testConds, bool runActions) {
     }
     else if (StringEqual(command, "-energy", false)) {
         Debug_Energy(player, StringWord(message, 2));
+    }
+    else if (StringEqual(command, "-melt", false)) {
+        Debug_Meltdown(player, StringWord(message, 2));
     }
     else if (StringEqual(command, "-qlip", false)) {
         Debug_SetCounter(player, StringWord(message, 2), StringWord(message, 3));

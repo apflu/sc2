@@ -1,0 +1,94 @@
+//--------------------------------------------------------------------------------------------------
+// The energy pool, and how the game ends.
+//
+// Lived in 14_work until the meltdown clock needed to take energy away, and
+// 13_meltdown sorts before 14_work because Work_Finish has to call into it.
+// Moving the pool out was the right fix rather than the convenient one: work is
+// one thing that fills the pool and meltdown is one thing that empties it, and
+// neither of them owns it.
+//
+// Every box a work produces pays twice, into two places that never mix: the
+// player's own stock for that one abnormality's encyclopedia (13_containment),
+// and the same amount again into this. So studying abnormalities and winning the
+// game are the same activity, and neither is bought at the other's expense.
+//
+// This is not a shared wallet and does not violate the baseline's first
+// principle. Nothing is ever SPENT out of it, and no player's rate of filling it
+// depends on another player's. It is a scoreboard the table fills together, and
+// a shared win condition is explicitly allowed -- what the principle forbids is
+// a teammate's mistake reaching your income or your character.
+//
+// Meltdown taking from it is the one subtraction, and it is a subtraction from
+// the scoreboard rather than from anybody's income: nobody's rate changes, the
+// table is simply further from the door than it was.
+//
+// Submitting is a decision rather than an automatic end, because the threshold
+// being reached does not mean this is the moment -- there may be an abnormality
+// loose, or one more work worth finishing.
+//--------------------------------------------------------------------------------------------------
+
+int gv_energy;
+int gv_energyGoal;
+bool gv_energySubmitted;
+
+void Energy_Add (int amount) {
+    gv_energy = gv_energy + amount;
+    if (gv_energy < 0) {
+        gv_energy = 0;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// Takes a percentage rather than an amount, so a penalty means the same thing
+// early and late. A flat number would be a game-ending disaster at minute two
+// and a rounding error at minute forty.
+//--------------------------------------------------------------------------------------------------
+int Energy_Drain (int percent) {
+    int lost;
+
+    if (percent <= 0 || gv_energy <= 0) {
+        return 0;
+    }
+    lost = gv_energy * percent / 100;
+    if (lost < 1) {
+        lost = 1;
+    }
+    if (lost > gv_energy) {
+        lost = gv_energy;
+    }
+    gv_energy = gv_energy - lost;
+    return lost;
+}
+
+bool Energy_CanSubmit () {
+    return gv_energy >= gv_energyGoal && !gv_energySubmitted;
+}
+
+void Energy_Submit (int player) {
+    int other;
+
+    if (!Energy_CanSubmit()) {
+        return;
+    }
+    gv_energySubmitted = true;
+
+    UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle,
+                     StringToText("energy delivered -- the ship makes it out"));
+
+    other = 1;
+    while (other <= 15) {
+        if (Slot_IsTablePlayer(other)) {
+            GameOver(other, c_gameOverVictory, true, true);
+        }
+        other = other + 1;
+    }
+}
+
+void Energy_Init () {
+    gv_energy = 0;
+    gv_energySubmitted = false;
+
+    // PLACEHOLDER. Design says the goal scales with difficulty, and difficulty
+    // is the lobby's business, which does not exist yet.
+    gv_energyGoal = 200;
+}

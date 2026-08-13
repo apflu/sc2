@@ -25,3 +25,23 @@ const int c_abnoPlayer = 8;
 // Still single player for the parts of P0 that have not been made per-player
 // yet: the character, the economy readout. Not a claim about the map.
 const int c_p0Player = 1;
+
+//--------------------------------------------------------------------------------------------------
+// Somebody at the table, as opposed to the swarm or whatever is loose.
+//
+// Asked of PlayerStatus rather than of Dept_Of: a department is chosen on a
+// selection screen that does not exist, so today only player 1 has one, and
+// anything keyed to that would treat a six-player game as a single-player one.
+//
+// Here rather than in a system module because it is a fact about slots, and
+// slots are what this file is.
+//--------------------------------------------------------------------------------------------------
+bool Slot_IsTablePlayer (int player) {
+    if (player < 1 || player > 15) {
+        return false;
+    }
+    if (player == c_zergPlayer || player == c_abnoPlayer) {
+        return false;
+    }
+    return PlayerStatus(player) == c_playerStatusActive;
+}
