@@ -64,49 +64,9 @@ unitgroup ObjectsGen_Group (string)     // 具名 group 成员（仅预放）
 
 尚未建出单位的前缀会产出**空表**——扫描返回空、判定返回 false。所以代码可以先于单位写好，未完成的内容是惰性的而不是报错的，两台机器不必按同一顺序落地。预期前缀列在 `tools/gen_objects.py` 的 `EXPECTED_CATEGORIES`。
 
-## 构建
+## 构建、语言的坑、自检
 
-```
-python3 tools/build_galaxy.py
-```
-
-会先从地图文件重新生成 `src/galaxy/05_objects_gen.galaxy`，再拼接出 `MapScript.galaxy`。**你在编辑器里摆完东西存盘后，代码侧要重新构建一次**，否则 group 表还是旧的（类型扫描不受影响，它是运行时的）。
-
-## 坑
-
-编辑器把 group 名字**连输入框里的换行一起存下来**——实测存的是 `"debris\n"` 而不是 `"debris"`。生成器已做 strip，但这类空白差异如果漏掉，会变成非常难查的名字匹配失败。
-
-**Galaxy 没有数组初始化语法**，所以生成的每张表都是"上面一句声明 + `ObjectsGen_Init` 里一串赋值"，两者之间没有任何东西把它们绑在一起。声明了却没填的表不会编译报错——它是运行期一个 null string 被喂给 `StringLength`，崩在离病因很远的地方（region 表就这么崩过一次），或者更糟，一串空字符串参与比较、静默地什么都匹配不上（升级 ally 表就这么静默坏过）。生成器末尾的 `check_fills` 现在会挡住这种情况，**加新表时不要绕过它**。
-
-**Galaxy 要求先声明后使用**，而模块是按文件名顺序拼接的——所以一个写在自己定义上方的调用是编译错误。麻烦在于**编译器把它报在调用处、说的是 "invalid argument list"**，看起来像签名对不上，会把人引到完全错的地方去查。这个错已经花掉四轮调试，每一次都是"某个块被挪动了"或者"调用跨了模块边界"。`build_galaxy.py` 的 `check_forward_refs` 现在会在写文件前挡住它，并直接指出是哪个函数。
-
-**位运算：`<<` 和 `|` 确认可用，`>>` `&` `^` `~` 没有证据。**
-
-`<<` 和 `|` 在暴雪自己发布的脚本里到处都是，直接作用在 int 上并赋给 int 变量（`attackersLimit = 1 << diff;` 见 `MeleeAI.galaxy`；`(1 << (c_targetFilterDead - 32)) | (1 << ...)` 见 `NativeLib`），光 `1 << (` 就有一万五千处。
-
-而 `>>` `&` `^` `~`：**把暴雪发布的每个 `.galaxy` 文件 grep 一遍，没有一处 int 用法**，命中的全是注释里的散文。它们大概率能用，但**这台机器编译不了地图**，所以不要把存档格式之类的东西押在上面。要右移或掩码时，整数 `/` 和 `%` 在非负数上做同一件事，且毫无疑问：
-
-```
-v >> n   ==   v / (1 << n)          v & (2^n - 1)   ==   v % (1 << n)
-```
-
-另外有一个真正的 `bitmask` 类型，带 `BitMaskAndBitMask` / `OrBitMask` / `XorBitMask` / `Invert` / `LeftShift` / `CountOnBits` / `SetIndex` / `TrueIndex`。它是**堆对象不是值**，所以适合挂在单位上当标志位，不适合当编码器。
-
-**`StringFind` 返回 1-based 下标，找不到返回 -1**（不是 0）。暴雪代码里两处都验证了：`StringSub(s, 1, found - 1)` 和 `if (found == -1)`。`02_codec.galaxy` 的 base64 解码就靠这个语义。
-
-**显示给玩家的文本里，`<` `>` 会被当成 markup。**`<s>` 是字体样式标签，而一个没有 `val` 的样式标签等于在找名字为空的样式——那就是 `TextError: 无法找到字体样式[]` 的来源。旧的聊天版 `-help` 印的是 `-stat <s> <v>`，所以**每次有人打 `-help` 都会报一次**。占位符写成 `NAME` / `VALUE`，异想体文档里 wiki 留下的 `<name>` 由生成器转义成 `&lt;name&gt;`。合法的只有 `<n/>` 和 `<c val="...">`。
-
-## 自检
-
-地图加载后打印：
-
-```
-scan: hero=N debris=N worker=N miner=N device=N | group(debris)=N
-```
-
-前几个数来自类型扫描，最后一个来自 group 表。**如果 group 那个数是 0 而 debris 不是 0，说明构建没跟上编辑器的存盘**，重跑一次构建即可。
-
-> 如果三个数字全是 0，说明预放单位在 `InitMap()` 执行时还没创建完。届时把扫描挪到 0 秒定时触发器里即可，代码侧改一行。
+全部搬到了 [`galaxy-pitfalls.md`](galaxy-pitfalls.md)。**写 Galaxy 之前读那一页**——先声明后使用、没有数组初始化、位运算能用哪些、`natives.galaxy` 不是全集，每一条都对应至少一轮真实调试。
 
 ## P0 灰盒摆放清单
 
@@ -343,24 +303,6 @@ Pale 那条是唯一需要多想一层的：**勇气直接就是最大生命**�
 图标名和词都能认，两者有其一即可；`Purple` 当 `Black`、`Blue` 当 `Pale`。缺这一行时默认 White 1-2 并在构建时报出来。
 
 **还没解决的**：控制部跨部门准入引用的那个"危险"tag。它是标签不是数字，但 attribute 已经花完了——现在多了一个现成的去处（文档里加一节，生成器加几行）。
-
-### `natives.galaxy` 不是全集
-
-`~/SC2GameData/mods/core.sc2mod/base.sc2data/TriggerLibs/` 下还有一个 **`natives_missing.galaxy`**，里面另有 236 个 native。**只 grep `natives.galaxy` 就断言"这个 native 不存在"是错的**——这个错已经犯过两次，其中一次差点让整套图鉴 UI 走上"为每个异想体生成一个单位"的歪路。编辑器触发器列表里能看到的东西，一定在 `NativeLib.TriggerLib` 里有 `<Identifier>`。
-
-对本项目重要的几个：
-
-| native | 用处 |
-|---|---|
-| `UnitAbilityAdd` / `Remove` / `ChangeLink` | **运行时增删改单位的技能** |
-| `UnitSetInfoButtonTooltip(unit, key, text)` | **按单位实例改命令按钮的 tooltip** |
-| `UnitGetAttributePoint` / `UnitSetAttributePoint` | 直接读写属性点数，不需要载体 buff |
-| `DataTableInstance*` | 实例级数据表（"每单位挂任意数据"） |
-| `TriggerAddEventUnitSpendVital` | 消耗 vital 的事件 |
-| `UnitLootDropUnit` / `DropPoint` | 掉落（E.G.O 的落点） |
-| `BankBackup*` | 存档备份 |
-
-注：`UnitAbilityAdd` 自己的文档说明，运行时加的技能**没有命令按钮就没法施放**——要在技能的 `Command+` 里指定默认按钮，并勾上 "Use Default Button" 和 "Create Default Button"。
 
 ## Region
 
