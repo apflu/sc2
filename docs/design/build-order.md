@@ -42,8 +42,8 @@
 `26_fortify.galaxy` 已经落地，但它现在**扫不到任何东西**。要跑起来需要三样编辑器侧的东西：
 
 1. **region** 命名 `room_*` / `corridor_*`
-2. **工事点位** `Lob_Fort_L<n>_<Rest>` 摆在那些 region 里
-3. **`Lob_Turret_*` / `Lob_Guard_*` / `Lob_Salvage_*`** 单位（按"单位由用户建"那条）
+2. **`Lob_Turret_*` / `Lob_Guard_*` / `Lob_Salvage_*`** 单位（按"单位由用户建"那条）
+3. 把真单位摆到该站的位置上，加进 group **`fort1` / `fort2` / `fort3`**（group 名 = 等级）。init 会读走它们然后删掉
 
 建工事建筑时**把 `Cost` 置 0**——修复费用是按单位自身 Cost 算的，置 0 才让"SCV 免费重建"成立，钱在升级那一步收。
 

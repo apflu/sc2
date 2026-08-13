@@ -63,7 +63,6 @@ EXPECTED_CATEGORIES = [
     "Door",
     "DoorDown",
     "Emp",
-    "Fort",
     "Guard",
     "Hero",
     "Marker",

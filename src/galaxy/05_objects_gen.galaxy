@@ -36,8 +36,6 @@ const int c_typesEmpCount = 1;
 string[1] gvg_typesEmp;
 const int c_typesEmp_BasicCount = 1;
 string[1] gvg_typesEmp_Basic;
-const int c_typesFortCount = 0;
-string[1] gvg_typesFort;
 const int c_typesGuardCount = 0;
 string[1] gvg_typesGuard;
 const int c_typesHeroCount = 1;
@@ -644,44 +642,6 @@ bool ObjectsGen_IsEmp_Basic (unit target) {
     i = 0;
     while (i < c_typesEmp_BasicCount) {
         if (UnitGetType(target) == gvg_typesEmp_Basic[i]) {
-            return true;
-        }
-        i = i + 1;
-    }
-    return false;
-}
-
-//--------------------------------------------------------------------------------------------------
-// Every live Fort unit on the map, whichever variant and whoever owns it.
-// Works for runtime-spawned units too, unlike anything keyed on placed ids.
-//--------------------------------------------------------------------------------------------------
-unitgroup ObjectsGen_ScanFort () {
-    unitgroup found;
-    int i;
-
-    found = UnitGroupEmpty();
-    i = 0;
-    while (i < c_typesFortCount) {
-        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesFort[i], c_playerAny,
-                                               RegionEntireMap(), null, 0));
-        i = i + 1;
-    }
-    return found;
-}
-
-//--------------------------------------------------------------------------------------------------
-// Whether a unit is a Fort, whatever variant. False for an empty
-// category, so code can be written ahead of the units existing.
-//--------------------------------------------------------------------------------------------------
-bool ObjectsGen_IsFort (unit target) {
-    int i;
-
-    if (target == null) {
-        return false;
-    }
-    i = 0;
-    while (i < c_typesFortCount) {
-        if (UnitGetType(target) == gvg_typesFort[i]) {
             return true;
         }
         i = i + 1;

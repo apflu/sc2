@@ -39,36 +39,53 @@
 // out without a build-time constant existing anywhere.
 //
 //--------------------------------------------------------------------------------------------------
-// The editor side, all through the type-prefix channel.
+// The editor side: place the REAL unit, then it is read and deleted.
 //
-//     region  room_* / corridor_*        a location
-//     unit    Lob_Fort_L<n>_<Rest>       a position: level n, becomes Lob_<Rest>
+//     region  room_* / corridor_*     a location
+//     group   fort1 / fort2 / fort3   a position, at that level
 //
-// So Lob_Fort_L1_Turret_Basic is a level-1 position that becomes
-// Lob_Turret_Basic, and Lob_Fort_L2_Guard_Marine is a level-2 position that
-// becomes Lob_Guard_Marine. Segment substitution, exactly like the
-// Lob_Device_/Lob_DeviceDown_ pair, so a new kind of emplacement is two units in
-// the editor and no code.
+// Put the actual Lob_Turret_Basic or Lob_Guard_Marine exactly where it should
+// stand and add it to the group for its level. At init this reads its type,
+// position, facing and owner, then removes it. Building it later re-creates the
+// same unit, in the same spot, facing the same way.
 //
-// Anything becoming a Lob_Guard_* is garrison and warps in; anything else is a
-// building and gets built. One prefix decides it, because "does a worker put
-// this up or does it arrive" is the only thing the distinction is for.
+// This replaced a marker scheme -- Lob_Fort_L2_Guard_Marine parsed apart to mean
+// "level 2, becomes Lob_Guard_Marine" -- and it is better on every count. There
+// is no parallel marker unit to author, no string parsing, no naming convention
+// to remember or mistype. Most of all it is WYSIWYG: a marker cannot tell you
+// whether the turret actually FITS, and a turret placed in the editor is checked
+// by the editor's own placement rules for free. Facing comes along for nothing,
+// which a marker would have needed another channel for.
+//
+// The level moves to the editor group, which is a channel this project already
+// has and which is preplaced-only -- exactly what a fixed position is.
+//
+// REMOVED rather than hidden, and that is the one part worth arguing. Hiding is
+// possible: c_unitStateHidden is writable, as are Selectable, Targetable and
+// Paused. But a hidden unit still occupies its footprint, so a level-3 turret
+// emplacement would block its corridor from minute zero, and there is no unit
+// state that turns pathing off. Hiding also means four flags that all have to be
+// right, where each one forgotten is a bug that looks like something else --
+// stray splash killing an invisible turret, a selection box catching nothing.
+// Reading four fields and deleting the unit has none of that, and the editor
+// still shows exactly what will be there.
 //
 // Whether a position is occupied is asked SPATIALLY -- is there a unit of that
-// type standing on the marker -- so nothing bookkeeps which building belongs to
+// type standing on the spot -- so nothing bookkeeps which building belongs to
 // which slot, and a building that dies simply makes its slot empty again.
 //
+// Anything whose type falls under Lob_Guard_* is garrison and warps in; anything
+// else is a building and gets built. That is the only thing the distinction is
+// for.
+//
 //--------------------------------------------------------------------------------------------------
-// Markers are indexed once. Enemies arrive on an event.
+// Positions are indexed once. Enemies arrive on an event.
 //
-// The first draft of this file re-scanned every marker on the map and tested
-// RegionContainsPoint on each of them, once per location, once per second. That
-// is a lot of work to re-derive a fact that cannot change: MARKERS DO NOT MOVE.
-// Their location, their level and what they become are parsed once at init and
-// never asked again.
+// Positions cannot move -- they are gone from the map after init -- so their
+// location, level and product are settled once and never asked again.
 //
-// Enemy presence is the opposite kind of fact -- it changes constantly and
-// almost always to "no" -- so it is an event rather than a poll.
+// Enemy presence is the opposite kind of fact: it changes constantly and is
+// almost always "no", so it is an event rather than a poll.
 // TriggerAddEventUnitRegion on each location fires when something walks in, and
 // the garrison is roused from there. Polling every location every second to
 // discover that nothing has happened is the same waste in the other direction.
@@ -98,7 +115,7 @@ int[4] gvg_fortCost;
 
 const fixed c_fortTick = 2.0;
 
-// How close a unit has to be to a marker to count as standing on it.
+// How close a unit has to be to a position to count as standing on it.
 const fixed c_fortSlotRadius = 1.5;
 
 // How close a worker has to get before the building goes up.
@@ -116,8 +133,8 @@ const fixed c_fortStartLifePct = 8.0;
 // How far a garrison unit may drift from its post before being sent back.
 const fixed c_fortPostSlack = 2.0;
 
-const string c_fortMarkerPrefix = "Lob_Fort_L";
-const string c_fortGuardPrefix = "Lob_Guard_";
+// Editor groups: fort1, fort2, fort3.
+const string c_fortGroupPrefix = "fort";
 
 const int c_locMax = 32;
 const int c_slotMax = 128;
@@ -132,41 +149,19 @@ int[32] gvg_locLevel;
 // location * 4 + level. What makes garrison a one-time arrival.
 bool[128] gvg_locSeeded;
 
-// Every fortification position on the map, parsed once.
+// Every fortification position on the map, read off the preplaced units before
+// they were removed.
 int gv_slotCount;
-unit[128] gvg_slotMarker;
+string[128] gvg_slotType;
 point[128] gvg_slotAt;
+fixed[128] gvg_slotFacing;
 int[128] gvg_slotLoc;
 int[128] gvg_slotLevel;
-string[128] gvg_slotTarget;
+int[128] gvg_slotOwner;
 bool[128] gvg_slotGuard;
 
 trigger gt_fortTick;
 trigger gt_fortEnter;
-
-//--------------------------------------------------------------------------------------------------
-// Reading a marker's type. Called at init and nowhere else.
-//
-// Lob_Fort_L2_Guard_Marine -> level 2, becomes Lob_Guard_Marine.
-//--------------------------------------------------------------------------------------------------
-int Fort_LevelOfType (string what) {
-    int digit;
-
-    if (StringSub(what, 1, StringLength(c_fortMarkerPrefix)) != c_fortMarkerPrefix) {
-        return -1;
-    }
-    digit = StringToInt(StringSub(what, StringLength(c_fortMarkerPrefix) + 1,
-                                  StringLength(c_fortMarkerPrefix) + 1));
-    if (digit < 1 || digit > c_fortMaxLevel) {
-        return -1;
-    }
-    return digit;
-}
-
-string Fort_TargetOfType (string what) {
-    // Past "Lob_Fort_L", the digit, and the underscore after it.
-    return "Lob_" + StringSub(what, StringLength(c_fortMarkerPrefix) + 3, StringLength(what));
-}
 
 //--------------------------------------------------------------------------------------------------
 // Locations.
@@ -220,11 +215,25 @@ int Fort_OwnerOf (int loc) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// Whose a position's occupant should be. The editor's own answer first, so
+// placing an emplacement under a specific player overrides the geometry.
+//--------------------------------------------------------------------------------------------------
+int Fort_SlotOwner (int slot) {
+    if (slot < 0 || slot >= gv_slotCount) {
+        return 0;
+    }
+    if (Slot_IsTablePlayer(gvg_slotOwner[slot])) {
+        return gvg_slotOwner[slot];
+    }
+    return Fort_OwnerOf(gvg_slotLoc[slot]);
+}
+
+//--------------------------------------------------------------------------------------------------
 // Positions, and whether they are occupied.
 //--------------------------------------------------------------------------------------------------
 unit Fort_OccupantOfSlot (int slot) {
     return UnitGroupClosestToPoint(
-        UnitGroup(gvg_slotTarget[slot], c_playerAny,
+        UnitGroup(gvg_slotType[slot], c_playerAny,
                   RegionCircle(gvg_slotAt[slot], c_fortSlotRadius), null, 0),
         gvg_slotAt[slot]);
 }
@@ -276,6 +285,27 @@ bool Fort_BuildingsComplete (int loc, int level) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// Puts one position's occupant back on the map, facing the way it was placed.
+//--------------------------------------------------------------------------------------------------
+unit Fort_Raise (int slot, fixed lifePct) {
+    unit made;
+    int owner;
+
+    owner = Fort_SlotOwner(slot);
+    if (owner < 1 || owner > 15) {
+        return null;
+    }
+
+    UnitCreate(1, gvg_slotType[slot], c_unitCreateIgnorePlacement, owner,
+               gvg_slotAt[slot], gvg_slotFacing[slot]);
+    made = UnitLastCreated();
+    if (made != null && lifePct > 0.0 && lifePct < 100.0) {
+        UnitSetPropertyFixed(made, c_unitPropLifePercent, lifePct);
+    }
+    return made;
+}
+
+//--------------------------------------------------------------------------------------------------
 // Garrison arrival.
 //
 // `upTo` is inclusive. `replaceOnly` skips levels that have never landed, so
@@ -284,13 +314,7 @@ bool Fort_BuildingsComplete (int loc, int level) {
 //--------------------------------------------------------------------------------------------------
 void Fort_SeedGarrison (int loc, int upTo, bool replaceOnly) {
     int slot;
-    int owner;
     int lvl;
-
-    owner = Fort_OwnerOf(loc);
-    if (owner < 1 || owner > 15) {
-        return;
-    }
 
     slot = 0;
     while (slot < gv_slotCount) {
@@ -298,18 +322,17 @@ void Fort_SeedGarrison (int loc, int upTo, bool replaceOnly) {
         if (gvg_slotLoc[slot] == loc && gvg_slotGuard[slot] && lvl <= upTo
             && (!replaceOnly || gvg_locSeeded[loc * 4 + lvl])
             && !Fort_SlotFilled(slot)) {
-            UnitCreate(1, gvg_slotTarget[slot], c_unitCreateIgnorePlacement, owner,
-                       gvg_slotAt[slot], 270.0);
+            Fort_Raise(slot, 100.0);
         }
         slot = slot + 1;
     }
 
-    lvl = 1;
-    while (lvl <= upTo) {
-        if (!replaceOnly) {
+    if (!replaceOnly) {
+        lvl = 1;
+        while (lvl <= upTo) {
             gvg_locSeeded[loc * 4 + lvl] = true;
+            lvl = lvl + 1;
         }
-        lvl = lvl + 1;
     }
 }
 
@@ -391,7 +414,7 @@ int Fort_JobFor (unit worker) {
     while (slot < gv_slotCount) {
         loc = gvg_slotLoc[slot];
         if (!gvg_slotGuard[slot] && gvg_slotLevel[slot] <= gvg_locLevel[loc]
-            && !Fort_SlotFilled(slot) && !Fort_SlotBlocked(slot, Fort_OwnerOf(loc))) {
+            && !Fort_SlotFilled(slot) && !Fort_SlotBlocked(slot, Fort_SlotOwner(slot))) {
             d = DistanceBetweenPoints(gvg_slotAt[slot], where);
             if (best < 0 || d < bestDist) {
                 best = slot;
@@ -415,27 +438,14 @@ point Fort_SlotPoint (int slot) {
 // does the rest, which is what makes worker count the build speed.
 //--------------------------------------------------------------------------------------------------
 void Fort_RaiseIfArrived (unit worker, int slot) {
-    unit built;
-    int owner;
-
     if (slot < 0 || slot >= gv_slotCount || Fort_SlotFilled(slot)) {
         return;
     }
-    if (DistanceBetweenPoints(UnitGetPosition(worker), gvg_slotAt[slot]) > c_fortBuildRange) {
+    if (DistanceBetweenPoints(UnitGetPosition(worker), gvg_slotAt[slot])
+        > c_fortBuildRange) {
         return;
     }
-
-    owner = Fort_OwnerOf(gvg_slotLoc[slot]);
-    if (owner < 1 || owner > 15) {
-        return;
-    }
-
-    UnitCreate(1, gvg_slotTarget[slot], c_unitCreateIgnorePlacement, owner,
-               gvg_slotAt[slot], 270.0);
-    built = UnitLastCreated();
-    if (built != null) {
-        UnitSetPropertyFixed(built, c_unitPropLifePercent, c_fortStartLifePct);
-    }
+    Fort_Raise(slot, c_fortStartLifePct);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -496,7 +506,6 @@ void Fort_Rouse (int loc, unit foe) {
 bool Fort_Enter_Func (bool testConds, bool runActions) {
     unit who;
     int loc;
-    int owner;
 
     if (!runActions) {
         return true;
@@ -508,12 +517,7 @@ bool Fort_Enter_Func (bool testConds, bool runActions) {
     }
 
     loc = Fort_LocOfPoint(UnitGetPosition(who));
-    if (loc < 0) {
-        return true;
-    }
-
-    owner = Fort_OwnerOf(loc);
-    if (Fort_IsEnemyOf(who, owner)) {
+    if (loc >= 0 && Fort_IsEnemyOf(who, Fort_OwnerOf(loc))) {
         Fort_Rouse(loc, who);
     }
     return true;
@@ -549,14 +553,9 @@ bool Fort_Tick_Func (bool testConds, bool runActions) {
     while (slot < gv_slotCount) {
         if (gvg_slotGuard[slot]) {
             who = Fort_OccupantOfSlot(slot);
-            if (who == null) {
-                // Nothing standing here. It either died or is out chasing
-                // something; either way the post is empty and the wanderer is
-                // handled by whichever slot it actually belongs to.
-            }
-            else if (UnitOrderCount(who) == 0
-                     && DistanceBetweenPoints(UnitGetPosition(who), gvg_slotAt[slot])
-                        > c_fortPostSlack) {
+            if (who != null && UnitOrderCount(who) == 0
+                && DistanceBetweenPoints(UnitGetPosition(who), gvg_slotAt[slot])
+                   > c_fortPostSlack) {
                 UnitIssueOrder(who,
                                OrderTargetingPoint(AbilityCommand("move", 0), gvg_slotAt[slot]),
                                c_orderQueueReplace);
@@ -568,17 +567,48 @@ bool Fort_Tick_Func (bool testConds, bool runActions) {
 }
 
 //--------------------------------------------------------------------------------------------------
-// Every room and corridor drawn in the editor, and every position standing in
-// one. Parsed once: a marker's location, level and product cannot change.
+// Every room and corridor drawn in the editor, and every emplacement standing in
+// one -- read off the real unit and then deleted.
+//
+// Everything is read BEFORE the removal, because after it the handle is a dead
+// unit and every one of these questions answers wrong.
 //--------------------------------------------------------------------------------------------------
-void Fort_BuildRegistry () {
-    unitgroup markers;
-    unit marker;
-    string name;
-    string what;
+void Fort_ReadLevel (int level) {
+    unitgroup placed;
+    unit who;
     int count;
-    int level;
     int loc;
+    int i;
+
+    placed = ObjectsGen_Group(c_fortGroupPrefix + IntToString(level));
+    count = UnitGroupCount(placed, c_unitCountAlive);
+
+    i = 1;
+    while (i <= count && gv_slotCount < c_slotMax) {
+        who = UnitGroupUnit(placed, i);
+        if (who != null) {
+            loc = Fort_LocOfPoint(UnitGetPosition(who));
+            if (loc >= 0) {
+                gvg_slotType[gv_slotCount] = UnitGetType(who);
+                gvg_slotAt[gv_slotCount] = UnitGetPosition(who);
+                gvg_slotFacing[gv_slotCount] = UnitGetFacing(who);
+                gvg_slotOwner[gv_slotCount] = UnitGetOwner(who);
+                gvg_slotGuard[gv_slotCount] = ObjectsGen_IsGuard(who);
+                gvg_slotLoc[gv_slotCount] = loc;
+                gvg_slotLevel[gv_slotCount] = level;
+                gv_slotCount = gv_slotCount + 1;
+            }
+            // Gone either way. An emplacement outside every location has no
+            // level to belong to, and leaving it standing would be a free
+            // turret nobody paid for.
+            UnitRemove(who);
+        }
+        i = i + 1;
+    }
+}
+
+void Fort_BuildRegistry () {
+    string name;
     int i;
 
     gv_locCount = 0;
@@ -596,27 +626,9 @@ void Fort_BuildRegistry () {
     }
 
     gv_slotCount = 0;
-    markers = ObjectsGen_ScanFort();
-    count = UnitGroupCount(markers, c_unitCountAlive);
     i = 1;
-    while (i <= count && gv_slotCount < c_slotMax) {
-        marker = UnitGroupUnit(markers, i);
-        if (marker != null) {
-            what = UnitGetType(marker);
-            level = Fort_LevelOfType(what);
-            loc = Fort_LocOfPoint(UnitGetPosition(marker));
-            if (level > 0 && loc >= 0) {
-                gvg_slotMarker[gv_slotCount] = marker;
-                gvg_slotAt[gv_slotCount] = UnitGetPosition(marker);
-                gvg_slotLoc[gv_slotCount] = loc;
-                gvg_slotLevel[gv_slotCount] = level;
-                gvg_slotTarget[gv_slotCount] = Fort_TargetOfType(what);
-                gvg_slotGuard[gv_slotCount] =
-                    StringSub(gvg_slotTarget[gv_slotCount], 1, StringLength(c_fortGuardPrefix))
-                    == c_fortGuardPrefix;
-                gv_slotCount = gv_slotCount + 1;
-            }
-        }
+    while (i <= c_fortMaxLevel) {
+        Fort_ReadLevel(i);
         i = i + 1;
     }
 }
