@@ -41,23 +41,53 @@
 // value ids end up being named, they work.
 //
 //--------------------------------------------------------------------------------------------------
-// Ordeals will read this too, and they are not written yet. Nothing here should
-// grow a second copy of the scale when they arrive: Diff_Of is the read.
+//--------------------------------------------------------------------------------------------------
+// There is a global difficulty as well, and it is the MEAN.
 //
-// One consequence worth stating out loud rather than discovering later: the
-// energy goal is shared while difficulty is personal, so a table where everybody
-// picks Easy wins a shared objective against reduced personal opposition. The
-// honest fix is that difficulty also scales what a player contributes or what
-// the goal is, and that is a decision for whoever tunes the economy. It is not
-// a reason to make difficulty a lobby-wide setting, which would take the novice
-// protection back out.
+// Personal difficulty sizes personal waves. But two things are shared and so
+// cannot read a personal number: the energy target, and the ceiling on how bad
+// an Ordeal is allowed to be.
+//
+// The mean, not the maximum. Baseline 2 already settled this exact argument for
+// the ship-wide surge -- "按全队总量缩放，而非按最强玩家缩放" -- and the reason
+// carries over intact: taking the max lets one player on Brutal drag the whole
+// table into Midnight Ordeals, which is a person's choice reaching into
+// everybody else's game. Taking the mean means each player moves the shared
+// number by their own share of it and no further.
+//
+// It also closes a hole this file used to have to apologise for. The energy
+// target is shared while difficulty is personal, so a table that all picked
+// Casual would have been beating an unchanged objective with weakened
+// opposition. Scaling the target by the mean makes Casual a genuinely smaller
+// game rather than a discount on a fixed one, which is what a difficulty setting
+// is supposed to mean.
+//
+//--------------------------------------------------------------------------------------------------
+// Ordeals are not implemented. Their CEILING is, because it is a fact about
+// difficulty rather than a fact about Ordeals: four difficulties map onto the
+// four tiers one for one, so Diff_OrdealCap is the whole of what difficulty has
+// to say and needs nothing that does not exist yet.
+//
+// When Ordeals land they read Diff_OrdealCap and Diff_Of. Nothing should grow a
+// second copy of either scale.
 //--------------------------------------------------------------------------------------------------
 
-const int c_diffEasy = 0;
+// Blizzard's campaign scale, which is where the names come from. The bottom
+// rung is Casual; this said Easy for one commit and that was simply wrong.
+const int c_diffCasual = 0;
 const int c_diffNormal = 1;
 const int c_diffHard = 2;
 const int c_diffBrutal = 3;
 const int c_diffCount = 4;
+
+// The four Ordeal tiers, in the order they get worse. One per difficulty, which
+// is not a coincidence to be tidied away later -- it is the mapping.
+const int c_ordealDawn = 0;
+const int c_ordealNoon = 1;
+const int c_ordealDusk = 2;
+const int c_ordealMidnight = 3;
+
+string[4] gvg_ordealName;
 
 const string c_diffAttribute = "difficulty";
 
@@ -68,6 +98,11 @@ string[4] gvg_diffName;
 // a curve, and this is a deliberately plain spread rather than a guess dressed
 // up as one.
 int[4] gvg_diffWavePct;
+
+// TUNING. Percent of the baseline energy target, read off the MEAN difficulty.
+// Deliberately flatter than the wave spread: a harder game should be a longer
+// game as well as a busier one, but doubling both at once multiplies.
+int[4] gvg_diffGoalPct;
 
 int[16] gvg_diffOf;
 
@@ -101,6 +136,73 @@ int Diff_WavePct (int player) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// The table's difficulty: the mean of everybody's, rounded to nearest.
+//
+// Rounded to nearest rather than down. Three on Brutal and one on Casual comes
+// to 2.25 and lands on Hard; rounding down would call that table Normal and cap
+// its Ordeals at Noon, which is one player's pick quietly deciding for three who
+// chose otherwise -- the same objection as taking the maximum, pointed the other
+// way.
+//
+// An empty table answers Normal. Nothing should ever ask before players exist,
+// but a difficulty of "no players" is not a thing and the alternative is a
+// division by zero.
+//--------------------------------------------------------------------------------------------------
+int Diff_Global () {
+    int total;
+    int count;
+    int player;
+
+    total = 0;
+    count = 0;
+    player = 1;
+    while (player <= 15) {
+        if (Slot_IsTablePlayer(player)) {
+            total = total + gvg_diffOf[player];
+            count = count + 1;
+        }
+        player = player + 1;
+    }
+    if (count == 0) {
+        return c_diffNormal;
+    }
+    return (total * 2 + count) / (count * 2);
+}
+
+string Diff_GlobalName () {
+    return Diff_Name(Diff_Global());
+}
+
+//--------------------------------------------------------------------------------------------------
+// The worst Ordeal this table can be dealt. A ceiling, not a schedule: which
+// Ordeal actually arrives and when is the Ordeal system's business, and it does
+// not exist yet.
+//--------------------------------------------------------------------------------------------------
+int Diff_OrdealCap () {
+    return Diff_Global();
+}
+
+string Diff_OrdealName (int tier) {
+    if (tier < 0 || tier > c_ordealMidnight) {
+        return "?";
+    }
+    return gvg_ordealName[tier];
+}
+
+//--------------------------------------------------------------------------------------------------
+// What the shared energy target should be, given a baseline.
+//--------------------------------------------------------------------------------------------------
+int Diff_GoalFrom (int base) {
+    int goal;
+
+    goal = base * gvg_diffGoalPct[Diff_Global()] / 100;
+    if (goal < 1) {
+        goal = 1;
+    }
+    return goal;
+}
+
+//--------------------------------------------------------------------------------------------------
 // Which level a word means, or -1. First letter only, because this has to accept
 // both what a player types into chat and whatever the lobby attribute's value
 // ids turn out to be called.
@@ -113,14 +215,14 @@ int Diff_FromWord (string word) {
     }
     first = StringCase(StringSub(word, 1, 1), false);
 
-    if (first == "e") { return c_diffEasy; }
+    if (first == "c") { return c_diffCasual; }
     if (first == "n") { return c_diffNormal; }
     if (first == "h") { return c_diffHard; }
     if (first == "b") { return c_diffBrutal; }
 
-    // Blizzard's campaign scale calls the bottom rung Casual, so a lobby
-    // attribute copied from theirs will say C where this says Easy.
-    if (first == "c") { return c_diffEasy; }
+    // Melee calls its bottom rung Easy and half the people typing this will
+    // reach for that word, so it means the same thing.
+    if (first == "e") { return c_diffCasual; }
     return -1;
 }
 
@@ -128,15 +230,25 @@ void Difficulty_Init () {
     int player;
     int level;
 
-    gvg_diffName[c_diffEasy] = "Easy";
+    gvg_diffName[c_diffCasual] = "Casual";
     gvg_diffName[c_diffNormal] = "Normal";
     gvg_diffName[c_diffHard] = "Hard";
     gvg_diffName[c_diffBrutal] = "Brutal";
 
-    gvg_diffWavePct[c_diffEasy] = 60;
+    gvg_ordealName[c_ordealDawn] = "Dawn";
+    gvg_ordealName[c_ordealNoon] = "Noon";
+    gvg_ordealName[c_ordealDusk] = "Dusk";
+    gvg_ordealName[c_ordealMidnight] = "Midnight";
+
+    gvg_diffWavePct[c_diffCasual] = 60;
     gvg_diffWavePct[c_diffNormal] = 100;
     gvg_diffWavePct[c_diffHard] = 145;
     gvg_diffWavePct[c_diffBrutal] = 200;
+
+    gvg_diffGoalPct[c_diffCasual] = 70;
+    gvg_diffGoalPct[c_diffNormal] = 100;
+    gvg_diffGoalPct[c_diffHard] = 125;
+    gvg_diffGoalPct[c_diffBrutal] = 155;
 
     player = 1;
     while (player <= 15) {

@@ -84,11 +84,25 @@ void Energy_Submit (int player) {
     }
 }
 
+// TUNING, and the one number here that is invented. What a Normal table has to
+// bring in; every other difficulty is a percentage of it.
+const int c_energyGoalBase = 200;
+
 void Energy_Init () {
     gv_energy = 0;
     gv_energySubmitted = false;
 
-    // PLACEHOLDER. Design says the goal scales with difficulty, and difficulty
-    // is the lobby's business, which does not exist yet.
-    gv_energyGoal = 200;
+    // Scaled by the MEAN difficulty at the table, not by any one player's.
+    //
+    // This is what makes a personal difficulty setting honest against a shared
+    // objective. Without it, a table that all picked Casual would face weakened
+    // opposition on the way to an unchanged target -- a discount rather than a
+    // smaller game. With it, Casual is genuinely shorter and Brutal is genuinely
+    // longer, which is what the word is supposed to mean.
+    //
+    // Read once, here, because the target has to be a fixed thing a table can
+    // aim at. A goal that moved when somebody left would be a goal nobody could
+    // plan against, and 8.4's rule about reading the lobby at init and not
+    // depending on it afterwards points the same way.
+    gv_energyGoal = Diff_GoalFrom(c_energyGoalBase);
 }
