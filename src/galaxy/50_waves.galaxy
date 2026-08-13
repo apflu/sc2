@@ -2,14 +2,34 @@
 // Zerg waves.
 //
 // One wave per spawn marker on a fixed interval, walking in on attack-move.
-// Wave size grows by one per wave -- a placeholder ramp, not a difficulty
-// curve. The baseline deliberately defers that until the mechanics it would be
-// balancing against exist.
 //
 // Waves aim at the nearest device rather than at the player, so that "leave the
 // fight to go repair" and "leave the repair to go fight" are the same decision
 // seen from two sides. Falling back to the nearest worker keeps them walking
 // somewhere meaningful before any device is placed.
+//
+//--------------------------------------------------------------------------------------------------
+// Personal waves, sized by the difficulty of whoever's sector they open into.
+//
+// Baseline 2 asks for personal waves so that a weak player cannot drag a strong
+// one down and a strong one is not punished for developing. It said "scaled by
+// that player's own development", and development is not a real quantity -- it
+// would have to be invented out of some weighted count of devices and upgrades,
+// and it would mean the better you play the harder it gets.
+//
+// A per-player difficulty setting is the answer instead, and 01_difficulty
+// argues why it is better rather than merely easier. What is left here is the
+// arithmetic: a marker belongs to the sector it stands in, that sector belongs
+// to a player, and that player's setting sizes the wave that comes through it.
+//
+// A marker that belongs to nobody -- no core placed anywhere near it -- still
+// spawns, at Normal. Silence would be worse: an unowned spawn point is a hole
+// in the map that nothing would ever come out of, and that is invisible until
+// somebody wonders why one corridor is peaceful.
+//
+// The per-wave ramp stays a placeholder. The baseline defers the strength curve
+// until the mechanics it would be balancing against exist, and difficulty
+// multiplies whatever that curve turns out to be rather than replacing it.
 //--------------------------------------------------------------------------------------------------
 
 const fixed c_waveInterval = 45.0;
@@ -19,6 +39,36 @@ const string c_waveUnitType = "Zergling";
 int gv_waveNumber;
 
 trigger gt_wave;
+
+//--------------------------------------------------------------------------------------------------
+// Whose wave this is. The marker's own owner first, so the editor can override
+// the geometry by simply assigning it; otherwise the sector it stands in.
+//--------------------------------------------------------------------------------------------------
+int Waves_OwnerOf (unit marker) {
+    if (marker == null) {
+        return 0;
+    }
+    if (Slot_IsTablePlayer(UnitGetOwner(marker))) {
+        return UnitGetOwner(marker);
+    }
+    return Sector_OwnerNear(UnitGetPosition(marker));
+}
+
+int Waves_SizeFor (int player) {
+    int size;
+    int pct;
+
+    pct = gvg_diffWavePct[c_diffNormal];
+    if (player >= 1 && player <= 15) {
+        pct = Diff_WavePct(player);
+    }
+
+    size = (c_waveBaseSize + gv_waveNumber) * pct / 100;
+    if (size < 1) {
+        size = 1;
+    }
+    return size;
+}
 
 //--------------------------------------------------------------------------------------------------
 // What a wave spawning at `from` should walk towards.
@@ -39,8 +89,10 @@ point Waves_TargetFrom (point from) {
 bool Waves_Spawn_Func (bool testConds, bool runActions) {
     unitgroup markers;
     unitgroup spawned;
+    unit marker;
     point where;
     int markerCount;
+    int owner;
     int i;
 
     if (!runActions) {
@@ -57,9 +109,12 @@ bool Waves_Spawn_Func (bool testConds, bool runActions) {
 
     i = 1;
     while (i <= markerCount) {
-        where = UnitGetPosition(UnitGroupUnit(markers, i));
+        marker = UnitGroupUnit(markers, i);
+        where = UnitGetPosition(marker);
+        owner = Waves_OwnerOf(marker);
+
         spawned = UnitCreate(
-            c_waveBaseSize + gv_waveNumber,
+            Waves_SizeFor(owner),
             c_waveUnitType,
             c_unitCreateIgnorePlacement,
             c_zergPlayer,
@@ -71,14 +126,20 @@ bool Waves_Spawn_Func (bool testConds, bool runActions) {
             OrderTargetingPoint(AbilityCommand("attack", 0), Waves_TargetFrom(where)),
             c_orderQueueReplace
         );
+
+        // Told to the player whose sector it opens into, with their own number.
+        // "wave 7 incoming" to everybody said nothing about who was about to be
+        // busy, which on a map of scattered sectors is the only part that
+        // matters.
+        if (owner >= 1 && owner <= 15) {
+            UIDisplayMessage(
+                PlayerGroupSingle(owner), c_messageAreaSubtitle,
+                StringToText("wave " + IntToString(gv_waveNumber) + " -- "
+                             + IntToString(Waves_SizeFor(owner)) + " incoming ("
+                             + Diff_NameOf(owner) + ")"));
+        }
         i = i + 1;
     }
-
-    UIDisplayMessage(
-        PlayerGroupAll(),
-        c_messageAreaSubtitle,
-        StringToText("wave " + IntToString(gv_waveNumber) + " incoming")
-    );
     return true;
 }
 

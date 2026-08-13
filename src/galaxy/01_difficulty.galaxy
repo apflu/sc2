@@ -1,0 +1,150 @@
+//--------------------------------------------------------------------------------------------------
+// Difficulty, chosen per player.
+//
+// This replaces "scaled by that player's own development" as the thing personal
+// wave strength reads. Development was never a real quantity -- it would have
+// had to be invented out of some weighted count of devices and upgrades, and
+// inventing a number to hang a system on is the mistake this project already
+// made once with a User2 attribute that does not exist.
+//
+// A difficulty setting is better than the metric it replaces on its own merits,
+// not merely as a stand-in:
+//
+//   It is chosen rather than measured, so nobody is punished for playing well.
+//   Scaling by development means the better you do the harder it gets, which is
+//   a treadmill dressed as a curve.
+//
+//   It is per player, so a novice can take Easy and still sit in a lobby of
+//   people who have played fifty games. That is the same shape as the
+//   encyclopedia admission rule in design 4.4 -- the table's difficulty is a
+//   function of what each person can actually handle, and nobody has to be told
+//   they are the reason everyone else is being held back.
+//
+//   It is legible. "I am on Hard" is something a player can say out loud, and
+//   "my development coefficient is 1.4" is not.
+//
+// A novice on Easy is not a heavier burden on their neighbours either: fewer
+// zerg spawn in their sector, so fewer leak out of it. The one negative transfer
+// the baseline allows gets smaller, not larger.
+//
+//--------------------------------------------------------------------------------------------------
+// The channel is a per-player lobby Game Attribute.
+//
+// GameAttributePlayerValue(name, player) is exactly "a dropdown in the lobby,
+// one per slot", which is the thing being described, and it is the same channel
+// design 7.8 already picked for core suppression. It returns "" when no such
+// attribute exists, so this reads the native channel today and quietly answers
+// Normal until somebody creates the attribute in the editor -- no code changes
+// when it lands, and no half-built lobby in the meantime.
+//
+// Values are matched loosely on their first letters, so whatever the attribute's
+// value ids end up being named, they work.
+//
+//--------------------------------------------------------------------------------------------------
+// Ordeals will read this too, and they are not written yet. Nothing here should
+// grow a second copy of the scale when they arrive: Diff_Of is the read.
+//
+// One consequence worth stating out loud rather than discovering later: the
+// energy goal is shared while difficulty is personal, so a table where everybody
+// picks Easy wins a shared objective against reduced personal opposition. The
+// honest fix is that difficulty also scales what a player contributes or what
+// the goal is, and that is a decision for whoever tunes the economy. It is not
+// a reason to make difficulty a lobby-wide setting, which would take the novice
+// protection back out.
+//--------------------------------------------------------------------------------------------------
+
+const int c_diffEasy = 0;
+const int c_diffNormal = 1;
+const int c_diffHard = 2;
+const int c_diffBrutal = 3;
+const int c_diffCount = 4;
+
+const string c_diffAttribute = "difficulty";
+
+string[4] gvg_diffName;
+
+// TUNING. Percent of the baseline personal wave. Blizzard's own campaign scale
+// is the reference for the NAMES, not for these numbers -- nobody has designed
+// a curve, and this is a deliberately plain spread rather than a guess dressed
+// up as one.
+int[4] gvg_diffWavePct;
+
+int[16] gvg_diffOf;
+
+int Diff_Of (int player) {
+    if (player < 1 || player > 15) {
+        return c_diffNormal;
+    }
+    return gvg_diffOf[player];
+}
+
+void Diff_SetOf (int player, int level) {
+    if (player < 1 || player > 15 || level < 0 || level >= c_diffCount) {
+        return;
+    }
+    gvg_diffOf[player] = level;
+}
+
+string Diff_Name (int level) {
+    if (level < 0 || level >= c_diffCount) {
+        return "?";
+    }
+    return gvg_diffName[level];
+}
+
+string Diff_NameOf (int player) {
+    return Diff_Name(Diff_Of(player));
+}
+
+int Diff_WavePct (int player) {
+    return gvg_diffWavePct[Diff_Of(player)];
+}
+
+//--------------------------------------------------------------------------------------------------
+// Which level a word means, or -1. First letter only, because this has to accept
+// both what a player types into chat and whatever the lobby attribute's value
+// ids turn out to be called.
+//--------------------------------------------------------------------------------------------------
+int Diff_FromWord (string word) {
+    string first;
+
+    if (word == "") {
+        return -1;
+    }
+    first = StringCase(StringSub(word, 1, 1), false);
+
+    if (first == "e") { return c_diffEasy; }
+    if (first == "n") { return c_diffNormal; }
+    if (first == "h") { return c_diffHard; }
+    if (first == "b") { return c_diffBrutal; }
+
+    // Blizzard's campaign scale calls the bottom rung Casual, so a lobby
+    // attribute copied from theirs will say C where this says Easy.
+    if (first == "c") { return c_diffEasy; }
+    return -1;
+}
+
+void Difficulty_Init () {
+    int player;
+    int level;
+
+    gvg_diffName[c_diffEasy] = "Easy";
+    gvg_diffName[c_diffNormal] = "Normal";
+    gvg_diffName[c_diffHard] = "Hard";
+    gvg_diffName[c_diffBrutal] = "Brutal";
+
+    gvg_diffWavePct[c_diffEasy] = 60;
+    gvg_diffWavePct[c_diffNormal] = 100;
+    gvg_diffWavePct[c_diffHard] = 145;
+    gvg_diffWavePct[c_diffBrutal] = 200;
+
+    player = 1;
+    while (player <= 15) {
+        gvg_diffOf[player] = c_diffNormal;
+        level = Diff_FromWord(GameAttributePlayerValue(c_diffAttribute, player));
+        if (level >= 0) {
+            gvg_diffOf[player] = level;
+        }
+        player = player + 1;
+    }
+}

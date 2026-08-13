@@ -105,6 +105,49 @@ unit Sector_AnyCore (int player) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// Whose sector a point is in.
+//
+// Answered by the nearest core, held or downed. Sectors are rooms joined by
+// corridors rather than tiles on a grid, so there is no region that covers "all
+// of player 3's territory" to test against -- but every sector has exactly one
+// core at its centre by construction, and nearest-core is the same spatial
+// question asked in a way the map can actually answer.
+//
+// Returns 0 when no core is placed at all, and callers are expected to treat
+// that as "nobody" rather than as player 1. A thing belonging to nobody should
+// be visibly inert, not silently somebody's.
+//--------------------------------------------------------------------------------------------------
+int Sector_OwnerNear (point where) {
+    unitgroup cores;
+    unit core;
+    int count;
+    int i;
+    int best;
+    fixed bestDist;
+    fixed d;
+
+    cores = ObjectsGen_ScanCore();
+    UnitGroupAddUnitGroup(cores, ObjectsGen_ScanCoreDown());
+    count = UnitGroupCount(cores, c_unitCountAlive);
+
+    best = 0;
+    bestDist = 0.0;
+    i = 1;
+    while (i <= count) {
+        core = UnitGroupUnit(cores, i);
+        if (core != null && Slot_IsTablePlayer(UnitGetOwner(core))) {
+            d = DistanceBetweenPoints(UnitGetPosition(core), where);
+            if (best == 0 || d < bestDist) {
+                best = UnitGetOwner(core);
+                bestDist = d;
+            }
+        }
+        i = i + 1;
+    }
+    return best;
+}
+
+//--------------------------------------------------------------------------------------------------
 // Widens a player's rest hall. This is the hook department upgrades use; the
 // region is mutated in place, so everything already testing against it follows
 // with no further wiring.

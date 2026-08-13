@@ -262,6 +262,39 @@ void Debug_ReportCells (int player) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// -diff [easy|normal|hard|brutal]
+//
+// Stands in for the lobby dropdown. Prints the whole table, because the point of
+// per-player difficulty is that the settings differ, and a readout that only
+// showed yours would make that impossible to check.
+//--------------------------------------------------------------------------------------------------
+void Debug_Difficulty (int player, string word) {
+    int level;
+    int other;
+
+    level = Diff_FromWord(word);
+    if (word != "" && level < 0) {
+        Debug_Say(player, "diff: want easy, normal, hard or brutal");
+        return;
+    }
+    if (level >= 0) {
+        Diff_SetOf(player, level);
+    }
+
+    other = 1;
+    while (other <= 15) {
+        if (Slot_IsTablePlayer(other)) {
+            Debug_Say(player, "diff p" + IntToString(other) + " = "
+                              + Diff_NameOf(other)
+                              + " (waves " + IntToString(Diff_WavePct(other)) + "%"
+                              + ", next " + IntToString(Waves_SizeFor(other)) + ")"
+                              + "  dept=" + Dept_NameOf(other));
+        }
+        other = other + 1;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
 // -melt [now]
 //
 // The clock, and a way to make it fire without waiting out the countdown.
@@ -685,6 +718,20 @@ void Debug_BuildHelp () {
         "Assets\\Textures\\btn-ability-terran-stimpack-color.dds");
 
     Debug_Tip(
+        "Difficulty",
+        "<c val=\"ffff8a\">-diff</c>  the whole table's settings.<n/>"
+        + "<c val=\"ffff8a\">-diff easy|normal|hard|brutal</c>  set yours.<n/><n/>"
+        + "Difficulty is PER PLAYER and sizes only your own waves, so a novice "
+        + "can sit in a lobby of veterans on Easy and still be learning the same "
+        + "game. It is not a handicap anybody else pays for -- fewer zerg spawn "
+        + "in that sector, so fewer leak out of it into yours.<n/><n/>"
+        + "It replaces \"scaled by that player's development\", which would have "
+        + "meant the better you played the harder it got. This stands in for a "
+        + "lobby dropdown that does not exist yet; it reads a per-player game "
+        + "attribute and answers Normal until one is created.",
+        "Assets\\Textures\\btn-ability-terran-scannersweep.dds");
+
+    Debug_Tip(
         "The world",
         "<c val=\"ffff8a\">-status</c>  debris, ore, power, devices, sector, energy.<n/>"
         + "<c val=\"ffff8a\">-scan</c>  what the generated object tables can actually see.<n/><n/>"
@@ -758,6 +805,9 @@ bool Debug_Chat_Func (bool testConds, bool runActions) {
     }
     else if (StringEqual(command, "-energy", false)) {
         Debug_Energy(player, StringWord(message, 2));
+    }
+    else if (StringEqual(command, "-diff", false)) {
+        Debug_Difficulty(player, StringWord(message, 2));
     }
     else if (StringEqual(command, "-melt", false)) {
         Debug_Meltdown(player, StringWord(message, 2));

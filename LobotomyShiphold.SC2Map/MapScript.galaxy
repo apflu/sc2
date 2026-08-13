@@ -63,6 +63,160 @@ bool Slot_IsTablePlayer (int player) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// src/galaxy/01_difficulty.galaxy
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// Difficulty, chosen per player.
+//
+// This replaces "scaled by that player's own development" as the thing personal
+// wave strength reads. Development was never a real quantity -- it would have
+// had to be invented out of some weighted count of devices and upgrades, and
+// inventing a number to hang a system on is the mistake this project already
+// made once with a User2 attribute that does not exist.
+//
+// A difficulty setting is better than the metric it replaces on its own merits,
+// not merely as a stand-in:
+//
+//   It is chosen rather than measured, so nobody is punished for playing well.
+//   Scaling by development means the better you do the harder it gets, which is
+//   a treadmill dressed as a curve.
+//
+//   It is per player, so a novice can take Easy and still sit in a lobby of
+//   people who have played fifty games. That is the same shape as the
+//   encyclopedia admission rule in design 4.4 -- the table's difficulty is a
+//   function of what each person can actually handle, and nobody has to be told
+//   they are the reason everyone else is being held back.
+//
+//   It is legible. "I am on Hard" is something a player can say out loud, and
+//   "my development coefficient is 1.4" is not.
+//
+// A novice on Easy is not a heavier burden on their neighbours either: fewer
+// zerg spawn in their sector, so fewer leak out of it. The one negative transfer
+// the baseline allows gets smaller, not larger.
+//
+//--------------------------------------------------------------------------------------------------
+// The channel is a per-player lobby Game Attribute.
+//
+// GameAttributePlayerValue(name, player) is exactly "a dropdown in the lobby,
+// one per slot", which is the thing being described, and it is the same channel
+// design 7.8 already picked for core suppression. It returns "" when no such
+// attribute exists, so this reads the native channel today and quietly answers
+// Normal until somebody creates the attribute in the editor -- no code changes
+// when it lands, and no half-built lobby in the meantime.
+//
+// Values are matched loosely on their first letters, so whatever the attribute's
+// value ids end up being named, they work.
+//
+//--------------------------------------------------------------------------------------------------
+// Ordeals will read this too, and they are not written yet. Nothing here should
+// grow a second copy of the scale when they arrive: Diff_Of is the read.
+//
+// One consequence worth stating out loud rather than discovering later: the
+// energy goal is shared while difficulty is personal, so a table where everybody
+// picks Easy wins a shared objective against reduced personal opposition. The
+// honest fix is that difficulty also scales what a player contributes or what
+// the goal is, and that is a decision for whoever tunes the economy. It is not
+// a reason to make difficulty a lobby-wide setting, which would take the novice
+// protection back out.
+//--------------------------------------------------------------------------------------------------
+
+const int c_diffEasy = 0;
+const int c_diffNormal = 1;
+const int c_diffHard = 2;
+const int c_diffBrutal = 3;
+const int c_diffCount = 4;
+
+const string c_diffAttribute = "difficulty";
+
+string[4] gvg_diffName;
+
+// TUNING. Percent of the baseline personal wave. Blizzard's own campaign scale
+// is the reference for the NAMES, not for these numbers -- nobody has designed
+// a curve, and this is a deliberately plain spread rather than a guess dressed
+// up as one.
+int[4] gvg_diffWavePct;
+
+int[16] gvg_diffOf;
+
+int Diff_Of (int player) {
+    if (player < 1 || player > 15) {
+        return c_diffNormal;
+    }
+    return gvg_diffOf[player];
+}
+
+void Diff_SetOf (int player, int level) {
+    if (player < 1 || player > 15 || level < 0 || level >= c_diffCount) {
+        return;
+    }
+    gvg_diffOf[player] = level;
+}
+
+string Diff_Name (int level) {
+    if (level < 0 || level >= c_diffCount) {
+        return "?";
+    }
+    return gvg_diffName[level];
+}
+
+string Diff_NameOf (int player) {
+    return Diff_Name(Diff_Of(player));
+}
+
+int Diff_WavePct (int player) {
+    return gvg_diffWavePct[Diff_Of(player)];
+}
+
+//--------------------------------------------------------------------------------------------------
+// Which level a word means, or -1. First letter only, because this has to accept
+// both what a player types into chat and whatever the lobby attribute's value
+// ids turn out to be called.
+//--------------------------------------------------------------------------------------------------
+int Diff_FromWord (string word) {
+    string first;
+
+    if (word == "") {
+        return -1;
+    }
+    first = StringCase(StringSub(word, 1, 1), false);
+
+    if (first == "e") { return c_diffEasy; }
+    if (first == "n") { return c_diffNormal; }
+    if (first == "h") { return c_diffHard; }
+    if (first == "b") { return c_diffBrutal; }
+
+    // Blizzard's campaign scale calls the bottom rung Casual, so a lobby
+    // attribute copied from theirs will say C where this says Easy.
+    if (first == "c") { return c_diffEasy; }
+    return -1;
+}
+
+void Difficulty_Init () {
+    int player;
+    int level;
+
+    gvg_diffName[c_diffEasy] = "Easy";
+    gvg_diffName[c_diffNormal] = "Normal";
+    gvg_diffName[c_diffHard] = "Hard";
+    gvg_diffName[c_diffBrutal] = "Brutal";
+
+    gvg_diffWavePct[c_diffEasy] = 60;
+    gvg_diffWavePct[c_diffNormal] = 100;
+    gvg_diffWavePct[c_diffHard] = 145;
+    gvg_diffWavePct[c_diffBrutal] = 200;
+
+    player = 1;
+    while (player <= 15) {
+        gvg_diffOf[player] = c_diffNormal;
+        level = Diff_FromWord(GameAttributePlayerValue(c_diffAttribute, player));
+        if (level >= 0) {
+            gvg_diffOf[player] = level;
+        }
+        player = player + 1;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
 // src/galaxy/04_abno_gen.galaxy
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
@@ -2025,6 +2179,49 @@ unit Sector_AnyCore (int player) {
         i = i + 1;
     }
     return null;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whose sector a point is in.
+//
+// Answered by the nearest core, held or downed. Sectors are rooms joined by
+// corridors rather than tiles on a grid, so there is no region that covers "all
+// of player 3's territory" to test against -- but every sector has exactly one
+// core at its centre by construction, and nearest-core is the same spatial
+// question asked in a way the map can actually answer.
+//
+// Returns 0 when no core is placed at all, and callers are expected to treat
+// that as "nobody" rather than as player 1. A thing belonging to nobody should
+// be visibly inert, not silently somebody's.
+//--------------------------------------------------------------------------------------------------
+int Sector_OwnerNear (point where) {
+    unitgroup cores;
+    unit core;
+    int count;
+    int i;
+    int best;
+    fixed bestDist;
+    fixed d;
+
+    cores = ObjectsGen_ScanCore();
+    UnitGroupAddUnitGroup(cores, ObjectsGen_ScanCoreDown());
+    count = UnitGroupCount(cores, c_unitCountAlive);
+
+    best = 0;
+    bestDist = 0.0;
+    i = 1;
+    while (i <= count) {
+        core = UnitGroupUnit(cores, i);
+        if (core != null && Slot_IsTablePlayer(UnitGetOwner(core))) {
+            d = DistanceBetweenPoints(UnitGetPosition(core), where);
+            if (best == 0 || d < bestDist) {
+                best = UnitGetOwner(core);
+                bestDist = d;
+            }
+        }
+        i = i + 1;
+    }
+    return best;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -4273,44 +4470,18 @@ int Melt_Targets () {
 // and 13_containment already treats its owner as the person whose encyclopedia
 // the panel shows.
 //
-// Falls back to the nearest core, so a cell whose panel has not been placed yet
+// Falls back to Sector_OwnerNear, so a cell whose panel has not been placed yet
 // is still somebody's rather than nobody's. Returns 0 when the map has neither,
 // and a cell owned by nobody is skipped rather than handed to player 1.
 //--------------------------------------------------------------------------------------------------
 int Melt_OwnerOf (int slot) {
-    unitgroup cores;
     unit panel;
-    unit core;
-    int count;
-    int i;
-    int best;
-    fixed bestDist;
-    fixed d;
 
     panel = Cont_PanelAt(gvg_cellHome[slot]);
     if (panel != null && Slot_IsTablePlayer(UnitGetOwner(panel))) {
         return UnitGetOwner(panel);
     }
-
-    cores = ObjectsGen_ScanCore();
-    UnitGroupAddUnitGroup(cores, ObjectsGen_ScanCoreDown());
-    count = UnitGroupCount(cores, c_unitCountAlive);
-
-    best = 0;
-    bestDist = 0.0;
-    i = 1;
-    while (i <= count) {
-        core = UnitGroupUnit(cores, i);
-        if (core != null && Slot_IsTablePlayer(UnitGetOwner(core))) {
-            d = DistanceBetweenPoints(UnitGetPosition(core), gvg_cellHome[slot]);
-            if (best == 0 || d < bestDist) {
-                best = UnitGetOwner(core);
-                bestDist = d;
-            }
-        }
-        i = i + 1;
-    }
-    return best;
+    return Sector_OwnerNear(gvg_cellHome[slot]);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -5769,6 +5940,7 @@ string Economy_StatusLine (int player) {
            + " (" + IntToString(gv_devicesOnline) + "/" + IntToString(gv_devicesTotal)
            + " devices online, map)"
            + "  dept=" + Dept_NameOf(player)
+           + "  diff=" + Diff_NameOf(player)
            + "  inner=" + Sector_HeldText(player)
            + "  workers=" + IntToString(Economy_CountOwned(ObjectsGen_ScanSCV_Worker(), player))
            + "  miners=" + IntToString(Economy_CountOwned(ObjectsGen_ScanSCV_Miner(), player))
@@ -5790,14 +5962,34 @@ void Economy_Init () {
 // Zerg waves.
 //
 // One wave per spawn marker on a fixed interval, walking in on attack-move.
-// Wave size grows by one per wave -- a placeholder ramp, not a difficulty
-// curve. The baseline deliberately defers that until the mechanics it would be
-// balancing against exist.
 //
 // Waves aim at the nearest device rather than at the player, so that "leave the
 // fight to go repair" and "leave the repair to go fight" are the same decision
 // seen from two sides. Falling back to the nearest worker keeps them walking
 // somewhere meaningful before any device is placed.
+//
+//--------------------------------------------------------------------------------------------------
+// Personal waves, sized by the difficulty of whoever's sector they open into.
+//
+// Baseline 2 asks for personal waves so that a weak player cannot drag a strong
+// one down and a strong one is not punished for developing. It said "scaled by
+// that player's own development", and development is not a real quantity -- it
+// would have to be invented out of some weighted count of devices and upgrades,
+// and it would mean the better you play the harder it gets.
+//
+// A per-player difficulty setting is the answer instead, and 01_difficulty
+// argues why it is better rather than merely easier. What is left here is the
+// arithmetic: a marker belongs to the sector it stands in, that sector belongs
+// to a player, and that player's setting sizes the wave that comes through it.
+//
+// A marker that belongs to nobody -- no core placed anywhere near it -- still
+// spawns, at Normal. Silence would be worse: an unowned spawn point is a hole
+// in the map that nothing would ever come out of, and that is invisible until
+// somebody wonders why one corridor is peaceful.
+//
+// The per-wave ramp stays a placeholder. The baseline defers the strength curve
+// until the mechanics it would be balancing against exist, and difficulty
+// multiplies whatever that curve turns out to be rather than replacing it.
 //--------------------------------------------------------------------------------------------------
 
 const fixed c_waveInterval = 45.0;
@@ -5807,6 +5999,36 @@ const string c_waveUnitType = "Zergling";
 int gv_waveNumber;
 
 trigger gt_wave;
+
+//--------------------------------------------------------------------------------------------------
+// Whose wave this is. The marker's own owner first, so the editor can override
+// the geometry by simply assigning it; otherwise the sector it stands in.
+//--------------------------------------------------------------------------------------------------
+int Waves_OwnerOf (unit marker) {
+    if (marker == null) {
+        return 0;
+    }
+    if (Slot_IsTablePlayer(UnitGetOwner(marker))) {
+        return UnitGetOwner(marker);
+    }
+    return Sector_OwnerNear(UnitGetPosition(marker));
+}
+
+int Waves_SizeFor (int player) {
+    int size;
+    int pct;
+
+    pct = gvg_diffWavePct[c_diffNormal];
+    if (player >= 1 && player <= 15) {
+        pct = Diff_WavePct(player);
+    }
+
+    size = (c_waveBaseSize + gv_waveNumber) * pct / 100;
+    if (size < 1) {
+        size = 1;
+    }
+    return size;
+}
 
 //--------------------------------------------------------------------------------------------------
 // What a wave spawning at `from` should walk towards.
@@ -5827,8 +6049,10 @@ point Waves_TargetFrom (point from) {
 bool Waves_Spawn_Func (bool testConds, bool runActions) {
     unitgroup markers;
     unitgroup spawned;
+    unit marker;
     point where;
     int markerCount;
+    int owner;
     int i;
 
     if (!runActions) {
@@ -5845,9 +6069,12 @@ bool Waves_Spawn_Func (bool testConds, bool runActions) {
 
     i = 1;
     while (i <= markerCount) {
-        where = UnitGetPosition(UnitGroupUnit(markers, i));
+        marker = UnitGroupUnit(markers, i);
+        where = UnitGetPosition(marker);
+        owner = Waves_OwnerOf(marker);
+
         spawned = UnitCreate(
-            c_waveBaseSize + gv_waveNumber,
+            Waves_SizeFor(owner),
             c_waveUnitType,
             c_unitCreateIgnorePlacement,
             c_zergPlayer,
@@ -5859,14 +6086,20 @@ bool Waves_Spawn_Func (bool testConds, bool runActions) {
             OrderTargetingPoint(AbilityCommand("attack", 0), Waves_TargetFrom(where)),
             c_orderQueueReplace
         );
+
+        // Told to the player whose sector it opens into, with their own number.
+        // "wave 7 incoming" to everybody said nothing about who was about to be
+        // busy, which on a map of scattered sectors is the only part that
+        // matters.
+        if (owner >= 1 && owner <= 15) {
+            UIDisplayMessage(
+                PlayerGroupSingle(owner), c_messageAreaSubtitle,
+                StringToText("wave " + IntToString(gv_waveNumber) + " -- "
+                             + IntToString(Waves_SizeFor(owner)) + " incoming ("
+                             + Diff_NameOf(owner) + ")"));
+        }
         i = i + 1;
     }
-
-    UIDisplayMessage(
-        PlayerGroupAll(),
-        c_messageAreaSubtitle,
-        StringToText("wave " + IntToString(gv_waveNumber) + " incoming")
-    );
     return true;
 }
 
@@ -6140,6 +6373,39 @@ void Debug_ReportCells (int player) {
 
         Debug_Say(player, line);
         slot = slot + 1;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// -diff [easy|normal|hard|brutal]
+//
+// Stands in for the lobby dropdown. Prints the whole table, because the point of
+// per-player difficulty is that the settings differ, and a readout that only
+// showed yours would make that impossible to check.
+//--------------------------------------------------------------------------------------------------
+void Debug_Difficulty (int player, string word) {
+    int level;
+    int other;
+
+    level = Diff_FromWord(word);
+    if (word != "" && level < 0) {
+        Debug_Say(player, "diff: want easy, normal, hard or brutal");
+        return;
+    }
+    if (level >= 0) {
+        Diff_SetOf(player, level);
+    }
+
+    other = 1;
+    while (other <= 15) {
+        if (Slot_IsTablePlayer(other)) {
+            Debug_Say(player, "diff p" + IntToString(other) + " = "
+                              + Diff_NameOf(other)
+                              + " (waves " + IntToString(Diff_WavePct(other)) + "%"
+                              + ", next " + IntToString(Waves_SizeFor(other)) + ")"
+                              + "  dept=" + Dept_NameOf(other));
+        }
+        other = other + 1;
     }
 }
 
@@ -6567,6 +6833,20 @@ void Debug_BuildHelp () {
         "Assets\\Textures\\btn-ability-terran-stimpack-color.dds");
 
     Debug_Tip(
+        "Difficulty",
+        "<c val=\"ffff8a\">-diff</c>  the whole table's settings.<n/>"
+        + "<c val=\"ffff8a\">-diff easy|normal|hard|brutal</c>  set yours.<n/><n/>"
+        + "Difficulty is PER PLAYER and sizes only your own waves, so a novice "
+        + "can sit in a lobby of veterans on Easy and still be learning the same "
+        + "game. It is not a handicap anybody else pays for -- fewer zerg spawn "
+        + "in that sector, so fewer leak out of it into yours.<n/><n/>"
+        + "It replaces \"scaled by that player's development\", which would have "
+        + "meant the better you played the harder it got. This stands in for a "
+        + "lobby dropdown that does not exist yet; it reads a per-player game "
+        + "attribute and answers Normal until one is created.",
+        "Assets\\Textures\\btn-ability-terran-scannersweep.dds");
+
+    Debug_Tip(
         "The world",
         "<c val=\"ffff8a\">-status</c>  debris, ore, power, devices, sector, energy.<n/>"
         + "<c val=\"ffff8a\">-scan</c>  what the generated object tables can actually see.<n/><n/>"
@@ -6641,6 +6921,9 @@ bool Debug_Chat_Func (bool testConds, bool runActions) {
     else if (StringEqual(command, "-energy", false)) {
         Debug_Energy(player, StringWord(message, 2));
     }
+    else if (StringEqual(command, "-diff", false)) {
+        Debug_Difficulty(player, StringWord(message, 2));
+    }
     else if (StringEqual(command, "-melt", false)) {
         Debug_Meltdown(player, StringWord(message, 2));
     }
@@ -6668,6 +6951,7 @@ void Debug_Init () {
 //--------------------------------------------------------------------------------------------------
 void InitMap () {
     libNtve_InitLib();
+    Difficulty_Init();
     AbnoGen_Init();
     ObjectsGen_Init();
     Sector_Init();

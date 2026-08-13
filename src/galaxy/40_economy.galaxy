@@ -138,6 +138,7 @@ string Economy_StatusLine (int player) {
            + " (" + IntToString(gv_devicesOnline) + "/" + IntToString(gv_devicesTotal)
            + " devices online, map)"
            + "  dept=" + Dept_NameOf(player)
+           + "  diff=" + Diff_NameOf(player)
            + "  inner=" + Sector_HeldText(player)
            + "  workers=" + IntToString(Economy_CountOwned(ObjectsGen_ScanSCV_Worker(), player))
            + "  miners=" + IntToString(Economy_CountOwned(ObjectsGen_ScanSCV_Miner(), player))

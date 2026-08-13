@@ -223,44 +223,18 @@ int Melt_Targets () {
 // and 13_containment already treats its owner as the person whose encyclopedia
 // the panel shows.
 //
-// Falls back to the nearest core, so a cell whose panel has not been placed yet
+// Falls back to Sector_OwnerNear, so a cell whose panel has not been placed yet
 // is still somebody's rather than nobody's. Returns 0 when the map has neither,
 // and a cell owned by nobody is skipped rather than handed to player 1.
 //--------------------------------------------------------------------------------------------------
 int Melt_OwnerOf (int slot) {
-    unitgroup cores;
     unit panel;
-    unit core;
-    int count;
-    int i;
-    int best;
-    fixed bestDist;
-    fixed d;
 
     panel = Cont_PanelAt(gvg_cellHome[slot]);
     if (panel != null && Slot_IsTablePlayer(UnitGetOwner(panel))) {
         return UnitGetOwner(panel);
     }
-
-    cores = ObjectsGen_ScanCore();
-    UnitGroupAddUnitGroup(cores, ObjectsGen_ScanCoreDown());
-    count = UnitGroupCount(cores, c_unitCountAlive);
-
-    best = 0;
-    bestDist = 0.0;
-    i = 1;
-    while (i <= count) {
-        core = UnitGroupUnit(cores, i);
-        if (core != null && Slot_IsTablePlayer(UnitGetOwner(core))) {
-            d = DistanceBetweenPoints(UnitGetPosition(core), gvg_cellHome[slot]);
-            if (best == 0 || d < bestDist) {
-                best = UnitGetOwner(core);
-                bestDist = d;
-            }
-        }
-        i = i + 1;
-    }
-    return best;
+    return Sector_OwnerNear(gvg_cellHome[slot]);
 }
 
 //--------------------------------------------------------------------------------------------------
