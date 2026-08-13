@@ -312,7 +312,19 @@ Pale 那条是唯一需要多想一层的：**勇气直接就是最大生命**�
 
 **员工没有倒地状态，掉到 0 就是死。**所以 Red/Black/Pale 和 White 不是同一件事的不同数字：选错工作在一个门前是一个糟糕的下午，在另一个门前是一场葬礼。这也是为什么 `-work` 的赔率旁边现在印着伤害类型——赔率不告诉你输了要付多少。
 
-伤害走 `UnitSetPropertyFixed` 直接扣，不走战斗系统：工作伤害没有来源、没有武器、没有方向，也不该被护甲减免或被任何东西反弹。
+伤害走 `UnitSetPropertyFixed` 直接扣，不走战斗系统：工作伤害没有来源、没有武器、没有方向，不该被**物理**护甲减免或被任何东西反弹。
+
+**E.G.O 护甲的落点是 `Emp_DamageScale(who, type)`**，返回百分比，现在恒为 100。是百分比而不是减免值，因为一件 E.G.O 抗某几种、对另几种**易伤**，所以它必须能超过 100。
+
+这里有一个"引擎看起来已经有了"的陷阱，记下来免得以后重新推一遍：
+
+```xml
+<DamageTakenFraction index="Melee" value="3"/>
+```
+
+原生、真实，而且 `3` 证明**超过 1 的易伤是原生支持的**。但它的 index 是一个封闭集（`Melee` / `Ranged` / `Splash` / `Ability` / `Basic`），而这些**真实武器已经在用**了——一件靠占用其中一个来抗 Red 的 E.G.O，会连虫子的攻击一起抗。所以 Red/White/Black/Pale 需要自己的通道，具体是哪个留给做 E.G.O 的时候定。**不要现在凭空挑一个**——上一次凭空推导出 `User2` attribute 就是这么来的。
+
+顺带：`UnitCreateEffectUnit(caster, effect, target)` 和 `UnitDamage(...)` 都存在，所以"把工作伤害交给战斗系统去走 `DamageResponse`"是一条真实的路。它的代价是 White 扣的是 Energy 而 `CEffectDamage` 只打 Life，四种伤害会变成两套不同的机制。也留到那时候再权衡。
 
 图标名和词都能认，两者有其一即可；`Purple` 当 `Black`、`Blue` 当 `Pale`。缺这一行时默认 White 1-2 并在构建时报出来。
 

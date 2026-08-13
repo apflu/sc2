@@ -421,6 +421,32 @@ void Emp_LifeDamage (unit who, fixed amount) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// How much of a given kind of work damage this employee actually takes, as a
+// percent. 100 is unarmoured.
+//
+// THIS IS WHERE E.G.O ARMOUR LANDS, and it is a seam rather than a system: a
+// suit resists some kinds and leaves you MORE open to others, so the number is
+// deliberately a percent that may exceed 100 rather than a reduction that
+// cannot. One function so that adding equipment later is filling this in, not
+// finding every place damage is applied.
+//
+// It is not a behavior Modification, and that is worth writing down because the
+// engine looks like it already has this. It does, almost:
+//
+//     <DamageTakenFraction index="Melee" value="3"/>
+//
+// -- real, native, and 3 proves that going ABOVE one is supported. But its index
+// is a closed set of damage KINDS (Melee, Ranged, Splash, Ability, Basic) that
+// real weapons already speak, so a suit that resisted "Red" by claiming one of
+// them would also resist zerg. Red/White/Black/Pale need a channel of their own,
+// and which one is a question for whoever builds E.G.O -- not something to guess
+// at now, which is how this project ended up inventing a User2 attribute once.
+//--------------------------------------------------------------------------------------------------
+int Emp_DamageScale (unit who, int type) {
+    return 100;
+}
+
+//--------------------------------------------------------------------------------------------------
 // A missed box, paid in whatever coin that abnormality charges.
 //
 // The type is the abnormality's, not the work's: the same badly chosen work
@@ -439,6 +465,14 @@ void Emp_LifeDamage (unit who, fixed amount) {
 //--------------------------------------------------------------------------------------------------
 void Emp_WorkDamage (unit who, int type, int amount) {
     if (who == null || !UnitIsAlive(who) || amount <= 0) {
+        return;
+    }
+
+    // Scaled once, before the split, so a suit that halves Black halves both
+    // halves of it and a suit that halves Pale halves the percentage. Applying
+    // it inside each branch would be four chances to get that wrong.
+    amount = amount * Emp_DamageScale(who, type) / 100;
+    if (amount <= 0) {
         return;
     }
 
