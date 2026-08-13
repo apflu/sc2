@@ -284,7 +284,7 @@ Structure  Hover  Heroic  Summoned  User1  MapBoss
 | 第一行 | 名字 |
 | `## Basic Information` | 危险等级 |
 | `## Details` | E-Box 速度、工作冷却 |
-| `## Abnormality Basic Info` | 最大 PE-Box 数 |
+| `## Abnormality Basic Info` | 最大 PE-Box 数、**失败一箱的伤害类型与数值** |
 | `## Outcome Ranges` | Good / Normal 的下界 |
 | `## Abnormality Work Preferences` | 4 种工作 × 5 个属性等级的成功率 |
 | `## Abnormality Escape Information` | Qliphoth 计数器（`X` = 没有计数器，**不等于 0**） |
@@ -296,6 +296,25 @@ Structure  Hover  Heroic  Summoned  User1  MapBoss
 构建时还会**交叉核对危险等级**：文档写一份，单位的 attribute 写一份，两者必须一致。文档那份驱动准入规则，attribute 那份驱动伤害加成和单位面板，而它们不一致时两边都不会报错。这是唯一一件两台机器各自都检查不了的事。
 
 > 注意：核对只看该 `CUnit` 上**显式写出**的 attribute，不看从 `parent` 继承来的。`parent="Critter"` 这类要把继承来的等级显式置 0。
+
+#### 工作伤害：**四种，逐异想体**
+
+`## Abnormality Basic Info` 里那行 `Work Damage / WhiteDamageTypeIcon.png White 1-2` 是被解析的。**失败一箱扣什么，是异想体的属性，不是工作的属性**：
+
+| | 扣哪里 |
+|---|---|
+| **Red** | 生命 |
+| **White** | SP（精神） |
+| **Black** | 两者，各扣全额 |
+| **Pale** | **最大生命的百分比** |
+
+Pale 那条是唯一需要多想一层的：**勇气直接就是最大生命**，所以定额伤害会随着员工成长而相对变轻——练得越壮越免疫。Pale 用百分比，正好把这条路堵死，对老手和新人一样危险。
+
+**员工没有倒地状态，掉到 0 就是死。**所以 Red/Black/Pale 和 White 不是同一件事的不同数字：选错工作在一个门前是一个糟糕的下午，在另一个门前是一场葬礼。这也是为什么 `-work` 的赔率旁边现在印着伤害类型——赔率不告诉你输了要付多少。
+
+伤害走 `UnitSetPropertyFixed` 直接扣，不走战斗系统：工作伤害没有来源、没有武器、没有方向，也不该被护甲减免或被任何东西反弹。
+
+图标名和词都能认，两者有其一即可；`Purple` 当 `Black`、`Blue` 当 `Pale`。缺这一行时默认 White 1-2 并在构建时报出来。
 
 **还没解决的**：控制部跨部门准入引用的那个"危险"tag。它是标签不是数字，但 attribute 已经花完了——现在多了一个现成的去处（文档里加一节，生成器加几行）。
 

@@ -47,6 +47,25 @@ RISK_ATTRIBUTE = {
 # Order must match c_work* in 14_work.galaxy.
 WORKS = ["Instinct", "Insight", "Attachment", "Repression"]
 
+# What a missed box costs, and to what. This encoding is emitted into the
+# generated file as c_dmg* so that the mapping lives in exactly one place -- the
+# script that reads the docs owns it, and everything downstream reads the
+# constants rather than the numbers.
+#
+#   Red    the body                White  the mind
+#   Black  both, in full           Pale   a percentage of maximum life
+#
+# The wiki writes the type twice, once as an icon filename and once as a word,
+# and different pages prefer different colour words for the same two types --
+# Black is sometimes purple and Pale is sometimes blue. All four spellings are
+# accepted because arguing with a wiki paste is not a thing worth doing.
+DAMAGE_TYPES = ["Red", "White", "Black", "Pale"]
+DAMAGE_ALIASES = {"purple": "Black", "blue": "Pale"}
+
+# O-03-03's own line. Its Details say the surrounding numbers are the default
+# for every abnormality, and nothing yet contradicts that for damage.
+DEFAULT_DAMAGE = ("White", 1, 2)
+
 # Stated in O-03-03's Details as applying to every abnormality by default.
 DEFAULT_BOX_SPEED = 0.30
 DEFAULT_COOLDOWN = 10.0
@@ -91,6 +110,44 @@ def parse_prefs(body: str) -> dict[str, list[int]]:
         if len(found) >= 5:
             prefs[work] = [int(x) for x in found[:5]]
     return prefs
+
+
+DAMAGE_WORDS = "|".join(DAMAGE_TYPES + list(DAMAGE_ALIASES))
+
+# The wiki's line is "WhiteDamageTypeIcon.png White 1-2", tab-joined to whatever
+# cell follows it. Either half alone is enough -- the icon name carries the type
+# and so does the word -- so they are two patterns tried in order rather than
+# one pattern with two optional halves, which would match neither.
+DAMAGE_RES = [
+    re.compile(rf"({DAMAGE_WORDS})DamageTypeIcon\.png[^\d\n]*(\d+)\s*-\s*(\d+)", re.I),
+    re.compile(rf"\b({DAMAGE_WORDS})\b[^\d\n]*(\d+)\s*-\s*(\d+)", re.I),
+]
+
+
+def parse_damage(text: str) -> tuple[str, int, int] | None:
+    """What a missed box costs the employee, and to what.
+
+    Scoped to the Basic Info section first, because that is where the source
+    puts it and because a colour word loose in prose is not a damage figure.
+    Falls back to the whole document for a doc that never grew the section but
+    states the line anyway.
+    """
+    canon = {t.lower(): t for t in DAMAGE_TYPES}
+    canon.update({a.lower(): t for a, t in DAMAGE_ALIASES.items()})
+
+    for body in (section(text, "Abnormality Basic Info"), text):
+        if not body:
+            continue
+        for pattern in DAMAGE_RES:
+            m = pattern.search(body)
+            if not m:
+                continue
+            kind = canon.get(m.group(1).lower())
+            if kind is None:
+                continue
+            lo, hi = int(m.group(2)), int(m.group(3))
+            return kind, min(lo, hi), max(lo, hi)
+    return None
 
 
 def parse_observation(body: str) -> tuple[list[int], list[int]]:
@@ -241,6 +298,8 @@ def parse(path: Path) -> dict:
     counter = re.search(r"Qliphoth counter\s+(\d+)", escape or text, re.I)
     no_counter = re.search(r"Qliphoth counter\s+X\b", escape or text, re.I)
 
+    damage = parse_damage(text)
+
     return {
         "id": path.stem,
         "name": lines[0] if lines else path.stem,
@@ -254,6 +313,8 @@ def parse(path: Path) -> dict:
         "max_box": int(max_box.group(1)) if max_box else DEFAULT_MAX_BOX,
         "good_min": int(good.group(1)) if good else 0,
         "normal_min": int(normal.group(1)) if normal else 0,
+        "damage": damage or DEFAULT_DAMAGE,
+        "damage_stated": damage is not None,
         "prefs": parse_prefs(section(text, "Abnormality Work Preferences")),
         "obs": parse_observation(section(text, "Observation Level")),
         "costs": parse_costs(text),
@@ -312,6 +373,11 @@ def check(entries: list[dict]) -> list[str]:
             notes.append(f"{uid}: no work preference table, falling back to 50% flat")
         if not e["counter_stated"]:
             notes.append(f"{uid}: no Qliphoth counter stated, treated as X")
+        if not e["damage_stated"]:
+            kind, lo, hi = DEFAULT_DAMAGE
+            notes.append(
+                f"{uid}: no Work Damage line, defaulting to {kind} {lo}-{hi}"
+            )
     return notes
 
 
@@ -333,6 +399,22 @@ def build(entries: list[dict]) -> str:
     out.append("// Lowest box count that still reads as this result.\n")
     out.append(f"int[{n}] gvg_abnoGoodMin;\n")
     out.append(f"int[{n}] gvg_abnoNormalMin;\n")
+    out.append(
+        "// What a missed box costs, and to what. The type is per abnormality:\n"
+        "// a bad work on one thing breaks the person doing it and on another\n"
+        "// kills them, and which of those it is has to be readable off the\n"
+        "// abnormality rather than assumed.\n"
+        "//\n"
+        "//   Red    the body            White  the mind\n"
+        "//   Black  both, in full       Pale   a percentage of maximum life\n"
+        "//\n"
+        "// Pale's numbers are percentages; the other three are flat amounts.\n"
+    )
+    for i, name in enumerate(DAMAGE_TYPES):
+        out.append(f"const int c_dmg{name} = {i};\n")
+    out.append(f"int[{n}] gvg_abnoDmgType;\n")
+    out.append(f"int[{n}] gvg_abnoDmgMin;\n")
+    out.append(f"int[{n}] gvg_abnoDmgMax;\n")
     out.append("// Success chance per box, flattened: abnormality * 20 + work * 5 + (level-1).\n")
     out.append(f"int[{max(len(entries) * 20, 1)}] gvg_abnoPref;\n")
     out.append("// Cumulative observation bonuses, flattened: abnormality * 5 + observation\n"
@@ -359,6 +441,10 @@ def build(entries: list[dict]) -> str:
         fills.append(f"    gvg_abnoCooldown[{i}] = {e['cooldown']};")
         fills.append(f"    gvg_abnoGoodMin[{i}] = {e['good_min']};")
         fills.append(f"    gvg_abnoNormalMin[{i}] = {e['normal_min']};")
+        kind, lo, hi = e["damage"]
+        fills.append(f"    gvg_abnoDmgType[{i}] = c_dmg{kind};")
+        fills.append(f"    gvg_abnoDmgMin[{i}] = {lo};")
+        fills.append(f"    gvg_abnoDmgMax[{i}] = {hi};")
         obs_speed, obs_success = e["obs"]
         for lvl in range(5):
             fills.append(f"    gvg_abnoObsSpeed[{i * 5 + lvl}] = {obs_speed[lvl]};")
@@ -476,6 +562,41 @@ def build(entries: list[dict]) -> str:
         "        return \"\";\n"
         "    }\n"
         "    return gvg_abnoLore[index * 4 + sec];\n"
+        "}\n\n"
+        "//--------------------------------------------------------------------------------------------------\n"
+        "// What a missed box on this abnormality costs. Defaults to White so that\n"
+        "// an unknown index costs the mind rather than the body -- the cheaper way\n"
+        "// to be wrong.\n"
+        "//--------------------------------------------------------------------------------------------------\n"
+        "int AbnoGen_DmgType (int index) {\n"
+        "    if (index < 0 || index >= c_abnoCount) {\n"
+        "        return c_dmgWhite;\n"
+        "    }\n"
+        "    return gvg_abnoDmgType[index];\n"
+        "}\n\n"
+        "int AbnoGen_DmgRoll (int index) {\n"
+        "    if (index < 0 || index >= c_abnoCount) {\n"
+        "        return 0;\n"
+        "    }\n"
+        "    return RandomInt(gvg_abnoDmgMin[index], gvg_abnoDmgMax[index]);\n"
+        "}\n\n"
+        "string AbnoGen_DmgName (int type) {\n"
+    )
+    for name in DAMAGE_TYPES:
+        out.append(f'    if (type == c_dmg{name}) {{ return "{name}"; }}\n')
+    out.append(
+        '    return "?";\n'
+        "}\n\n"
+        "//--------------------------------------------------------------------------------------------------\n"
+        "// The damage line as a player would read it, for tooltips and debug.\n"
+        "//--------------------------------------------------------------------------------------------------\n"
+        "string AbnoGen_DmgText (int index) {\n"
+        "    if (index < 0 || index >= c_abnoCount) {\n"
+        "        return \"\";\n"
+        "    }\n"
+        "    return AbnoGen_DmgName(gvg_abnoDmgType[index]) + \" \"\n"
+        "           + IntToString(gvg_abnoDmgMin[index]) + \"-\"\n"
+        "           + IntToString(gvg_abnoDmgMax[index]);\n"
         "}\n"
     )
     return "".join(out)
@@ -499,6 +620,7 @@ if __name__ == "__main__":
         print(
             f"  {e['id']:<10} {grade:<6} qliphoth={counter:<3} "
             f"box={e['speed']}/s x{e['max_box']} good>={e['good_min']} "
+            f"dmg={e['damage'][0]} {e['damage'][1]}-{e['damage'][2]} "
             f"obs=+{e['obs'][0][4]}spd/+{e['obs'][1][4]}suc "
             f"cost={'/'.join(str(c) for c in e['costs'])} "
             f"prefs={'yes' if e['prefs'] else 'MISSING'}  {e['name']}"

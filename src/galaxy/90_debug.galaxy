@@ -419,7 +419,11 @@ void Debug_Work (int player, string word) {
     slot = 0;
     while (slot < gv_cellCount) {
         abno = gvg_cellAbno[slot];
-        line = "  " + gvg_abnoName[AbnoGen_IndexOf(abno)] + ":";
+        // The cost of being wrong belongs next to the odds of being wrong. On
+        // one abnormality a missed box is a bad afternoon; on another it is a
+        // funeral, and that is not visible from a percentage.
+        line = "  " + gvg_abnoName[AbnoGen_IndexOf(abno)]
+               + " [miss: " + AbnoGen_DmgText(AbnoGen_IndexOf(abno)) + "]:";
         work = 0;
         while (work < c_workCount) {
             line = line + " " + StringSub(Work_Name(work), 1, 4) + "=";
@@ -637,10 +641,14 @@ void Debug_BuildHelp () {
         + "or repr. Prints each abnormality's odds for all four at your "
         + "employees' current levels, so the choice needs no wiki.<n/><n/>"
         + "One roll per box. The chance is keyed to the LEVEL of the stat that "
-        + "work uses, so 30 and 44 of a stat are the same to an abnormality. A "
-        + "missed box is White damage to SP, which has nothing to do with the "
-        + "health bar -- a badly chosen work costs nothing visible until the "
-        + "person breaks.",
+        + "work uses, so 30 and 44 of a stat are the same to an abnormality.<n/><n/>"
+        + "What a missed box costs is the abnormality's own, printed next to its "
+        + "odds. <c val=\"ffff8a\">White</c> is the mind and shows nowhere until "
+        + "the person breaks. <c val=\"ffff8a\">Red</c> is the body. "
+        + "<c val=\"ffff8a\">Black</c> is both, in full. "
+        + "<c val=\"ffff8a\">Pale</c> is a percentage of maximum life -- and "
+        + "since Fortitude IS maximum life, it is the one an employee cannot "
+        + "outgrow. Employees do not go down; they die.",
         "Assets\\Textures\\btn-upgrade-terran-infantryweaponslevel1.dds");
 
     Debug_Tip(

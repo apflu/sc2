@@ -18,6 +18,22 @@ fixed[2] gvg_abnoCooldown;
 // Lowest box count that still reads as this result.
 int[2] gvg_abnoGoodMin;
 int[2] gvg_abnoNormalMin;
+// What a missed box costs, and to what. The type is per abnormality:
+// a bad work on one thing breaks the person doing it and on another
+// kills them, and which of those it is has to be readable off the
+// abnormality rather than assumed.
+//
+//   Red    the body            White  the mind
+//   Black  both, in full       Pale   a percentage of maximum life
+//
+// Pale's numbers are percentages; the other three are flat amounts.
+const int c_dmgRed = 0;
+const int c_dmgWhite = 1;
+const int c_dmgBlack = 2;
+const int c_dmgPale = 3;
+int[2] gvg_abnoDmgType;
+int[2] gvg_abnoDmgMin;
+int[2] gvg_abnoDmgMax;
 // Success chance per box, flattened: abnormality * 20 + work * 5 + (level-1).
 int[40] gvg_abnoPref;
 // Cumulative observation bonuses, flattened: abnormality * 5 + observation
@@ -44,6 +60,9 @@ void AbnoGen_Init () {
     gvg_abnoCooldown[0] = 10.0;
     gvg_abnoGoodMin[0] = 0;
     gvg_abnoNormalMin[0] = 0;
+    gvg_abnoDmgType[0] = c_dmgWhite;
+    gvg_abnoDmgMin[0] = 1;
+    gvg_abnoDmgMax[0] = 2;
     gvg_abnoObsSpeed[0] = 0;
     gvg_abnoObsSuccess[0] = 0;
     gvg_abnoObsSpeed[1] = 0;
@@ -91,6 +110,9 @@ void AbnoGen_Init () {
     gvg_abnoCooldown[1] = 10.0;
     gvg_abnoGoodMin[1] = 8;
     gvg_abnoNormalMin[1] = 4;
+    gvg_abnoDmgType[1] = c_dmgWhite;
+    gvg_abnoDmgMin[1] = 1;
+    gvg_abnoDmgMax[1] = 2;
     gvg_abnoObsSpeed[5] = 0;
     gvg_abnoObsSuccess[5] = 0;
     gvg_abnoObsSpeed[6] = 0;
@@ -241,4 +263,43 @@ string AbnoGen_Lore (int index, int sec) {
         return "";
     }
     return gvg_abnoLore[index * 4 + sec];
+}
+
+//--------------------------------------------------------------------------------------------------
+// What a missed box on this abnormality costs. Defaults to White so that
+// an unknown index costs the mind rather than the body -- the cheaper way
+// to be wrong.
+//--------------------------------------------------------------------------------------------------
+int AbnoGen_DmgType (int index) {
+    if (index < 0 || index >= c_abnoCount) {
+        return c_dmgWhite;
+    }
+    return gvg_abnoDmgType[index];
+}
+
+int AbnoGen_DmgRoll (int index) {
+    if (index < 0 || index >= c_abnoCount) {
+        return 0;
+    }
+    return RandomInt(gvg_abnoDmgMin[index], gvg_abnoDmgMax[index]);
+}
+
+string AbnoGen_DmgName (int type) {
+    if (type == c_dmgRed) { return "Red"; }
+    if (type == c_dmgWhite) { return "White"; }
+    if (type == c_dmgBlack) { return "Black"; }
+    if (type == c_dmgPale) { return "Pale"; }
+    return "?";
+}
+
+//--------------------------------------------------------------------------------------------------
+// The damage line as a player would read it, for tooltips and debug.
+//--------------------------------------------------------------------------------------------------
+string AbnoGen_DmgText (int index) {
+    if (index < 0 || index >= c_abnoCount) {
+        return "";
+    }
+    return AbnoGen_DmgName(gvg_abnoDmgType[index]) + " "
+           + IntToString(gvg_abnoDmgMin[index]) + "-"
+           + IntToString(gvg_abnoDmgMax[index]);
 }

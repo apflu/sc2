@@ -23,11 +23,12 @@
 //     Instinct   -> Fortitude    Insight    -> Prudence
 //     Attachment -> Temperance   Repression -> Justice
 //
-// Two things are deliberately absent, both marked where they belong:
-//
-//   Failure costs nothing yet. A failed box is White 1-2 damage to the
-//   employee's SP, and there is no SP. The roll is made and the damage is
-//   counted so that adding SP later is one line rather than a redesign.
+// What a missed box costs comes from the doc too, and it is not one thing. Red
+// is the body, White is the mind, Black is both in full, and Pale is a
+// percentage of maximum life. So the question a player answers at the door is
+// not only "which work" but "who can afford to be wrong here" -- and since
+// Fortitude IS maximum life, Pale is the one that a strong employee cannot
+// simply outgrow.
 //
 
 // Both formulas are from docs/usr/mechanism.md and neither is invented:
@@ -70,12 +71,6 @@ const int c_workGainNormal = 2;
 const int c_workGainGood = 3;
 
 const fixed c_workTick = 0.25;
-
-// White damage for a missed box. O-03-03's own line, and its Details say the
-// surrounding numbers are the default for every abnormality; nothing yet
-// carries a different one, so this is shared until one does.
-const int c_workWhiteMin = 1;
-const int c_workWhiteMax = 2;
 
 // Work success is counted in points and paid out in whole percents.
 const int c_workSuccessPerPercent = 5;
@@ -398,10 +393,10 @@ void Work_RollBox (int slot) {
         gvg_workBoxes[slot] = gvg_workBoxes[slot] + 1;
     }
     else {
-        // A missed box is White damage. White is the damage that goes to the
-        // mind rather than the body, which is why this is the whole cost of
-        // choosing the wrong work: nothing about it shows on a health bar.
-        SP_Damage(emp, RandomInt(c_workWhiteMin, c_workWhiteMax));
+        // Whatever this abnormality charges, which is not always the mind. Its
+        // own doc says which and how much, so a missed box on one thing is a bad
+        // afternoon and on another it is a funeral.
+        Emp_WorkDamage(emp, AbnoGen_DmgType(index), AbnoGen_DmgRoll(index));
     }
 
     gvg_workNextBox[slot] = GameGetMissionTime() + Work_BoxInterval(emp, index);

@@ -82,6 +82,22 @@ fixed[2] gvg_abnoCooldown;
 // Lowest box count that still reads as this result.
 int[2] gvg_abnoGoodMin;
 int[2] gvg_abnoNormalMin;
+// What a missed box costs, and to what. The type is per abnormality:
+// a bad work on one thing breaks the person doing it and on another
+// kills them, and which of those it is has to be readable off the
+// abnormality rather than assumed.
+//
+//   Red    the body            White  the mind
+//   Black  both, in full       Pale   a percentage of maximum life
+//
+// Pale's numbers are percentages; the other three are flat amounts.
+const int c_dmgRed = 0;
+const int c_dmgWhite = 1;
+const int c_dmgBlack = 2;
+const int c_dmgPale = 3;
+int[2] gvg_abnoDmgType;
+int[2] gvg_abnoDmgMin;
+int[2] gvg_abnoDmgMax;
 // Success chance per box, flattened: abnormality * 20 + work * 5 + (level-1).
 int[40] gvg_abnoPref;
 // Cumulative observation bonuses, flattened: abnormality * 5 + observation
@@ -108,6 +124,9 @@ void AbnoGen_Init () {
     gvg_abnoCooldown[0] = 10.0;
     gvg_abnoGoodMin[0] = 0;
     gvg_abnoNormalMin[0] = 0;
+    gvg_abnoDmgType[0] = c_dmgWhite;
+    gvg_abnoDmgMin[0] = 1;
+    gvg_abnoDmgMax[0] = 2;
     gvg_abnoObsSpeed[0] = 0;
     gvg_abnoObsSuccess[0] = 0;
     gvg_abnoObsSpeed[1] = 0;
@@ -155,6 +174,9 @@ void AbnoGen_Init () {
     gvg_abnoCooldown[1] = 10.0;
     gvg_abnoGoodMin[1] = 8;
     gvg_abnoNormalMin[1] = 4;
+    gvg_abnoDmgType[1] = c_dmgWhite;
+    gvg_abnoDmgMin[1] = 1;
+    gvg_abnoDmgMax[1] = 2;
     gvg_abnoObsSpeed[5] = 0;
     gvg_abnoObsSuccess[5] = 0;
     gvg_abnoObsSpeed[6] = 0;
@@ -305,6 +327,45 @@ string AbnoGen_Lore (int index, int sec) {
         return "";
     }
     return gvg_abnoLore[index * 4 + sec];
+}
+
+//--------------------------------------------------------------------------------------------------
+// What a missed box on this abnormality costs. Defaults to White so that
+// an unknown index costs the mind rather than the body -- the cheaper way
+// to be wrong.
+//--------------------------------------------------------------------------------------------------
+int AbnoGen_DmgType (int index) {
+    if (index < 0 || index >= c_abnoCount) {
+        return c_dmgWhite;
+    }
+    return gvg_abnoDmgType[index];
+}
+
+int AbnoGen_DmgRoll (int index) {
+    if (index < 0 || index >= c_abnoCount) {
+        return 0;
+    }
+    return RandomInt(gvg_abnoDmgMin[index], gvg_abnoDmgMax[index]);
+}
+
+string AbnoGen_DmgName (int type) {
+    if (type == c_dmgRed) { return "Red"; }
+    if (type == c_dmgWhite) { return "White"; }
+    if (type == c_dmgBlack) { return "Black"; }
+    if (type == c_dmgPale) { return "Pale"; }
+    return "?";
+}
+
+//--------------------------------------------------------------------------------------------------
+// The damage line as a player would read it, for tooltips and debug.
+//--------------------------------------------------------------------------------------------------
+string AbnoGen_DmgText (int index) {
+    if (index < 0 || index >= c_abnoCount) {
+        return "";
+    }
+    return AbnoGen_DmgName(gvg_abnoDmgType[index]) + " "
+           + IntToString(gvg_abnoDmgMin[index]) + "-"
+           + IntToString(gvg_abnoDmgMax[index]);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -2564,6 +2625,69 @@ void SP_Restore (unit who, int amount) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// Damage to the body, which for an employee is permanent.
+//
+// Set rather than dealt. Work damage has no source, no weapon and no direction,
+// and it is not supposed to be reduced by armour or reflected by anything --
+// routing it through the combat system would attach all three. Zero kills
+// outright, because 2.6 has employee death as a real loss and there is no
+// downed state for a person.
+//--------------------------------------------------------------------------------------------------
+void Emp_LifeDamage (unit who, fixed amount) {
+    fixed life;
+
+    if (who == null || !UnitIsAlive(who) || amount <= 0.0) {
+        return;
+    }
+
+    life = UnitGetPropertyFixed(who, c_unitPropLife, true) - amount;
+    if (life <= 0.0) {
+        UnitKill(who);
+        return;
+    }
+    UnitSetPropertyFixed(who, c_unitPropLife, life);
+}
+
+//--------------------------------------------------------------------------------------------------
+// A missed box, paid in whatever coin that abnormality charges.
+//
+// The type is the abnormality's, not the work's: the same badly chosen work
+// breaks the employee at one door and kills them at another, and that difference
+// is most of what distinguishes one abnormality from another at the moment a
+// player decides who to send. White alone would have made every wrong answer
+// cost the same thing.
+//
+// Pale is a percentage of maximum life rather than a flat amount, so it is
+// exactly as dangerous to a veteran as to a new hire. Since Fortitude IS maximum
+// life, a flat amount would already have scaled the wrong way -- growing an
+// employee would make them immune -- and Pale is the mechanic that says no.
+//
+// Black charges the full amount to both, which is why it is worse than its
+// numbers look.
+//--------------------------------------------------------------------------------------------------
+void Emp_WorkDamage (unit who, int type, int amount) {
+    if (who == null || !UnitIsAlive(who) || amount <= 0) {
+        return;
+    }
+
+    if (type == c_dmgWhite) {
+        SP_Damage(who, amount);
+    }
+    else if (type == c_dmgRed) {
+        Emp_LifeDamage(who, IntToFixed(amount));
+    }
+    else if (type == c_dmgBlack) {
+        Emp_LifeDamage(who, IntToFixed(amount));
+        SP_Damage(who, amount);
+    }
+    else if (type == c_dmgPale) {
+        Emp_LifeDamage(who,
+                       UnitGetPropertyFixed(who, c_unitPropLifeMax, true)
+                       * IntToFixed(amount) / 100.0);
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
 // One player's employees.
 //
 // A scan, not a roster. The units on the map are the roster, so there is no
@@ -4425,11 +4549,12 @@ void Meltdown_Init () {
 //     Instinct   -> Fortitude    Insight    -> Prudence
 //     Attachment -> Temperance   Repression -> Justice
 //
-// Two things are deliberately absent, both marked where they belong:
-//
-//   Failure costs nothing yet. A failed box is White 1-2 damage to the
-//   employee's SP, and there is no SP. The roll is made and the damage is
-//   counted so that adding SP later is one line rather than a redesign.
+// What a missed box costs comes from the doc too, and it is not one thing. Red
+// is the body, White is the mind, Black is both in full, and Pale is a
+// percentage of maximum life. So the question a player answers at the door is
+// not only "which work" but "who can afford to be wrong here" -- and since
+// Fortitude IS maximum life, Pale is the one that a strong employee cannot
+// simply outgrow.
 //
 
 // Both formulas are from docs/usr/mechanism.md and neither is invented:
@@ -4472,12 +4597,6 @@ const int c_workGainNormal = 2;
 const int c_workGainGood = 3;
 
 const fixed c_workTick = 0.25;
-
-// White damage for a missed box. O-03-03's own line, and its Details say the
-// surrounding numbers are the default for every abnormality; nothing yet
-// carries a different one, so this is shared until one does.
-const int c_workWhiteMin = 1;
-const int c_workWhiteMax = 2;
 
 // Work success is counted in points and paid out in whole percents.
 const int c_workSuccessPerPercent = 5;
@@ -4800,10 +4919,10 @@ void Work_RollBox (int slot) {
         gvg_workBoxes[slot] = gvg_workBoxes[slot] + 1;
     }
     else {
-        // A missed box is White damage. White is the damage that goes to the
-        // mind rather than the body, which is why this is the whole cost of
-        // choosing the wrong work: nothing about it shows on a health bar.
-        SP_Damage(emp, RandomInt(c_workWhiteMin, c_workWhiteMax));
+        // Whatever this abnormality charges, which is not always the mind. Its
+        // own doc says which and how much, so a missed box on one thing is a bad
+        // afternoon and on another it is a funeral.
+        Emp_WorkDamage(emp, AbnoGen_DmgType(index), AbnoGen_DmgRoll(index));
     }
 
     gvg_workNextBox[slot] = GameGetMissionTime() + Work_BoxInterval(emp, index);
@@ -5992,7 +6111,11 @@ void Debug_Work (int player, string word) {
     slot = 0;
     while (slot < gv_cellCount) {
         abno = gvg_cellAbno[slot];
-        line = "  " + gvg_abnoName[AbnoGen_IndexOf(abno)] + ":";
+        // The cost of being wrong belongs next to the odds of being wrong. On
+        // one abnormality a missed box is a bad afternoon; on another it is a
+        // funeral, and that is not visible from a percentage.
+        line = "  " + gvg_abnoName[AbnoGen_IndexOf(abno)]
+               + " [miss: " + AbnoGen_DmgText(AbnoGen_IndexOf(abno)) + "]:";
         work = 0;
         while (work < c_workCount) {
             line = line + " " + StringSub(Work_Name(work), 1, 4) + "=";
@@ -6210,10 +6333,14 @@ void Debug_BuildHelp () {
         + "or repr. Prints each abnormality's odds for all four at your "
         + "employees' current levels, so the choice needs no wiki.<n/><n/>"
         + "One roll per box. The chance is keyed to the LEVEL of the stat that "
-        + "work uses, so 30 and 44 of a stat are the same to an abnormality. A "
-        + "missed box is White damage to SP, which has nothing to do with the "
-        + "health bar -- a badly chosen work costs nothing visible until the "
-        + "person breaks.",
+        + "work uses, so 30 and 44 of a stat are the same to an abnormality.<n/><n/>"
+        + "What a missed box costs is the abnormality's own, printed next to its "
+        + "odds. <c val=\"ffff8a\">White</c> is the mind and shows nowhere until "
+        + "the person breaks. <c val=\"ffff8a\">Red</c> is the body. "
+        + "<c val=\"ffff8a\">Black</c> is both, in full. "
+        + "<c val=\"ffff8a\">Pale</c> is a percentage of maximum life -- and "
+        + "since Fortitude IS maximum life, it is the one an employee cannot "
+        + "outgrow. Employees do not go down; they die.",
         "Assets\\Textures\\btn-upgrade-terran-infantryweaponslevel1.dds");
 
     Debug_Tip(
