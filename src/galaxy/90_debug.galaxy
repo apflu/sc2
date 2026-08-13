@@ -279,6 +279,11 @@ void Debug_Difficulty (int player, string word) {
     }
     if (level >= 0) {
         Diff_SetOf(player, level);
+        // Immediately. A debug command exists to put the game into a state so
+        // it can be looked at, and one that changed a setting while leaving
+        // everything derived from it at the old value would be testing a
+        // situation that cannot occur in a real game.
+        Energy_Retarget();
     }
 
     // The mean, and what hangs off it. Printed first because it is the thing
@@ -286,9 +291,8 @@ void Debug_Difficulty (int player, string word) {
     // player's row.
     Debug_Say(player, "table = " + Diff_GlobalName()
                       + "  ordeal cap " + Diff_OrdealName(Diff_OrdealCap())
-                      + "  energy goal " + IntToString(Diff_GoalFrom(c_energyGoalBase))
-                      + " (live; this game locked "
-                      + IntToString(gv_energyGoal) + " at start)");
+                      + "  energy " + IntToString(gv_energy)
+                      + "/" + IntToString(gv_energyGoal));
 
     other = 1;
     while (other <= 15) {

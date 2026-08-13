@@ -88,21 +88,26 @@ void Energy_Submit (int player) {
 // bring in; every other difficulty is a percentage of it.
 const int c_energyGoalBase = 200;
 
+//--------------------------------------------------------------------------------------------------
+// Recomputes the target from the table's mean difficulty.
+//
+// Scaled by the MEAN, not by any one player's. This is what makes a personal
+// difficulty setting honest against a shared objective: without it a table that
+// all picked Casual would face weakened opposition on the way to an unchanged
+// target, which is a discount rather than a smaller game.
+//
+// A function rather than a line in Init because difficulty can move. In a real
+// game it does not -- it comes off the lobby and is read once -- but the debug
+// console sets it directly, and a target that ignored that would make the
+// command a no-op for the half of its job that matters. So the formula lives
+// here, once, and whoever changes difficulty calls this.
+//--------------------------------------------------------------------------------------------------
+void Energy_Retarget () {
+    gv_energyGoal = Diff_GoalFrom(c_energyGoalBase);
+}
+
 void Energy_Init () {
     gv_energy = 0;
     gv_energySubmitted = false;
-
-    // Scaled by the MEAN difficulty at the table, not by any one player's.
-    //
-    // This is what makes a personal difficulty setting honest against a shared
-    // objective. Without it, a table that all picked Casual would face weakened
-    // opposition on the way to an unchanged target -- a discount rather than a
-    // smaller game. With it, Casual is genuinely shorter and Brutal is genuinely
-    // longer, which is what the word is supposed to mean.
-    //
-    // Read once, here, because the target has to be a fixed thing a table can
-    // aim at. A goal that moved when somebody left would be a goal nobody could
-    // plan against, and 8.4's rule about reading the lobby at init and not
-    // depending on it afterwards points the same way.
-    gv_energyGoal = Diff_GoalFrom(c_energyGoalBase);
+    Energy_Retarget();
 }

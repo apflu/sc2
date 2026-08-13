@@ -3584,23 +3584,28 @@ void Energy_Submit (int player) {
 // bring in; every other difficulty is a percentage of it.
 const int c_energyGoalBase = 200;
 
+//--------------------------------------------------------------------------------------------------
+// Recomputes the target from the table's mean difficulty.
+//
+// Scaled by the MEAN, not by any one player's. This is what makes a personal
+// difficulty setting honest against a shared objective: without it a table that
+// all picked Casual would face weakened opposition on the way to an unchanged
+// target, which is a discount rather than a smaller game.
+//
+// A function rather than a line in Init because difficulty can move. In a real
+// game it does not -- it comes off the lobby and is read once -- but the debug
+// console sets it directly, and a target that ignored that would make the
+// command a no-op for the half of its job that matters. So the formula lives
+// here, once, and whoever changes difficulty calls this.
+//--------------------------------------------------------------------------------------------------
+void Energy_Retarget () {
+    gv_energyGoal = Diff_GoalFrom(c_energyGoalBase);
+}
+
 void Energy_Init () {
     gv_energy = 0;
     gv_energySubmitted = false;
-
-    // Scaled by the MEAN difficulty at the table, not by any one player's.
-    //
-    // This is what makes a personal difficulty setting honest against a shared
-    // objective. Without it, a table that all picked Casual would face weakened
-    // opposition on the way to an unchanged target -- a discount rather than a
-    // smaller game. With it, Casual is genuinely shorter and Brutal is genuinely
-    // longer, which is what the word is supposed to mean.
-    //
-    // Read once, here, because the target has to be a fixed thing a table can
-    // aim at. A goal that moved when somebody left would be a goal nobody could
-    // plan against, and 8.4's rule about reading the lobby at init and not
-    // depending on it afterwards points the same way.
-    gv_energyGoal = Diff_GoalFrom(c_energyGoalBase);
+    Energy_Retarget();
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -6520,6 +6525,11 @@ void Debug_Difficulty (int player, string word) {
     }
     if (level >= 0) {
         Diff_SetOf(player, level);
+        // Immediately. A debug command exists to put the game into a state so
+        // it can be looked at, and one that changed a setting while leaving
+        // everything derived from it at the old value would be testing a
+        // situation that cannot occur in a real game.
+        Energy_Retarget();
     }
 
     // The mean, and what hangs off it. Printed first because it is the thing
@@ -6527,9 +6537,8 @@ void Debug_Difficulty (int player, string word) {
     // player's row.
     Debug_Say(player, "table = " + Diff_GlobalName()
                       + "  ordeal cap " + Diff_OrdealName(Diff_OrdealCap())
-                      + "  energy goal " + IntToString(Diff_GoalFrom(c_energyGoalBase))
-                      + " (live; this game locked "
-                      + IntToString(gv_energyGoal) + " at start)");
+                      + "  energy " + IntToString(gv_energy)
+                      + "/" + IntToString(gv_energyGoal));
 
     other = 1;
     while (other <= 15) {
