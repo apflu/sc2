@@ -1,0 +1,649 @@
+//--------------------------------------------------------------------------------------------------
+// Fortifications.
+//
+// Rules from docs/usr/Defense.md. Baseline 6.2 asked for fixed positions and an
+// upgrade button rather than free placement, and that document says what goes in
+// the positions and what happens when a level lands.
+//
+// A LOCATION is a room or a corridor. The distinction is flavour -- both are
+// regions with fortification positions in them and both take a level -- so
+// nothing here branches on which kind it is.
+//
+//--------------------------------------------------------------------------------------------------
+// Money and time are two separate costs, and that is the whole mechanic.
+//
+// The upgrade completes instantly and the location stays at that level however
+// many buildings are destroyed. What does NOT happen instantly is the buildings:
+// worker SCVs have to walk over and put them up, and they repair and rebuild for
+// free forever after. So paying is a decision about minerals and getting the
+// benefit is a decision about how many workers you built ten minutes ago.
+//
+// Two rules bite together and produce something worth noticing: a level cannot
+// be bought until the previous level is fully standing, and buildings under
+// sustained attack never finish. So A LOCATION THAT IS BEING OVERRUN CANNOT BE
+// REINFORCED. You have to win the fight first and buy the answer afterwards,
+// which is the opposite of panic-buying and is deliberate.
+//
+//--------------------------------------------------------------------------------------------------
+// Free repair is free because the buildings cost nothing.
+//
+// SC2's Repair charges a fraction of the unit's own Cost, so "SCVs rebuild at no
+// charge" is a data decision rather than a script: give the fortification
+// buildings Cost 0 and take the minerals on the upgrade instead. Repair and
+// rebuild are then free with nothing written.
+//
+// The same choice makes construction free too, which is why a building is put up
+// at a sliver of life and left to the workers. That is not a simulation of
+// construction, it IS the construction: build time becomes repair time, repair
+// time falls with the number of workers, and "更多的scv让修建和修复都更快" comes
+// out without a build-time constant existing anywhere.
+//
+//--------------------------------------------------------------------------------------------------
+// The editor side, all through the type-prefix channel.
+//
+//     region  room_* / corridor_*        a location
+//     unit    Lob_Fort_L<n>_<Rest>       a position: level n, becomes Lob_<Rest>
+//
+// So Lob_Fort_L1_Turret_Basic is a level-1 position that becomes
+// Lob_Turret_Basic, and Lob_Fort_L2_Guard_Marine is a level-2 position that
+// becomes Lob_Guard_Marine. Segment substitution, exactly like the
+// Lob_Device_/Lob_DeviceDown_ pair, so a new kind of emplacement is two units in
+// the editor and no code.
+//
+// Anything becoming a Lob_Guard_* is garrison and warps in; anything else is a
+// building and gets built. One prefix decides it, because "does a worker put
+// this up or does it arrive" is the only thing the distinction is for.
+//
+// Whether a position is occupied is asked SPATIALLY -- is there a unit of that
+// type standing on the marker -- so nothing bookkeeps which building belongs to
+// which slot, and a building that dies simply makes its slot empty again.
+//
+//--------------------------------------------------------------------------------------------------
+// Markers are indexed once. Enemies arrive on an event.
+//
+// The first draft of this file re-scanned every marker on the map and tested
+// RegionContainsPoint on each of them, once per location, once per second. That
+// is a lot of work to re-derive a fact that cannot change: MARKERS DO NOT MOVE.
+// Their location, their level and what they become are parsed once at init and
+// never asked again.
+//
+// Enemy presence is the opposite kind of fact -- it changes constantly and
+// almost always to "no" -- so it is an event rather than a poll.
+// TriggerAddEventUnitRegion on each location fires when something walks in, and
+// the garrison is roused from there. Polling every location every second to
+// discover that nothing has happened is the same waste in the other direction.
+//
+// What is left on a timer is only "an idle guard has drifted off its post",
+// which is genuinely periodic and iterates the indexed slots rather than the map.
+//
+//--------------------------------------------------------------------------------------------------
+// Garrison arrives once per level, and death is permanent until the next one.
+//
+// Warping in happens the FIRST time a level's buildings all stand, and upgrading
+// also tops up the dead from earlier levels. Rebuilding after a massacre does
+// not. So a location whose garrison is wiped stays weaker until somebody spends
+// money on it, or until a production building in the room or Central Command's
+// passive replaces them -- neither of which exists yet, and both are noted where
+// they go.
+//
+// That makes losing garrison genuinely cost something, which a free respawn
+// would not.
+//--------------------------------------------------------------------------------------------------
+
+const int c_fortMaxLevel = 3;
+
+// TUNING, all of it. Minerals for each step up. Nobody has designed an economy
+// curve and these are placeholders that make the mechanic visible.
+int[4] gvg_fortCost;
+
+const fixed c_fortTick = 2.0;
+
+// How close a unit has to be to a marker to count as standing on it.
+const fixed c_fortSlotRadius = 1.5;
+
+// How close a worker has to get before the building goes up.
+const fixed c_fortBuildRange = 2.5;
+
+// And how far an enemy has to be for the position to be usable at all. An
+// occupied slot is refused rather than contested: docs/usr/Defense.md has the
+// worker cancel and go do something else, which a command queue then covers.
+const fixed c_fortEnemyRadius = 4.0;
+
+// What a building starts at, as a percent of its maximum. The rest is the
+// workers' job.
+const fixed c_fortStartLifePct = 8.0;
+
+// How far a garrison unit may drift from its post before being sent back.
+const fixed c_fortPostSlack = 2.0;
+
+const string c_fortMarkerPrefix = "Lob_Fort_L";
+const string c_fortGuardPrefix = "Lob_Guard_";
+
+const int c_locMax = 32;
+const int c_slotMax = 128;
+
+int gv_locCount;
+string[32] gvg_locName;
+region[32] gvg_locRegion;
+point[32] gvg_locCenter;
+int[32] gvg_locLevel;
+
+// Whether this location's level has ever stood complete, flattened
+// location * 4 + level. What makes garrison a one-time arrival.
+bool[128] gvg_locSeeded;
+
+// Every fortification position on the map, parsed once.
+int gv_slotCount;
+unit[128] gvg_slotMarker;
+point[128] gvg_slotAt;
+int[128] gvg_slotLoc;
+int[128] gvg_slotLevel;
+string[128] gvg_slotTarget;
+bool[128] gvg_slotGuard;
+
+trigger gt_fortTick;
+trigger gt_fortEnter;
+
+//--------------------------------------------------------------------------------------------------
+// Reading a marker's type. Called at init and nowhere else.
+//
+// Lob_Fort_L2_Guard_Marine -> level 2, becomes Lob_Guard_Marine.
+//--------------------------------------------------------------------------------------------------
+int Fort_LevelOfType (string what) {
+    int digit;
+
+    if (StringSub(what, 1, StringLength(c_fortMarkerPrefix)) != c_fortMarkerPrefix) {
+        return -1;
+    }
+    digit = StringToInt(StringSub(what, StringLength(c_fortMarkerPrefix) + 1,
+                                  StringLength(c_fortMarkerPrefix) + 1));
+    if (digit < 1 || digit > c_fortMaxLevel) {
+        return -1;
+    }
+    return digit;
+}
+
+string Fort_TargetOfType (string what) {
+    // Past "Lob_Fort_L", the digit, and the underscore after it.
+    return "Lob_" + StringSub(what, StringLength(c_fortMarkerPrefix) + 3, StringLength(what));
+}
+
+//--------------------------------------------------------------------------------------------------
+// Locations.
+//--------------------------------------------------------------------------------------------------
+int Fort_LocOfPoint (point where) {
+    int i;
+
+    i = 0;
+    while (i < gv_locCount) {
+        if (RegionContainsPoint(gvg_locRegion[i], where)) {
+            return i;
+        }
+        i = i + 1;
+    }
+    return -1;
+}
+
+int Fort_LocByName (string name) {
+    int i;
+
+    i = 0;
+    while (i < gv_locCount) {
+        if (gvg_locName[i] == name) {
+            return i;
+        }
+        i = i + 1;
+    }
+    return -1;
+}
+
+int Fort_LevelOf (int loc) {
+    if (loc < 0 || loc >= gv_locCount) {
+        return 0;
+    }
+    return gvg_locLevel[loc];
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whose location this is: the same spatial question the containment cells ask,
+// answered the same way.
+//
+// The region's centre rather than anything that walks into it, because this has
+// to be answerable for an EMPTY room -- who may upgrade it, and who the
+// buildings will belong to, are both questions asked before anybody is there.
+//--------------------------------------------------------------------------------------------------
+int Fort_OwnerOf (int loc) {
+    if (loc < 0 || loc >= gv_locCount) {
+        return 0;
+    }
+    return Sector_OwnerNear(gvg_locCenter[loc]);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Positions, and whether they are occupied.
+//--------------------------------------------------------------------------------------------------
+unit Fort_OccupantOfSlot (int slot) {
+    return UnitGroupClosestToPoint(
+        UnitGroup(gvg_slotTarget[slot], c_playerAny,
+                  RegionCircle(gvg_slotAt[slot], c_fortSlotRadius), null, 0),
+        gvg_slotAt[slot]);
+}
+
+bool Fort_SlotFilled (int slot) {
+    return Fort_OccupantOfSlot(slot) != null;
+}
+
+bool Fort_IsEnemyOf (unit who, int owner) {
+    unitgroup one;
+
+    if (who == null || owner < 1 || owner > 15) {
+        return false;
+    }
+    one = UnitGroupEmpty();
+    UnitGroupAdd(one, who);
+    return UnitGroupCount(UnitGroupFilterAlliance(one, owner, c_unitAllianceEnemy, 0),
+                          c_unitCountAlive) > 0;
+}
+
+bool Fort_SlotBlocked (int slot, int owner) {
+    if (owner < 1 || owner > 15) {
+        return false;
+    }
+    // Enemies only. An ally standing on the spot is not an obstacle, because the
+    // building is created ignoring placement -- which is exactly the doc's
+    // "friendly in the way means build anyway".
+    return UnitCountAlliance(owner, c_unitAllianceEnemy,
+                             RegionCircle(gvg_slotAt[slot], c_fortEnemyRadius),
+                             null, c_unitCountAlive) > 0;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether every building up to a level is standing. Buildings only -- garrison
+// arrives because the buildings are done, so waiting on it would deadlock.
+//--------------------------------------------------------------------------------------------------
+bool Fort_BuildingsComplete (int loc, int level) {
+    int slot;
+
+    slot = 0;
+    while (slot < gv_slotCount) {
+        if (gvg_slotLoc[slot] == loc && !gvg_slotGuard[slot]
+            && gvg_slotLevel[slot] <= level && !Fort_SlotFilled(slot)) {
+            return false;
+        }
+        slot = slot + 1;
+    }
+    return true;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Garrison arrival.
+//
+// `upTo` is inclusive. `replaceOnly` skips levels that have never landed, so
+// upgrading tops up what is missing without pre-delivering the level being
+// bought -- that one waits for its buildings.
+//--------------------------------------------------------------------------------------------------
+void Fort_SeedGarrison (int loc, int upTo, bool replaceOnly) {
+    int slot;
+    int owner;
+    int lvl;
+
+    owner = Fort_OwnerOf(loc);
+    if (owner < 1 || owner > 15) {
+        return;
+    }
+
+    slot = 0;
+    while (slot < gv_slotCount) {
+        lvl = gvg_slotLevel[slot];
+        if (gvg_slotLoc[slot] == loc && gvg_slotGuard[slot] && lvl <= upTo
+            && (!replaceOnly || gvg_locSeeded[loc * 4 + lvl])
+            && !Fort_SlotFilled(slot)) {
+            UnitCreate(1, gvg_slotTarget[slot], c_unitCreateIgnorePlacement, owner,
+                       gvg_slotAt[slot], 270.0);
+        }
+        slot = slot + 1;
+    }
+
+    lvl = 1;
+    while (lvl <= upTo) {
+        if (!replaceOnly) {
+            gvg_locSeeded[loc * 4 + lvl] = true;
+        }
+        lvl = lvl + 1;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// Upgrading.
+//
+// A reason rather than a bare false, the same as Work_Refusal: a button that
+// does nothing is the same bug for a player and for whoever has to debug it.
+//--------------------------------------------------------------------------------------------------
+string Fort_UpgradeRefusal (int player, int loc) {
+    if (loc < 0 || loc >= gv_locCount) {
+        return "no such location";
+    }
+    if (!Slot_IsTablePlayer(player)) {
+        return "not a player";
+    }
+    if (gvg_locLevel[loc] >= c_fortMaxLevel) {
+        return "already at maximum";
+    }
+    if (!Fort_BuildingsComplete(loc, gvg_locLevel[loc])) {
+        return "the current level is not finished being built";
+    }
+    if (PlayerGetPropertyInt(player, c_playerPropMinerals)
+        < gvg_fortCost[gvg_locLevel[loc] + 1]) {
+        return "not enough minerals";
+    }
+    // Cross-department permission is Control Team's business and lives in
+    // usr/department.md: lv1 allows other sectors to level 1, lv2 to level 3,
+    // lv3 and lv4 without limit. There is no upgrade tree in the map yet, so
+    // nothing is refused here rather than something being invented.
+    return "";
+}
+
+bool Fort_Upgrade (int player, int loc) {
+    int cost;
+
+    if (Fort_UpgradeRefusal(player, loc) != "") {
+        return false;
+    }
+
+    cost = gvg_fortCost[gvg_locLevel[loc] + 1];
+    PlayerModifyPropertyInt(player, c_playerPropMinerals, c_playerPropOperSubtract, cost);
+    gvg_locLevel[loc] = gvg_locLevel[loc] + 1;
+
+    // Topping up earlier levels' dead garrison is part of buying a level, per
+    // the doc. It happens now rather than when the new buildings finish, because
+    // the earlier levels are already standing.
+    Fort_SeedGarrison(loc, gvg_locLevel[loc] - 1, true);
+
+    UIDisplayMessage(
+        PlayerGroupAll(), c_messageAreaSubtitle,
+        StringToText(gvg_locName[loc] + " defence level " + IntToString(gvg_locLevel[loc])));
+    return true;
+}
+
+//--------------------------------------------------------------------------------------------------
+// What a worker should be doing about fortifications, or -1.
+//
+// Asked by 30_workers before it considers devices or debris, which is the
+// ordering docs/usr/Defense.md gives: a worker clears debris when it has nothing
+// else to do.
+//--------------------------------------------------------------------------------------------------
+int Fort_JobFor (unit worker) {
+    point where;
+    fixed bestDist;
+    fixed d;
+    int best;
+    int slot;
+    int loc;
+
+    if (worker == null || !UnitIsAlive(worker)) {
+        return -1;
+    }
+    where = UnitGetPosition(worker);
+    best = -1;
+    bestDist = 0.0;
+
+    slot = 0;
+    while (slot < gv_slotCount) {
+        loc = gvg_slotLoc[slot];
+        if (!gvg_slotGuard[slot] && gvg_slotLevel[slot] <= gvg_locLevel[loc]
+            && !Fort_SlotFilled(slot) && !Fort_SlotBlocked(slot, Fort_OwnerOf(loc))) {
+            d = DistanceBetweenPoints(gvg_slotAt[slot], where);
+            if (best < 0 || d < bestDist) {
+                best = slot;
+                bestDist = d;
+            }
+        }
+        slot = slot + 1;
+    }
+    return best;
+}
+
+point Fort_SlotPoint (int slot) {
+    if (slot < 0 || slot >= gv_slotCount) {
+        return Point(0.0, 0.0);
+    }
+    return gvg_slotAt[slot];
+}
+
+//--------------------------------------------------------------------------------------------------
+// A worker that has arrived puts the building up, at a sliver of life. Repair
+// does the rest, which is what makes worker count the build speed.
+//--------------------------------------------------------------------------------------------------
+void Fort_RaiseIfArrived (unit worker, int slot) {
+    unit built;
+    int owner;
+
+    if (slot < 0 || slot >= gv_slotCount || Fort_SlotFilled(slot)) {
+        return;
+    }
+    if (DistanceBetweenPoints(UnitGetPosition(worker), gvg_slotAt[slot]) > c_fortBuildRange) {
+        return;
+    }
+
+    owner = Fort_OwnerOf(gvg_slotLoc[slot]);
+    if (owner < 1 || owner > 15) {
+        return;
+    }
+
+    UnitCreate(1, gvg_slotTarget[slot], c_unitCreateIgnorePlacement, owner,
+               gvg_slotAt[slot], 270.0);
+    built = UnitLastCreated();
+    if (built != null) {
+        UnitSetPropertyFixed(built, c_unitPropLifePercent, c_fortStartLifePct);
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// Damaged fortification buildings, so 30_workers can repair them alongside
+// devices.
+//--------------------------------------------------------------------------------------------------
+unitgroup Fort_Damaged () {
+    unitgroup found;
+    unitgroup all;
+    unit who;
+    int count;
+    int i;
+
+    found = UnitGroupEmpty();
+    all = ObjectsGen_ScanTurret();
+    count = UnitGroupCount(all, c_unitCountAlive);
+    i = 1;
+    while (i <= count) {
+        who = UnitGroupUnit(all, i);
+        if (who != null && UnitIsAlive(who)
+            && UnitGetPropertyFixed(who, c_unitPropLifePercent, true) < 100.0) {
+            UnitGroupAdd(found, who);
+        }
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Something walked into a location.
+//
+// An event rather than a poll: enemy presence changes constantly and is almost
+// always "no", so asking every location every second is a lot of work to learn
+// nothing. This fires only when it is actually true.
+//
+// The whole garrison answers, which is the doc's rule -- one turret engaging
+// pulls everybody at that location onto the same target. Read as "an enemy is
+// here" rather than "a turret has a target", because a structure weapon firing
+// on its own is not a thing script can reliably ask about.
+//--------------------------------------------------------------------------------------------------
+void Fort_Rouse (int loc, unit foe) {
+    unit who;
+    int slot;
+
+    slot = 0;
+    while (slot < gv_slotCount) {
+        if (gvg_slotLoc[slot] == loc && gvg_slotGuard[slot]) {
+            who = Fort_OccupantOfSlot(slot);
+            if (who != null && UnitIsAlive(who)) {
+                UnitIssueOrder(who, OrderTargetingUnit(AbilityCommand("attack", 0), foe),
+                               c_orderQueueReplace);
+            }
+        }
+        slot = slot + 1;
+    }
+}
+
+bool Fort_Enter_Func (bool testConds, bool runActions) {
+    unit who;
+    int loc;
+    int owner;
+
+    if (!runActions) {
+        return true;
+    }
+
+    who = EventUnit();
+    if (who == null || !UnitIsAlive(who)) {
+        return true;
+    }
+
+    loc = Fort_LocOfPoint(UnitGetPosition(who));
+    if (loc < 0) {
+        return true;
+    }
+
+    owner = Fort_OwnerOf(loc);
+    if (Fort_IsEnemyOf(who, owner)) {
+        Fort_Rouse(loc, who);
+    }
+    return true;
+}
+
+//--------------------------------------------------------------------------------------------------
+// The only thing left that is genuinely periodic: a level that has just finished
+// standing, and guards that have wandered off their posts.
+//--------------------------------------------------------------------------------------------------
+bool Fort_Tick_Func (bool testConds, bool runActions) {
+    unit who;
+    int loc;
+    int slot;
+
+    if (!runActions) {
+        return true;
+    }
+
+    loc = 0;
+    while (loc < gv_locCount) {
+        // A level that has just finished standing for the first time delivers
+        // its garrison. Rebuilding after a massacre does not come through here,
+        // because the flag is already set.
+        if (gvg_locLevel[loc] > 0
+            && !gvg_locSeeded[loc * 4 + gvg_locLevel[loc]]
+            && Fort_BuildingsComplete(loc, gvg_locLevel[loc])) {
+            Fort_SeedGarrison(loc, gvg_locLevel[loc], false);
+        }
+        loc = loc + 1;
+    }
+
+    slot = 0;
+    while (slot < gv_slotCount) {
+        if (gvg_slotGuard[slot]) {
+            who = Fort_OccupantOfSlot(slot);
+            if (who == null) {
+                // Nothing standing here. It either died or is out chasing
+                // something; either way the post is empty and the wanderer is
+                // handled by whichever slot it actually belongs to.
+            }
+            else if (UnitOrderCount(who) == 0
+                     && DistanceBetweenPoints(UnitGetPosition(who), gvg_slotAt[slot])
+                        > c_fortPostSlack) {
+                UnitIssueOrder(who,
+                               OrderTargetingPoint(AbilityCommand("move", 0), gvg_slotAt[slot]),
+                               c_orderQueueReplace);
+            }
+        }
+        slot = slot + 1;
+    }
+    return true;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every room and corridor drawn in the editor, and every position standing in
+// one. Parsed once: a marker's location, level and product cannot change.
+//--------------------------------------------------------------------------------------------------
+void Fort_BuildRegistry () {
+    unitgroup markers;
+    unit marker;
+    string name;
+    string what;
+    int count;
+    int level;
+    int loc;
+    int i;
+
+    gv_locCount = 0;
+    i = 0;
+    while (i < c_regionCount && gv_locCount < c_locMax) {
+        name = gvg_regionNames[i];
+        if (StringSub(name, 1, 5) == "room_" || StringSub(name, 1, 9) == "corridor_") {
+            gvg_locName[gv_locCount] = name;
+            gvg_locRegion[gv_locCount] = ObjectsGen_Region(name);
+            gvg_locCenter[gv_locCount] = RegionGetCenter(gvg_locRegion[gv_locCount]);
+            gvg_locLevel[gv_locCount] = 0;
+            gv_locCount = gv_locCount + 1;
+        }
+        i = i + 1;
+    }
+
+    gv_slotCount = 0;
+    markers = ObjectsGen_ScanFort();
+    count = UnitGroupCount(markers, c_unitCountAlive);
+    i = 1;
+    while (i <= count && gv_slotCount < c_slotMax) {
+        marker = UnitGroupUnit(markers, i);
+        if (marker != null) {
+            what = UnitGetType(marker);
+            level = Fort_LevelOfType(what);
+            loc = Fort_LocOfPoint(UnitGetPosition(marker));
+            if (level > 0 && loc >= 0) {
+                gvg_slotMarker[gv_slotCount] = marker;
+                gvg_slotAt[gv_slotCount] = UnitGetPosition(marker);
+                gvg_slotLoc[gv_slotCount] = loc;
+                gvg_slotLevel[gv_slotCount] = level;
+                gvg_slotTarget[gv_slotCount] = Fort_TargetOfType(what);
+                gvg_slotGuard[gv_slotCount] =
+                    StringSub(gvg_slotTarget[gv_slotCount], 1, StringLength(c_fortGuardPrefix))
+                    == c_fortGuardPrefix;
+                gv_slotCount = gv_slotCount + 1;
+            }
+        }
+        i = i + 1;
+    }
+}
+
+void Fortify_Init () {
+    int i;
+
+    gvg_fortCost[0] = 0;
+    gvg_fortCost[1] = 150;
+    gvg_fortCost[2] = 300;
+    gvg_fortCost[3] = 600;
+
+    i = 0;
+    while (i < 128) {
+        gvg_locSeeded[i] = false;
+        i = i + 1;
+    }
+
+    Fort_BuildRegistry();
+
+    gt_fortEnter = TriggerCreate("Fort_Enter_Func");
+    i = 0;
+    while (i < gv_locCount) {
+        TriggerAddEventUnitRegion(gt_fortEnter, null, gvg_locRegion[i], true);
+        i = i + 1;
+    }
+
+    gt_fortTick = TriggerCreate("Fort_Tick_Func");
+    TriggerAddEventTimePeriodic(gt_fortTick, c_fortTick, c_timeGame);
+}

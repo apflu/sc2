@@ -262,6 +262,74 @@ void Debug_ReportCells (int player) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// -fort [slot]
+//
+// Every room and corridor: level, owner, how much of it is standing. With an
+// index, buys the next level there -- standing in for the upgrade button, which
+// needs a room UI that does not exist.
+//
+// Prints the refusal reason rather than failing quietly, because "the current
+// level is not finished being built" is a rule people will hit constantly and
+// a dead button teaches nothing.
+//--------------------------------------------------------------------------------------------------
+void Debug_Fortify (int player, string word) {
+    string line;
+    int loc;
+    int slot;
+    int standing;
+    int total;
+    int want;
+
+    want = Debug_Int(word, -1);
+    if (want >= 0) {
+        if (Fort_UpgradeRefusal(player, want) != "") {
+            Debug_Say(player, "fort: " + Fort_UpgradeRefusal(player, want));
+        }
+        else {
+            Fort_Upgrade(player, want);
+        }
+    }
+
+    if (gv_locCount == 0) {
+        Debug_Say(player, "fort: no room_* or corridor_* region drawn yet ("
+                          + IntToString(c_regionCount) + " regions total)");
+        return;
+    }
+
+    loc = 0;
+    while (loc < gv_locCount) {
+        standing = 0;
+        total = 0;
+        slot = 0;
+        while (slot < gv_slotCount) {
+            if (gvg_slotLoc[slot] == loc && gvg_slotLevel[slot] <= gvg_locLevel[loc]) {
+                total = total + 1;
+                if (Fort_SlotFilled(slot)) {
+                    standing = standing + 1;
+                }
+            }
+            slot = slot + 1;
+        }
+
+        line = "fort " + IntToString(loc) + " " + gvg_locName[loc]
+               + "  lv" + IntToString(gvg_locLevel[loc]) + "/" + IntToString(c_fortMaxLevel)
+               + "  owner=";
+        if (Fort_OwnerOf(loc) == 0) {
+            line = line + "NOBODY";
+        }
+        else {
+            line = line + IntToString(Fort_OwnerOf(loc));
+        }
+        line = line + "  standing " + IntToString(standing) + "/" + IntToString(total);
+        if (gvg_locLevel[loc] < c_fortMaxLevel) {
+            line = line + "  next " + IntToString(gvg_fortCost[gvg_locLevel[loc] + 1]) + "m";
+        }
+        Debug_Say(player, line);
+        loc = loc + 1;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
 // -bank [save|wipe]
 //
 // What is on disk for this player, next to what is in memory. Printed together
@@ -783,6 +851,24 @@ void Debug_BuildHelp () {
         "Assets\\Textures\\btn-ability-terran-stimpack-color.dds");
 
     Debug_Tip(
+        "Fortifications",
+        "<c val=\"ffff8a\">-fort</c>  every room and corridor: level, owner, how much "
+        + "of it is standing.<n/>"
+        + "<c val=\"ffff8a\">-fort N</c>  buy the next level there.<n/><n/>"
+        + "The upgrade completes instantly and the level never drops, however "
+        + "much is destroyed. The BUILDINGS are not instant -- workers walk over "
+        + "and put them up, then repair and rebuild them free forever. So money "
+        + "and time are separate costs, and how fast you get what you paid for "
+        + "depends on how many workers you built ten minutes ago.<n/><n/>"
+        + "A level cannot be bought until the previous one is fully standing, "
+        + "and buildings under attack never finish. So a place that is being "
+        + "overrun cannot be reinforced: win the fight, then buy the answer.<n/><n/>"
+        + "Garrison warps in the first time a level stands, and buying a level "
+        + "replaces earlier casualties. Rebuilding after a massacre does not -- "
+        + "dead guards stay dead until somebody spends money.",
+        "Assets\\Textures\\btn-building-terran-bunker.dds");
+
+    Debug_Tip(
         "The save file",
         "<c val=\"ffff8a\">-bank</c>  what is in memory next to what is on disk.<n/>"
         + "<c val=\"ffff8a\">-bank save</c>  write now.  "
@@ -896,6 +982,9 @@ bool Debug_Chat_Func (bool testConds, bool runActions) {
     }
     else if (StringEqual(command, "-energy", false)) {
         Debug_Energy(player, StringWord(message, 2));
+    }
+    else if (StringEqual(command, "-fort", false)) {
+        Debug_Fortify(player, StringWord(message, 2));
     }
     else if (StringEqual(command, "-codec", false)) {
         Debug_Say(player, Codec_SelfTest());

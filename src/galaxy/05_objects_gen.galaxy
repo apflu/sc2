@@ -36,6 +36,10 @@ const int c_typesEmpCount = 1;
 string[1] gvg_typesEmp;
 const int c_typesEmp_BasicCount = 1;
 string[1] gvg_typesEmp_Basic;
+const int c_typesFortCount = 0;
+string[1] gvg_typesFort;
+const int c_typesGuardCount = 0;
+string[1] gvg_typesGuard;
 const int c_typesHeroCount = 1;
 string[1] gvg_typesHero;
 const int c_typesHero_AgentCount = 1;
@@ -62,8 +66,12 @@ const int c_typesSCV_UnassignedCount = 1;
 string[1] gvg_typesSCV_Unassigned;
 const int c_typesSCV_WorkerCount = 1;
 string[1] gvg_typesSCV_Worker;
+const int c_typesSalvageCount = 0;
+string[1] gvg_typesSalvage;
 const int c_typesToolCount = 0;
 string[1] gvg_typesTool;
+const int c_typesTurretCount = 0;
+string[1] gvg_typesTurret;
 
 // Editor object groups, flattened: names[i] owns the members
 // slice starting at groupFirst[i] and running groupSize[i] long.
@@ -644,6 +652,82 @@ bool ObjectsGen_IsEmp_Basic (unit target) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// Every live Fort unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanFort () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesFortCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesFort[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Fort, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsFort (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesFortCount) {
+        if (UnitGetType(target) == gvg_typesFort[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live Guard unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanGuard () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesGuardCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesGuard[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Guard, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsGuard (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesGuardCount) {
+        if (UnitGetType(target) == gvg_typesGuard[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
 // Every live Hero unit on the map, whichever variant and whoever owns it.
 // Works for runtime-spawned units too, unlike anything keyed on placed ids.
 //--------------------------------------------------------------------------------------------------
@@ -1138,6 +1222,44 @@ bool ObjectsGen_IsSCV_Worker (unit target) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// Every live Salvage unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanSalvage () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesSalvageCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesSalvage[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Salvage, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsSalvage (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesSalvageCount) {
+        if (UnitGetType(target) == gvg_typesSalvage[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
 // Every live Tool unit on the map, whichever variant and whoever owns it.
 // Works for runtime-spawned units too, unlike anything keyed on placed ids.
 //--------------------------------------------------------------------------------------------------
@@ -1168,6 +1290,44 @@ bool ObjectsGen_IsTool (unit target) {
     i = 0;
     while (i < c_typesToolCount) {
         if (UnitGetType(target) == gvg_typesTool[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live Turret unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanTurret () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesTurretCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesTurret[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Turret, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsTurret (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesTurretCount) {
+        if (UnitGetType(target) == gvg_typesTurret[i]) {
             return true;
         }
         i = i + 1;

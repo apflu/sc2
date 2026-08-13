@@ -1,10 +1,14 @@
 //--------------------------------------------------------------------------------------------------
 // Worker assignment.
 //
-// Workers pick their own job, repair before clearing. That ordering is the NPC
-// side of the same tension P0 is testing on the player: a damaged device pulls
-// a worker off the debris it was chewing on, so losing devices costs clearing
-// throughput as well as power.
+// Workers pick their own job, in the order docs/usr/Defense.md gives: put up
+// missing fortifications, then repair, then clear debris. Debris is what a
+// worker does when it has nothing else to do -- which is also why buying a
+// defence level costs clearing throughput, not just minerals.
+//
+// That ordering is the NPC side of the same tension P0 is testing on the player:
+// a damaged device pulls a worker off the debris it was chewing on, so losing
+// devices costs clearing throughput as well as power.
 //
 // Only idle workers get an order. Reissuing every tick would reset the attack
 // of a worker already mid-swing and nothing would ever finish.
@@ -26,6 +30,7 @@ bool Workers_Assign_Func (bool testConds, bool runActions) {
     point where;
     int count;
     int i;
+    int slot;
 
     if (!runActions) {
         return true;
@@ -38,30 +43,51 @@ bool Workers_Assign_Func (bool testConds, bool runActions) {
     }
 
     damaged = Devices_Damaged();
+    UnitGroupAddUnitGroup(damaged, Fort_Damaged());
     debris = ObjectsGen_ScanDebris();
 
     i = 1;
     while (i <= count) {
         worker = UnitGroupUnit(workers, i);
-        if (worker != null && UnitIsAlive(worker) && UnitOrderCount(worker) == 0) {
+        if (worker != null && UnitIsAlive(worker)) {
             where = UnitGetPosition(worker);
 
-            target = UnitGroupClosestToPoint(damaged, where);
-            if (target != null) {
-                UnitIssueOrder(
-                    worker,
-                    OrderTargetingUnit(AbilityCommand("Repair", 0), target),
-                    c_orderQueueReplace
-                );
+            // Asked even of a busy worker, because the one that matters is the
+            // worker already walking to a slot: arriving is what puts the
+            // building up, and it has a move order the whole way there.
+            slot = Fort_JobFor(worker);
+            if (slot >= 0) {
+                Fort_RaiseIfArrived(worker, slot);
+                slot = Fort_JobFor(worker);
             }
-            else {
-                target = UnitGroupClosestToPoint(debris, where);
-                if (target != null) {
+
+            if (UnitOrderCount(worker) == 0) {
+                if (slot >= 0) {
                     UnitIssueOrder(
                         worker,
-                        OrderTargetingUnit(AbilityCommand("attack", 0), target),
+                        OrderTargetingPoint(AbilityCommand("move", 0), Fort_SlotPoint(slot)),
                         c_orderQueueReplace
                     );
+                }
+                else {
+                    target = UnitGroupClosestToPoint(damaged, where);
+                    if (target != null) {
+                        UnitIssueOrder(
+                            worker,
+                            OrderTargetingUnit(AbilityCommand("Repair", 0), target),
+                            c_orderQueueReplace
+                        );
+                    }
+                    else {
+                        target = UnitGroupClosestToPoint(debris, where);
+                        if (target != null) {
+                            UnitIssueOrder(
+                                worker,
+                                OrderTargetingUnit(AbilityCommand("attack", 0), target),
+                                c_orderQueueReplace
+                            );
+                        }
+                    }
                 }
             }
         }

@@ -15,6 +15,7 @@
 | 改融毁 | [`design/systems/meltdown.md`](design/systems/meltdown.md) | |
 | 改难度、波次强度、考验 | [`design/systems/difficulty.md`](design/systems/difficulty.md) | |
 | 改存档 / 跨局解锁 | [`design/systems/persistence.md`](design/systems/persistence.md) | |
+| 改防御设施、房间、守军 | [`design/systems/fortify.md`](design/systems/fortify.md) | |
 | 加一个异想体 | [`dev/authoring-contract.md`](dev/authoring-contract.md) 的「异想体的 per-type 数字」一节 + 抄一份 `usr/abnormality/*.md` | |
 | 改构建流程 | [`dev/pipeline.md`](dev/pipeline.md) | |
 

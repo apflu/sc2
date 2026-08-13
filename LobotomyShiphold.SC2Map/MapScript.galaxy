@@ -937,6 +937,10 @@ const int c_typesEmpCount = 1;
 string[1] gvg_typesEmp;
 const int c_typesEmp_BasicCount = 1;
 string[1] gvg_typesEmp_Basic;
+const int c_typesFortCount = 0;
+string[1] gvg_typesFort;
+const int c_typesGuardCount = 0;
+string[1] gvg_typesGuard;
 const int c_typesHeroCount = 1;
 string[1] gvg_typesHero;
 const int c_typesHero_AgentCount = 1;
@@ -963,8 +967,12 @@ const int c_typesSCV_UnassignedCount = 1;
 string[1] gvg_typesSCV_Unassigned;
 const int c_typesSCV_WorkerCount = 1;
 string[1] gvg_typesSCV_Worker;
+const int c_typesSalvageCount = 0;
+string[1] gvg_typesSalvage;
 const int c_typesToolCount = 0;
 string[1] gvg_typesTool;
+const int c_typesTurretCount = 0;
+string[1] gvg_typesTurret;
 
 // Editor object groups, flattened: names[i] owns the members
 // slice starting at groupFirst[i] and running groupSize[i] long.
@@ -1545,6 +1553,82 @@ bool ObjectsGen_IsEmp_Basic (unit target) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// Every live Fort unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanFort () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesFortCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesFort[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Fort, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsFort (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesFortCount) {
+        if (UnitGetType(target) == gvg_typesFort[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live Guard unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanGuard () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesGuardCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesGuard[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Guard, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsGuard (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesGuardCount) {
+        if (UnitGetType(target) == gvg_typesGuard[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
 // Every live Hero unit on the map, whichever variant and whoever owns it.
 // Works for runtime-spawned units too, unlike anything keyed on placed ids.
 //--------------------------------------------------------------------------------------------------
@@ -2039,6 +2123,44 @@ bool ObjectsGen_IsSCV_Worker (unit target) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// Every live Salvage unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanSalvage () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesSalvageCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesSalvage[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Salvage, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsSalvage (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesSalvageCount) {
+        if (UnitGetType(target) == gvg_typesSalvage[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
 // Every live Tool unit on the map, whichever variant and whoever owns it.
 // Works for runtime-spawned units too, unlike anything keyed on placed ids.
 //--------------------------------------------------------------------------------------------------
@@ -2069,6 +2191,44 @@ bool ObjectsGen_IsTool (unit target) {
     i = 0;
     while (i < c_typesToolCount) {
         if (UnitGetType(target) == gvg_typesTool[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live Turret unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanTurret () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesTurretCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesTurret[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Turret, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsTurret (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesTurretCount) {
+        if (UnitGetType(target) == gvg_typesTurret[i]) {
             return true;
         }
         i = i + 1;
@@ -6405,15 +6565,672 @@ void Clearing_Init () {
 }
 
 //--------------------------------------------------------------------------------------------------
+// src/galaxy/26_fortify.galaxy
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// Fortifications.
+//
+// Rules from docs/usr/Defense.md. Baseline 6.2 asked for fixed positions and an
+// upgrade button rather than free placement, and that document says what goes in
+// the positions and what happens when a level lands.
+//
+// A LOCATION is a room or a corridor. The distinction is flavour -- both are
+// regions with fortification positions in them and both take a level -- so
+// nothing here branches on which kind it is.
+//
+//--------------------------------------------------------------------------------------------------
+// Money and time are two separate costs, and that is the whole mechanic.
+//
+// The upgrade completes instantly and the location stays at that level however
+// many buildings are destroyed. What does NOT happen instantly is the buildings:
+// worker SCVs have to walk over and put them up, and they repair and rebuild for
+// free forever after. So paying is a decision about minerals and getting the
+// benefit is a decision about how many workers you built ten minutes ago.
+//
+// Two rules bite together and produce something worth noticing: a level cannot
+// be bought until the previous level is fully standing, and buildings under
+// sustained attack never finish. So A LOCATION THAT IS BEING OVERRUN CANNOT BE
+// REINFORCED. You have to win the fight first and buy the answer afterwards,
+// which is the opposite of panic-buying and is deliberate.
+//
+//--------------------------------------------------------------------------------------------------
+// Free repair is free because the buildings cost nothing.
+//
+// SC2's Repair charges a fraction of the unit's own Cost, so "SCVs rebuild at no
+// charge" is a data decision rather than a script: give the fortification
+// buildings Cost 0 and take the minerals on the upgrade instead. Repair and
+// rebuild are then free with nothing written.
+//
+// The same choice makes construction free too, which is why a building is put up
+// at a sliver of life and left to the workers. That is not a simulation of
+// construction, it IS the construction: build time becomes repair time, repair
+// time falls with the number of workers, and "更多的scv让修建和修复都更快" comes
+// out without a build-time constant existing anywhere.
+//
+//--------------------------------------------------------------------------------------------------
+// The editor side, all through the type-prefix channel.
+//
+//     region  room_* / corridor_*        a location
+//     unit    Lob_Fort_L<n>_<Rest>       a position: level n, becomes Lob_<Rest>
+//
+// So Lob_Fort_L1_Turret_Basic is a level-1 position that becomes
+// Lob_Turret_Basic, and Lob_Fort_L2_Guard_Marine is a level-2 position that
+// becomes Lob_Guard_Marine. Segment substitution, exactly like the
+// Lob_Device_/Lob_DeviceDown_ pair, so a new kind of emplacement is two units in
+// the editor and no code.
+//
+// Anything becoming a Lob_Guard_* is garrison and warps in; anything else is a
+// building and gets built. One prefix decides it, because "does a worker put
+// this up or does it arrive" is the only thing the distinction is for.
+//
+// Whether a position is occupied is asked SPATIALLY -- is there a unit of that
+// type standing on the marker -- so nothing bookkeeps which building belongs to
+// which slot, and a building that dies simply makes its slot empty again.
+//
+//--------------------------------------------------------------------------------------------------
+// Markers are indexed once. Enemies arrive on an event.
+//
+// The first draft of this file re-scanned every marker on the map and tested
+// RegionContainsPoint on each of them, once per location, once per second. That
+// is a lot of work to re-derive a fact that cannot change: MARKERS DO NOT MOVE.
+// Their location, their level and what they become are parsed once at init and
+// never asked again.
+//
+// Enemy presence is the opposite kind of fact -- it changes constantly and
+// almost always to "no" -- so it is an event rather than a poll.
+// TriggerAddEventUnitRegion on each location fires when something walks in, and
+// the garrison is roused from there. Polling every location every second to
+// discover that nothing has happened is the same waste in the other direction.
+//
+// What is left on a timer is only "an idle guard has drifted off its post",
+// which is genuinely periodic and iterates the indexed slots rather than the map.
+//
+//--------------------------------------------------------------------------------------------------
+// Garrison arrives once per level, and death is permanent until the next one.
+//
+// Warping in happens the FIRST time a level's buildings all stand, and upgrading
+// also tops up the dead from earlier levels. Rebuilding after a massacre does
+// not. So a location whose garrison is wiped stays weaker until somebody spends
+// money on it, or until a production building in the room or Central Command's
+// passive replaces them -- neither of which exists yet, and both are noted where
+// they go.
+//
+// That makes losing garrison genuinely cost something, which a free respawn
+// would not.
+//--------------------------------------------------------------------------------------------------
+
+const int c_fortMaxLevel = 3;
+
+// TUNING, all of it. Minerals for each step up. Nobody has designed an economy
+// curve and these are placeholders that make the mechanic visible.
+int[4] gvg_fortCost;
+
+const fixed c_fortTick = 2.0;
+
+// How close a unit has to be to a marker to count as standing on it.
+const fixed c_fortSlotRadius = 1.5;
+
+// How close a worker has to get before the building goes up.
+const fixed c_fortBuildRange = 2.5;
+
+// And how far an enemy has to be for the position to be usable at all. An
+// occupied slot is refused rather than contested: docs/usr/Defense.md has the
+// worker cancel and go do something else, which a command queue then covers.
+const fixed c_fortEnemyRadius = 4.0;
+
+// What a building starts at, as a percent of its maximum. The rest is the
+// workers' job.
+const fixed c_fortStartLifePct = 8.0;
+
+// How far a garrison unit may drift from its post before being sent back.
+const fixed c_fortPostSlack = 2.0;
+
+const string c_fortMarkerPrefix = "Lob_Fort_L";
+const string c_fortGuardPrefix = "Lob_Guard_";
+
+const int c_locMax = 32;
+const int c_slotMax = 128;
+
+int gv_locCount;
+string[32] gvg_locName;
+region[32] gvg_locRegion;
+point[32] gvg_locCenter;
+int[32] gvg_locLevel;
+
+// Whether this location's level has ever stood complete, flattened
+// location * 4 + level. What makes garrison a one-time arrival.
+bool[128] gvg_locSeeded;
+
+// Every fortification position on the map, parsed once.
+int gv_slotCount;
+unit[128] gvg_slotMarker;
+point[128] gvg_slotAt;
+int[128] gvg_slotLoc;
+int[128] gvg_slotLevel;
+string[128] gvg_slotTarget;
+bool[128] gvg_slotGuard;
+
+trigger gt_fortTick;
+trigger gt_fortEnter;
+
+//--------------------------------------------------------------------------------------------------
+// Reading a marker's type. Called at init and nowhere else.
+//
+// Lob_Fort_L2_Guard_Marine -> level 2, becomes Lob_Guard_Marine.
+//--------------------------------------------------------------------------------------------------
+int Fort_LevelOfType (string what) {
+    int digit;
+
+    if (StringSub(what, 1, StringLength(c_fortMarkerPrefix)) != c_fortMarkerPrefix) {
+        return -1;
+    }
+    digit = StringToInt(StringSub(what, StringLength(c_fortMarkerPrefix) + 1,
+                                  StringLength(c_fortMarkerPrefix) + 1));
+    if (digit < 1 || digit > c_fortMaxLevel) {
+        return -1;
+    }
+    return digit;
+}
+
+string Fort_TargetOfType (string what) {
+    // Past "Lob_Fort_L", the digit, and the underscore after it.
+    return "Lob_" + StringSub(what, StringLength(c_fortMarkerPrefix) + 3, StringLength(what));
+}
+
+//--------------------------------------------------------------------------------------------------
+// Locations.
+//--------------------------------------------------------------------------------------------------
+int Fort_LocOfPoint (point where) {
+    int i;
+
+    i = 0;
+    while (i < gv_locCount) {
+        if (RegionContainsPoint(gvg_locRegion[i], where)) {
+            return i;
+        }
+        i = i + 1;
+    }
+    return -1;
+}
+
+int Fort_LocByName (string name) {
+    int i;
+
+    i = 0;
+    while (i < gv_locCount) {
+        if (gvg_locName[i] == name) {
+            return i;
+        }
+        i = i + 1;
+    }
+    return -1;
+}
+
+int Fort_LevelOf (int loc) {
+    if (loc < 0 || loc >= gv_locCount) {
+        return 0;
+    }
+    return gvg_locLevel[loc];
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whose location this is: the same spatial question the containment cells ask,
+// answered the same way.
+//
+// The region's centre rather than anything that walks into it, because this has
+// to be answerable for an EMPTY room -- who may upgrade it, and who the
+// buildings will belong to, are both questions asked before anybody is there.
+//--------------------------------------------------------------------------------------------------
+int Fort_OwnerOf (int loc) {
+    if (loc < 0 || loc >= gv_locCount) {
+        return 0;
+    }
+    return Sector_OwnerNear(gvg_locCenter[loc]);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Positions, and whether they are occupied.
+//--------------------------------------------------------------------------------------------------
+unit Fort_OccupantOfSlot (int slot) {
+    return UnitGroupClosestToPoint(
+        UnitGroup(gvg_slotTarget[slot], c_playerAny,
+                  RegionCircle(gvg_slotAt[slot], c_fortSlotRadius), null, 0),
+        gvg_slotAt[slot]);
+}
+
+bool Fort_SlotFilled (int slot) {
+    return Fort_OccupantOfSlot(slot) != null;
+}
+
+bool Fort_IsEnemyOf (unit who, int owner) {
+    unitgroup one;
+
+    if (who == null || owner < 1 || owner > 15) {
+        return false;
+    }
+    one = UnitGroupEmpty();
+    UnitGroupAdd(one, who);
+    return UnitGroupCount(UnitGroupFilterAlliance(one, owner, c_unitAllianceEnemy, 0),
+                          c_unitCountAlive) > 0;
+}
+
+bool Fort_SlotBlocked (int slot, int owner) {
+    if (owner < 1 || owner > 15) {
+        return false;
+    }
+    // Enemies only. An ally standing on the spot is not an obstacle, because the
+    // building is created ignoring placement -- which is exactly the doc's
+    // "friendly in the way means build anyway".
+    return UnitCountAlliance(owner, c_unitAllianceEnemy,
+                             RegionCircle(gvg_slotAt[slot], c_fortEnemyRadius),
+                             null, c_unitCountAlive) > 0;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether every building up to a level is standing. Buildings only -- garrison
+// arrives because the buildings are done, so waiting on it would deadlock.
+//--------------------------------------------------------------------------------------------------
+bool Fort_BuildingsComplete (int loc, int level) {
+    int slot;
+
+    slot = 0;
+    while (slot < gv_slotCount) {
+        if (gvg_slotLoc[slot] == loc && !gvg_slotGuard[slot]
+            && gvg_slotLevel[slot] <= level && !Fort_SlotFilled(slot)) {
+            return false;
+        }
+        slot = slot + 1;
+    }
+    return true;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Garrison arrival.
+//
+// `upTo` is inclusive. `replaceOnly` skips levels that have never landed, so
+// upgrading tops up what is missing without pre-delivering the level being
+// bought -- that one waits for its buildings.
+//--------------------------------------------------------------------------------------------------
+void Fort_SeedGarrison (int loc, int upTo, bool replaceOnly) {
+    int slot;
+    int owner;
+    int lvl;
+
+    owner = Fort_OwnerOf(loc);
+    if (owner < 1 || owner > 15) {
+        return;
+    }
+
+    slot = 0;
+    while (slot < gv_slotCount) {
+        lvl = gvg_slotLevel[slot];
+        if (gvg_slotLoc[slot] == loc && gvg_slotGuard[slot] && lvl <= upTo
+            && (!replaceOnly || gvg_locSeeded[loc * 4 + lvl])
+            && !Fort_SlotFilled(slot)) {
+            UnitCreate(1, gvg_slotTarget[slot], c_unitCreateIgnorePlacement, owner,
+                       gvg_slotAt[slot], 270.0);
+        }
+        slot = slot + 1;
+    }
+
+    lvl = 1;
+    while (lvl <= upTo) {
+        if (!replaceOnly) {
+            gvg_locSeeded[loc * 4 + lvl] = true;
+        }
+        lvl = lvl + 1;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// Upgrading.
+//
+// A reason rather than a bare false, the same as Work_Refusal: a button that
+// does nothing is the same bug for a player and for whoever has to debug it.
+//--------------------------------------------------------------------------------------------------
+string Fort_UpgradeRefusal (int player, int loc) {
+    if (loc < 0 || loc >= gv_locCount) {
+        return "no such location";
+    }
+    if (!Slot_IsTablePlayer(player)) {
+        return "not a player";
+    }
+    if (gvg_locLevel[loc] >= c_fortMaxLevel) {
+        return "already at maximum";
+    }
+    if (!Fort_BuildingsComplete(loc, gvg_locLevel[loc])) {
+        return "the current level is not finished being built";
+    }
+    if (PlayerGetPropertyInt(player, c_playerPropMinerals)
+        < gvg_fortCost[gvg_locLevel[loc] + 1]) {
+        return "not enough minerals";
+    }
+    // Cross-department permission is Control Team's business and lives in
+    // usr/department.md: lv1 allows other sectors to level 1, lv2 to level 3,
+    // lv3 and lv4 without limit. There is no upgrade tree in the map yet, so
+    // nothing is refused here rather than something being invented.
+    return "";
+}
+
+bool Fort_Upgrade (int player, int loc) {
+    int cost;
+
+    if (Fort_UpgradeRefusal(player, loc) != "") {
+        return false;
+    }
+
+    cost = gvg_fortCost[gvg_locLevel[loc] + 1];
+    PlayerModifyPropertyInt(player, c_playerPropMinerals, c_playerPropOperSubtract, cost);
+    gvg_locLevel[loc] = gvg_locLevel[loc] + 1;
+
+    // Topping up earlier levels' dead garrison is part of buying a level, per
+    // the doc. It happens now rather than when the new buildings finish, because
+    // the earlier levels are already standing.
+    Fort_SeedGarrison(loc, gvg_locLevel[loc] - 1, true);
+
+    UIDisplayMessage(
+        PlayerGroupAll(), c_messageAreaSubtitle,
+        StringToText(gvg_locName[loc] + " defence level " + IntToString(gvg_locLevel[loc])));
+    return true;
+}
+
+//--------------------------------------------------------------------------------------------------
+// What a worker should be doing about fortifications, or -1.
+//
+// Asked by 30_workers before it considers devices or debris, which is the
+// ordering docs/usr/Defense.md gives: a worker clears debris when it has nothing
+// else to do.
+//--------------------------------------------------------------------------------------------------
+int Fort_JobFor (unit worker) {
+    point where;
+    fixed bestDist;
+    fixed d;
+    int best;
+    int slot;
+    int loc;
+
+    if (worker == null || !UnitIsAlive(worker)) {
+        return -1;
+    }
+    where = UnitGetPosition(worker);
+    best = -1;
+    bestDist = 0.0;
+
+    slot = 0;
+    while (slot < gv_slotCount) {
+        loc = gvg_slotLoc[slot];
+        if (!gvg_slotGuard[slot] && gvg_slotLevel[slot] <= gvg_locLevel[loc]
+            && !Fort_SlotFilled(slot) && !Fort_SlotBlocked(slot, Fort_OwnerOf(loc))) {
+            d = DistanceBetweenPoints(gvg_slotAt[slot], where);
+            if (best < 0 || d < bestDist) {
+                best = slot;
+                bestDist = d;
+            }
+        }
+        slot = slot + 1;
+    }
+    return best;
+}
+
+point Fort_SlotPoint (int slot) {
+    if (slot < 0 || slot >= gv_slotCount) {
+        return Point(0.0, 0.0);
+    }
+    return gvg_slotAt[slot];
+}
+
+//--------------------------------------------------------------------------------------------------
+// A worker that has arrived puts the building up, at a sliver of life. Repair
+// does the rest, which is what makes worker count the build speed.
+//--------------------------------------------------------------------------------------------------
+void Fort_RaiseIfArrived (unit worker, int slot) {
+    unit built;
+    int owner;
+
+    if (slot < 0 || slot >= gv_slotCount || Fort_SlotFilled(slot)) {
+        return;
+    }
+    if (DistanceBetweenPoints(UnitGetPosition(worker), gvg_slotAt[slot]) > c_fortBuildRange) {
+        return;
+    }
+
+    owner = Fort_OwnerOf(gvg_slotLoc[slot]);
+    if (owner < 1 || owner > 15) {
+        return;
+    }
+
+    UnitCreate(1, gvg_slotTarget[slot], c_unitCreateIgnorePlacement, owner,
+               gvg_slotAt[slot], 270.0);
+    built = UnitLastCreated();
+    if (built != null) {
+        UnitSetPropertyFixed(built, c_unitPropLifePercent, c_fortStartLifePct);
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// Damaged fortification buildings, so 30_workers can repair them alongside
+// devices.
+//--------------------------------------------------------------------------------------------------
+unitgroup Fort_Damaged () {
+    unitgroup found;
+    unitgroup all;
+    unit who;
+    int count;
+    int i;
+
+    found = UnitGroupEmpty();
+    all = ObjectsGen_ScanTurret();
+    count = UnitGroupCount(all, c_unitCountAlive);
+    i = 1;
+    while (i <= count) {
+        who = UnitGroupUnit(all, i);
+        if (who != null && UnitIsAlive(who)
+            && UnitGetPropertyFixed(who, c_unitPropLifePercent, true) < 100.0) {
+            UnitGroupAdd(found, who);
+        }
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Something walked into a location.
+//
+// An event rather than a poll: enemy presence changes constantly and is almost
+// always "no", so asking every location every second is a lot of work to learn
+// nothing. This fires only when it is actually true.
+//
+// The whole garrison answers, which is the doc's rule -- one turret engaging
+// pulls everybody at that location onto the same target. Read as "an enemy is
+// here" rather than "a turret has a target", because a structure weapon firing
+// on its own is not a thing script can reliably ask about.
+//--------------------------------------------------------------------------------------------------
+void Fort_Rouse (int loc, unit foe) {
+    unit who;
+    int slot;
+
+    slot = 0;
+    while (slot < gv_slotCount) {
+        if (gvg_slotLoc[slot] == loc && gvg_slotGuard[slot]) {
+            who = Fort_OccupantOfSlot(slot);
+            if (who != null && UnitIsAlive(who)) {
+                UnitIssueOrder(who, OrderTargetingUnit(AbilityCommand("attack", 0), foe),
+                               c_orderQueueReplace);
+            }
+        }
+        slot = slot + 1;
+    }
+}
+
+bool Fort_Enter_Func (bool testConds, bool runActions) {
+    unit who;
+    int loc;
+    int owner;
+
+    if (!runActions) {
+        return true;
+    }
+
+    who = EventUnit();
+    if (who == null || !UnitIsAlive(who)) {
+        return true;
+    }
+
+    loc = Fort_LocOfPoint(UnitGetPosition(who));
+    if (loc < 0) {
+        return true;
+    }
+
+    owner = Fort_OwnerOf(loc);
+    if (Fort_IsEnemyOf(who, owner)) {
+        Fort_Rouse(loc, who);
+    }
+    return true;
+}
+
+//--------------------------------------------------------------------------------------------------
+// The only thing left that is genuinely periodic: a level that has just finished
+// standing, and guards that have wandered off their posts.
+//--------------------------------------------------------------------------------------------------
+bool Fort_Tick_Func (bool testConds, bool runActions) {
+    unit who;
+    int loc;
+    int slot;
+
+    if (!runActions) {
+        return true;
+    }
+
+    loc = 0;
+    while (loc < gv_locCount) {
+        // A level that has just finished standing for the first time delivers
+        // its garrison. Rebuilding after a massacre does not come through here,
+        // because the flag is already set.
+        if (gvg_locLevel[loc] > 0
+            && !gvg_locSeeded[loc * 4 + gvg_locLevel[loc]]
+            && Fort_BuildingsComplete(loc, gvg_locLevel[loc])) {
+            Fort_SeedGarrison(loc, gvg_locLevel[loc], false);
+        }
+        loc = loc + 1;
+    }
+
+    slot = 0;
+    while (slot < gv_slotCount) {
+        if (gvg_slotGuard[slot]) {
+            who = Fort_OccupantOfSlot(slot);
+            if (who == null) {
+                // Nothing standing here. It either died or is out chasing
+                // something; either way the post is empty and the wanderer is
+                // handled by whichever slot it actually belongs to.
+            }
+            else if (UnitOrderCount(who) == 0
+                     && DistanceBetweenPoints(UnitGetPosition(who), gvg_slotAt[slot])
+                        > c_fortPostSlack) {
+                UnitIssueOrder(who,
+                               OrderTargetingPoint(AbilityCommand("move", 0), gvg_slotAt[slot]),
+                               c_orderQueueReplace);
+            }
+        }
+        slot = slot + 1;
+    }
+    return true;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every room and corridor drawn in the editor, and every position standing in
+// one. Parsed once: a marker's location, level and product cannot change.
+//--------------------------------------------------------------------------------------------------
+void Fort_BuildRegistry () {
+    unitgroup markers;
+    unit marker;
+    string name;
+    string what;
+    int count;
+    int level;
+    int loc;
+    int i;
+
+    gv_locCount = 0;
+    i = 0;
+    while (i < c_regionCount && gv_locCount < c_locMax) {
+        name = gvg_regionNames[i];
+        if (StringSub(name, 1, 5) == "room_" || StringSub(name, 1, 9) == "corridor_") {
+            gvg_locName[gv_locCount] = name;
+            gvg_locRegion[gv_locCount] = ObjectsGen_Region(name);
+            gvg_locCenter[gv_locCount] = RegionGetCenter(gvg_locRegion[gv_locCount]);
+            gvg_locLevel[gv_locCount] = 0;
+            gv_locCount = gv_locCount + 1;
+        }
+        i = i + 1;
+    }
+
+    gv_slotCount = 0;
+    markers = ObjectsGen_ScanFort();
+    count = UnitGroupCount(markers, c_unitCountAlive);
+    i = 1;
+    while (i <= count && gv_slotCount < c_slotMax) {
+        marker = UnitGroupUnit(markers, i);
+        if (marker != null) {
+            what = UnitGetType(marker);
+            level = Fort_LevelOfType(what);
+            loc = Fort_LocOfPoint(UnitGetPosition(marker));
+            if (level > 0 && loc >= 0) {
+                gvg_slotMarker[gv_slotCount] = marker;
+                gvg_slotAt[gv_slotCount] = UnitGetPosition(marker);
+                gvg_slotLoc[gv_slotCount] = loc;
+                gvg_slotLevel[gv_slotCount] = level;
+                gvg_slotTarget[gv_slotCount] = Fort_TargetOfType(what);
+                gvg_slotGuard[gv_slotCount] =
+                    StringSub(gvg_slotTarget[gv_slotCount], 1, StringLength(c_fortGuardPrefix))
+                    == c_fortGuardPrefix;
+                gv_slotCount = gv_slotCount + 1;
+            }
+        }
+        i = i + 1;
+    }
+}
+
+void Fortify_Init () {
+    int i;
+
+    gvg_fortCost[0] = 0;
+    gvg_fortCost[1] = 150;
+    gvg_fortCost[2] = 300;
+    gvg_fortCost[3] = 600;
+
+    i = 0;
+    while (i < 128) {
+        gvg_locSeeded[i] = false;
+        i = i + 1;
+    }
+
+    Fort_BuildRegistry();
+
+    gt_fortEnter = TriggerCreate("Fort_Enter_Func");
+    i = 0;
+    while (i < gv_locCount) {
+        TriggerAddEventUnitRegion(gt_fortEnter, null, gvg_locRegion[i], true);
+        i = i + 1;
+    }
+
+    gt_fortTick = TriggerCreate("Fort_Tick_Func");
+    TriggerAddEventTimePeriodic(gt_fortTick, c_fortTick, c_timeGame);
+}
+
+//--------------------------------------------------------------------------------------------------
 // src/galaxy/30_workers.galaxy
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
 // Worker assignment.
 //
-// Workers pick their own job, repair before clearing. That ordering is the NPC
-// side of the same tension P0 is testing on the player: a damaged device pulls
-// a worker off the debris it was chewing on, so losing devices costs clearing
-// throughput as well as power.
+// Workers pick their own job, in the order docs/usr/Defense.md gives: put up
+// missing fortifications, then repair, then clear debris. Debris is what a
+// worker does when it has nothing else to do -- which is also why buying a
+// defence level costs clearing throughput, not just minerals.
+//
+// That ordering is the NPC side of the same tension P0 is testing on the player:
+// a damaged device pulls a worker off the debris it was chewing on, so losing
+// devices costs clearing throughput as well as power.
 //
 // Only idle workers get an order. Reissuing every tick would reset the attack
 // of a worker already mid-swing and nothing would ever finish.
@@ -6435,6 +7252,7 @@ bool Workers_Assign_Func (bool testConds, bool runActions) {
     point where;
     int count;
     int i;
+    int slot;
 
     if (!runActions) {
         return true;
@@ -6447,30 +7265,51 @@ bool Workers_Assign_Func (bool testConds, bool runActions) {
     }
 
     damaged = Devices_Damaged();
+    UnitGroupAddUnitGroup(damaged, Fort_Damaged());
     debris = ObjectsGen_ScanDebris();
 
     i = 1;
     while (i <= count) {
         worker = UnitGroupUnit(workers, i);
-        if (worker != null && UnitIsAlive(worker) && UnitOrderCount(worker) == 0) {
+        if (worker != null && UnitIsAlive(worker)) {
             where = UnitGetPosition(worker);
 
-            target = UnitGroupClosestToPoint(damaged, where);
-            if (target != null) {
-                UnitIssueOrder(
-                    worker,
-                    OrderTargetingUnit(AbilityCommand("Repair", 0), target),
-                    c_orderQueueReplace
-                );
+            // Asked even of a busy worker, because the one that matters is the
+            // worker already walking to a slot: arriving is what puts the
+            // building up, and it has a move order the whole way there.
+            slot = Fort_JobFor(worker);
+            if (slot >= 0) {
+                Fort_RaiseIfArrived(worker, slot);
+                slot = Fort_JobFor(worker);
             }
-            else {
-                target = UnitGroupClosestToPoint(debris, where);
-                if (target != null) {
+
+            if (UnitOrderCount(worker) == 0) {
+                if (slot >= 0) {
                     UnitIssueOrder(
                         worker,
-                        OrderTargetingUnit(AbilityCommand("attack", 0), target),
+                        OrderTargetingPoint(AbilityCommand("move", 0), Fort_SlotPoint(slot)),
                         c_orderQueueReplace
                     );
+                }
+                else {
+                    target = UnitGroupClosestToPoint(damaged, where);
+                    if (target != null) {
+                        UnitIssueOrder(
+                            worker,
+                            OrderTargetingUnit(AbilityCommand("Repair", 0), target),
+                            c_orderQueueReplace
+                        );
+                    }
+                    else {
+                        target = UnitGroupClosestToPoint(debris, where);
+                        if (target != null) {
+                            UnitIssueOrder(
+                                worker,
+                                OrderTargetingUnit(AbilityCommand("attack", 0), target),
+                                c_orderQueueReplace
+                            );
+                        }
+                    }
                 }
             }
         }
@@ -6511,7 +7350,63 @@ void Workers_Init () {
 
 const fixed c_minerAssignPeriod = 2.0;
 
+//--------------------------------------------------------------------------------------------------
+// Salvage: a slow trickle into the ore pile.
+//
+// A level-0 fixture in a room, per docs/usr/Defense.md. Its job is narrow and
+// worth stating so nobody later mistakes it for an economy: it exists so that a
+// sector with every scrap of debris cleared and every abnormality temporarily
+// unworkable does not sit at zero income with nothing to do about it.
+//
+// It pays into the PILE, not into the player's minerals, and that is the whole
+// reason it does not change the shape of anything. Baseline 4.4 has the second
+// stage of the chain fully automatic and driven by miners walking; this adds a
+// floor under the FIRST stage instead of a bypass around the second. The player
+// still needs miners, the miners still walk, and a player whose pile is being
+// worked is not affected by this at all.
+//
+// The rate is deliberately bad. It is a floor, not a strategy.
+//--------------------------------------------------------------------------------------------------
+const fixed c_salvagePeriod = 10.0;
+
+// TUNING. Per salvage device, per period, into the nearest pile.
+const int c_salvageAmount = 5;
+
 trigger gt_minerAssign;
+trigger gt_salvage;
+
+bool Economy_Salvage_Func (bool testConds, bool runActions) {
+    unitgroup devices;
+    unit device;
+    unit pile;
+    int count;
+    int i;
+
+    if (!runActions) {
+        return true;
+    }
+
+    devices = ObjectsGen_ScanSalvage();
+    count = UnitGroupCount(devices, c_unitCountAlive);
+
+    i = 1;
+    while (i <= count) {
+        device = UnitGroupUnit(devices, i);
+        if (device != null && UnitIsAlive(device)) {
+            // Nearest pile, which is the same spatial idiom the doors and the
+            // control panels use. A salvage device in a room feeds that room's
+            // sector without anything having to be told which sector it is in.
+            pile = UnitGroupClosestToPoint(ObjectsGen_ScanPile(), UnitGetPosition(device));
+            if (pile != null && UnitIsAlive(pile)) {
+                UnitSetPropertyInt(
+                    pile, c_unitPropResources,
+                    UnitGetPropertyInt(pile, c_unitPropResources, true) + c_salvageAmount);
+            }
+        }
+        i = i + 1;
+    }
+    return true;
+}
 
 //--------------------------------------------------------------------------------------------------
 // How much is sitting in the pile, across every pile there is.
@@ -6640,6 +7535,9 @@ string Economy_StatusLine (int player) {
 void Economy_Init () {
     gt_minerAssign = TriggerCreate("Economy_MinerAssign_Func");
     TriggerAddEventTimePeriodic(gt_minerAssign, c_minerAssignPeriod, c_timeGame);
+
+    gt_salvage = TriggerCreate("Economy_Salvage_Func");
+    TriggerAddEventTimePeriodic(gt_salvage, c_salvagePeriod, c_timeGame);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -7060,6 +7958,74 @@ void Debug_ReportCells (int player) {
 
         Debug_Say(player, line);
         slot = slot + 1;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// -fort [slot]
+//
+// Every room and corridor: level, owner, how much of it is standing. With an
+// index, buys the next level there -- standing in for the upgrade button, which
+// needs a room UI that does not exist.
+//
+// Prints the refusal reason rather than failing quietly, because "the current
+// level is not finished being built" is a rule people will hit constantly and
+// a dead button teaches nothing.
+//--------------------------------------------------------------------------------------------------
+void Debug_Fortify (int player, string word) {
+    string line;
+    int loc;
+    int slot;
+    int standing;
+    int total;
+    int want;
+
+    want = Debug_Int(word, -1);
+    if (want >= 0) {
+        if (Fort_UpgradeRefusal(player, want) != "") {
+            Debug_Say(player, "fort: " + Fort_UpgradeRefusal(player, want));
+        }
+        else {
+            Fort_Upgrade(player, want);
+        }
+    }
+
+    if (gv_locCount == 0) {
+        Debug_Say(player, "fort: no room_* or corridor_* region drawn yet ("
+                          + IntToString(c_regionCount) + " regions total)");
+        return;
+    }
+
+    loc = 0;
+    while (loc < gv_locCount) {
+        standing = 0;
+        total = 0;
+        slot = 0;
+        while (slot < gv_slotCount) {
+            if (gvg_slotLoc[slot] == loc && gvg_slotLevel[slot] <= gvg_locLevel[loc]) {
+                total = total + 1;
+                if (Fort_SlotFilled(slot)) {
+                    standing = standing + 1;
+                }
+            }
+            slot = slot + 1;
+        }
+
+        line = "fort " + IntToString(loc) + " " + gvg_locName[loc]
+               + "  lv" + IntToString(gvg_locLevel[loc]) + "/" + IntToString(c_fortMaxLevel)
+               + "  owner=";
+        if (Fort_OwnerOf(loc) == 0) {
+            line = line + "NOBODY";
+        }
+        else {
+            line = line + IntToString(Fort_OwnerOf(loc));
+        }
+        line = line + "  standing " + IntToString(standing) + "/" + IntToString(total);
+        if (gvg_locLevel[loc] < c_fortMaxLevel) {
+            line = line + "  next " + IntToString(gvg_fortCost[gvg_locLevel[loc] + 1]) + "m";
+        }
+        Debug_Say(player, line);
+        loc = loc + 1;
     }
 }
 
@@ -7585,6 +8551,24 @@ void Debug_BuildHelp () {
         "Assets\\Textures\\btn-ability-terran-stimpack-color.dds");
 
     Debug_Tip(
+        "Fortifications",
+        "<c val=\"ffff8a\">-fort</c>  every room and corridor: level, owner, how much "
+        + "of it is standing.<n/>"
+        + "<c val=\"ffff8a\">-fort N</c>  buy the next level there.<n/><n/>"
+        + "The upgrade completes instantly and the level never drops, however "
+        + "much is destroyed. The BUILDINGS are not instant -- workers walk over "
+        + "and put them up, then repair and rebuild them free forever. So money "
+        + "and time are separate costs, and how fast you get what you paid for "
+        + "depends on how many workers you built ten minutes ago.<n/><n/>"
+        + "A level cannot be bought until the previous one is fully standing, "
+        + "and buildings under attack never finish. So a place that is being "
+        + "overrun cannot be reinforced: win the fight, then buy the answer.<n/><n/>"
+        + "Garrison warps in the first time a level stands, and buying a level "
+        + "replaces earlier casualties. Rebuilding after a massacre does not -- "
+        + "dead guards stay dead until somebody spends money.",
+        "Assets\\Textures\\btn-building-terran-bunker.dds");
+
+    Debug_Tip(
         "The save file",
         "<c val=\"ffff8a\">-bank</c>  what is in memory next to what is on disk.<n/>"
         + "<c val=\"ffff8a\">-bank save</c>  write now.  "
@@ -7699,6 +8683,9 @@ bool Debug_Chat_Func (bool testConds, bool runActions) {
     else if (StringEqual(command, "-energy", false)) {
         Debug_Energy(player, StringWord(message, 2));
     }
+    else if (StringEqual(command, "-fort", false)) {
+        Debug_Fortify(player, StringWord(message, 2));
+    }
     else if (StringEqual(command, "-codec", false)) {
         Debug_Say(player, Codec_SelfTest());
     }
@@ -7750,6 +8737,7 @@ void InitMap () {
     Bank_Init();
     Devices_Init();
     Clearing_Init();
+    Fortify_Init();
     Workers_Init();
     Economy_Init();
     Waves_Init();

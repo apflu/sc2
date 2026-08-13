@@ -22,7 +22,63 @@
 
 const fixed c_minerAssignPeriod = 2.0;
 
+//--------------------------------------------------------------------------------------------------
+// Salvage: a slow trickle into the ore pile.
+//
+// A level-0 fixture in a room, per docs/usr/Defense.md. Its job is narrow and
+// worth stating so nobody later mistakes it for an economy: it exists so that a
+// sector with every scrap of debris cleared and every abnormality temporarily
+// unworkable does not sit at zero income with nothing to do about it.
+//
+// It pays into the PILE, not into the player's minerals, and that is the whole
+// reason it does not change the shape of anything. Baseline 4.4 has the second
+// stage of the chain fully automatic and driven by miners walking; this adds a
+// floor under the FIRST stage instead of a bypass around the second. The player
+// still needs miners, the miners still walk, and a player whose pile is being
+// worked is not affected by this at all.
+//
+// The rate is deliberately bad. It is a floor, not a strategy.
+//--------------------------------------------------------------------------------------------------
+const fixed c_salvagePeriod = 10.0;
+
+// TUNING. Per salvage device, per period, into the nearest pile.
+const int c_salvageAmount = 5;
+
 trigger gt_minerAssign;
+trigger gt_salvage;
+
+bool Economy_Salvage_Func (bool testConds, bool runActions) {
+    unitgroup devices;
+    unit device;
+    unit pile;
+    int count;
+    int i;
+
+    if (!runActions) {
+        return true;
+    }
+
+    devices = ObjectsGen_ScanSalvage();
+    count = UnitGroupCount(devices, c_unitCountAlive);
+
+    i = 1;
+    while (i <= count) {
+        device = UnitGroupUnit(devices, i);
+        if (device != null && UnitIsAlive(device)) {
+            // Nearest pile, which is the same spatial idiom the doors and the
+            // control panels use. A salvage device in a room feeds that room's
+            // sector without anything having to be told which sector it is in.
+            pile = UnitGroupClosestToPoint(ObjectsGen_ScanPile(), UnitGetPosition(device));
+            if (pile != null && UnitIsAlive(pile)) {
+                UnitSetPropertyInt(
+                    pile, c_unitPropResources,
+                    UnitGetPropertyInt(pile, c_unitPropResources, true) + c_salvageAmount);
+            }
+        }
+        i = i + 1;
+    }
+    return true;
+}
 
 //--------------------------------------------------------------------------------------------------
 // How much is sitting in the pile, across every pile there is.
@@ -151,4 +207,7 @@ string Economy_StatusLine (int player) {
 void Economy_Init () {
     gt_minerAssign = TriggerCreate("Economy_MinerAssign_Func");
     TriggerAddEventTimePeriodic(gt_minerAssign, c_minerAssignPeriod, c_timeGame);
+
+    gt_salvage = TriggerCreate("Economy_Salvage_Func");
+    TriggerAddEventTimePeriodic(gt_salvage, c_salvagePeriod, c_timeGame);
 }
