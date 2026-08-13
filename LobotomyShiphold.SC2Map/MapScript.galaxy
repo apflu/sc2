@@ -35,9 +35,12 @@ include "TriggerLibs/NativeLib"
 const int c_zergPlayer = 7;
 const int c_abnoPlayer = 8;
 
-// Still single player for the parts of P0 that have not been made per-player
-// yet: the character, the economy readout. Not a claim about the map.
-const int c_p0Player = 1;
+// There used to be a c_p0Player = 1 here, for the parts of P0 that had not been
+// made per-player yet -- the character, the department, the economy readout. It
+// is gone because they all have been, and nothing refers to it. If a new one
+// appears, that is the signal to write the per-player version instead: this
+// constant is how a single-player assumption spreads, because it reads like a
+// configuration value and is actually a claim that there is one player.
 
 //--------------------------------------------------------------------------------------------------
 // Somebody at the table, as opposed to the swarm or whatever is loose.
@@ -2922,6 +2925,10 @@ const int c_deptHokma = 7;
 const int c_deptBinah = 8;
 const int c_deptCount = 9;
 
+// The four upper departments are contiguous and start at Malkuth, which is what
+// lets the placeholder deal round-robin without a table.
+const int c_deptAsiyahCount = 4;
+
 // Sephirot tiers, as the doc groups them.
 const int c_tierAsiyah = 0;
 const int c_tierBriah = 1;
@@ -3110,6 +3117,7 @@ bool Dept_UpgradeChanged_Func (bool testConds, bool runActions) {
 
 void Departments_Init () {
     int player;
+    int dealt;
 
     gvg_deptKey[c_deptMalkuth] = "Malkuth";
     gvg_deptKey[c_deptYesod] = "Yesod";
@@ -3147,8 +3155,24 @@ void Departments_Init () {
         player = player + 1;
     }
 
-    // Placeholder until there is a selection screen.
-    Dept_SetOf(c_p0Player, c_deptMalkuth);
+    // PLACEHOLDER until there is a selection screen. Baseline 7.1 has each
+    // player choosing, with repeats allowed but at least three distinct
+    // departments in a game; dealing the four Asiyah ones round-robin satisfies
+    // that for any table of three or more and needs nothing from the lobby.
+    //
+    // It used to hand Malkuth to player 1 and nothing to anybody else, which
+    // made Dept_Of a working test for "is this player 1" and a broken one for
+    // everything it is actually asked. Ally upgrade propagation walks the table
+    // by department, and the victory loop used to as well.
+    dealt = 0;
+    player = 1;
+    while (player <= 15) {
+        if (Slot_IsTablePlayer(player)) {
+            Dept_SetOf(player, c_deptMalkuth + dealt % c_deptAsiyahCount);
+            dealt = dealt + 1;
+        }
+        player = player + 1;
+    }
 
     gt_upgradeChanged = TriggerCreate("Dept_UpgradeChanged_Func");
     player = 1;
@@ -5117,108 +5141,216 @@ void Work_Init () {
 // src/galaxy/15_hero.galaxy
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
-// The player character.
+// The player characters.
 //
 // P0's whole proposition is that clearing, fighting and repairing all want the
 // same pair of hands. That only means anything if the hands exist, so this
-// module owns the one unit the player actually drives: handing it over at
+// module owns the one unit each player actually drives: handing it over at
 // start, and putting it back after it dies.
 //
 // Death costs time and nothing else, per the design baseline -- no resources
 // lost, no lasting penalty on the character. The cost is the walk back plus
-// whatever fell apart in the meantime, and that is a real cost precisely
-// because the other two jobs do not pause while the player is dead.
+// whatever fell apart in the meantime, and that is a real cost precisely because
+// the other two jobs do not pause while the player is dead.
 //
-// The character's type is read from the generated table rather than named
-// here, so renaming the unit in the editor does not need a code change. If no
-// Hero unit has been authored yet the module simply does nothing.
+// The character's type is read from the generated table rather than named here,
+// so renaming the unit in the editor does not need a code change. If no Hero
+// unit has been authored yet the module simply does nothing.
+//
+//--------------------------------------------------------------------------------------------------
+// One per player, and it used to be one full stop.
+//
+// The old version kept a single gv_hero, took the FIRST hero unit on the map
+// whoever owned it, and respawned it for player 1. On a six-player map that is
+// five orphans: characters that belong to somebody, die once, and never come
+// back, while player 1 quietly acquires a second body at their own home.
+//
+// Nothing about that was a shortcut worth keeping past the point where a second
+// player existed, and build-order.md says so outright: new modules are written
+// per player, and the ones carrying this debt get fixed when something touches
+// them. Meltdown, energy and containment are all per player now, and they cannot
+// be exercised at all through a single-player character layer.
+//
+// Respawn is a tick rather than a timer per player. TriggerAddEventTimer would
+// need EventTimer() compared against sixteen handles to find out whose it was,
+// which is more machinery than a loop that already has to exist -- and every
+// other clock in this project (containment, meltdown, sector) is a tick.
 //--------------------------------------------------------------------------------------------------
 
 const fixed c_heroRespawnDelay = 15.0;
+const fixed c_heroTick = 1.0;
 
-unit gv_hero;
-point gv_heroHome;
-timer gv_heroRespawn;
+unit[16] gvg_hero;
+point[16] gvg_heroHome;
+fixed[16] gvg_heroBackAt;
+bool[16] gvg_heroHas;
 
 trigger gt_heroDied;
-trigger gt_heroBack;
+trigger gt_heroTick;
+
+unit Hero_Of (int player) {
+    if (player < 1 || player > 15) {
+        return null;
+    }
+    return gvg_hero[player];
+}
+
+point Hero_HomeOf (int player) {
+    if (player < 1 || player > 15) {
+        return Point(0.0, 0.0);
+    }
+    return gvg_heroHome[player];
+}
 
 //--------------------------------------------------------------------------------------------------
-// Creates the character at its home point and hands it to the player.
+// Creates one player's character at their own home point.
 //--------------------------------------------------------------------------------------------------
-void Hero_Spawn () {
-    if (c_typesHeroCount == 0) {
+void Hero_Spawn (int player) {
+    if (c_typesHeroCount == 0 || !gvg_heroHas[player]) {
         return;
     }
 
     // Ignoring placement is not optional. The home point may well be full of
-    // zerglings at exactly the moment the character is due back, and "the
-    // player does not respawn" is not a cost the design ever asked for.
+    // zerglings at exactly the moment the character is due back, and "the player
+    // does not respawn" is not a cost the design ever asked for.
     UnitCreate(1, gvg_typesHero[0], c_unitCreateIgnorePlacement,
-               c_p0Player, gv_heroHome, 270.0);
-    gv_hero = UnitLastCreated();
-    UnitSelect(gv_hero, c_p0Player, true);
-    CameraPan(c_p0Player, gv_heroHome, 0.0, -1.0, 10.0, true);
+               player, gvg_heroHome[player], 270.0);
+    gvg_hero[player] = UnitLastCreated();
+    UnitSelect(gvg_hero[player], player, true);
+    CameraPan(player, gvg_heroHome[player], 0.0, -1.0, 10.0, true);
 }
 
 //--------------------------------------------------------------------------------------------------
-// Any unit death, filtered down to the character. Same shape as the debris
-// death handler in 25_clearing.galaxy, and for the same reason: it covers a
-// character that was spawned at runtime, which after the first respawn is
-// every character there will ever be.
+// Any unit death, filtered down to a character. Same shape as the debris death
+// handler in 25_clearing.galaxy, and for the same reason: it covers a character
+// spawned at runtime, which after the first respawn is every character there
+// will ever be.
+//
+// Whose it was comes off the unit rather than being looked up, which is the
+// whole reason a per-player version costs nothing here.
 //--------------------------------------------------------------------------------------------------
 bool Hero_Died_Func (bool testConds, bool runActions) {
+    unit who;
+    int player;
+
     if (!runActions) {
         return true;
     }
-    if (!ObjectsGen_IsHero(EventUnit())) {
+
+    who = EventUnit();
+    if (!ObjectsGen_IsHero(who)) {
         return true;
     }
 
+    player = UnitGetOwner(who);
+    if (player < 1 || player > 15) {
+        return true;
+    }
+
+    gvg_hero[player] = null;
+    gvg_heroBackAt[player] = GameGetMissionTime() + c_heroRespawnDelay;
+
+    // To that player, because six characters dying over twenty minutes is six
+    // messages everybody else cannot act on. A teammate being down matters, but
+    // it belongs to whatever eventually draws a roster, not to the subtitle line
+    // that meltdown and containment are both already using.
     UIDisplayMessage(
-        PlayerGroupAll(),
-        c_messageAreaSubtitle,
+        PlayerGroupSingle(player), c_messageAreaSubtitle,
         StringToText("agent down -- back in "
-                     + IntToString(FixedToInt(c_heroRespawnDelay)) + "s")
-    );
-    TimerStart(gv_heroRespawn, c_heroRespawnDelay, false, c_timeGame);
+                     + IntToString(FixedToInt(c_heroRespawnDelay)) + "s"));
+    return true;
+}
+
+bool Hero_Tick_Func (bool testConds, bool runActions) {
+    fixed now;
+    int player;
+
+    if (!runActions) {
+        return true;
+    }
+
+    now = GameGetMissionTime();
+    player = 1;
+    while (player <= 15) {
+        if (gvg_heroHas[player]
+            && (gvg_hero[player] == null || !UnitIsAlive(gvg_hero[player]))
+            && now >= gvg_heroBackAt[player]) {
+            Hero_Spawn(player);
+        }
+        player = player + 1;
+    }
     return true;
 }
 
 //--------------------------------------------------------------------------------------------------
-// The respawn is a timer rather than a Wait inside the death handler. This
-// trigger runs on every unit death on the map, so waiting inside it would park
-// the whole handler for the delay and queue up every death that happened
-// meanwhile. Those queued runs would all no-op on the type check, but a handler
-// that is deaf for fifteen seconds at a time is not something to leave in place
-// on the assumption that nothing will ever need it.
+// Claims every character standing on the map for whoever owns it.
+//
+// Where the character was placed is where it comes back. Deliberately not a
+// separate marker: a respawn point that can drift away from the start point is a
+// bug waiting to happen, and nothing here would move it.
+//
+// A player who is at the table but has no character placed falls back to their
+// core, so adding a sixth player to the map does not silently mean a sixth
+// player with no hands. A player with neither is left alone -- there is nowhere
+// to put them, and inventing a spot would drop somebody into the map at a
+// position nobody chose.
 //--------------------------------------------------------------------------------------------------
-bool Hero_Back_Func (bool testConds, bool runActions) {
-    if (!runActions) {
-        return true;
+void Hero_Claim () {
+    unitgroup heroes;
+    unit who;
+    unit core;
+    int count;
+    int i;
+    int player;
+
+    heroes = ObjectsGen_ScanHero();
+    count = UnitGroupCount(heroes, c_unitCountAlive);
+
+    i = 1;
+    while (i <= count) {
+        who = UnitGroupUnit(heroes, i);
+        if (who != null) {
+            player = UnitGetOwner(who);
+            if (player >= 1 && player <= 15 && !gvg_heroHas[player]) {
+                gvg_hero[player] = who;
+                gvg_heroHome[player] = UnitGetPosition(who);
+                gvg_heroHas[player] = true;
+                UnitSelect(who, player, true);
+                CameraPan(player, gvg_heroHome[player], 0.0, -1.0, 10.0, true);
+            }
+        }
+        i = i + 1;
     }
-    Hero_Spawn();
-    return true;
+
+    player = 1;
+    while (player <= 15) {
+        if (!gvg_heroHas[player] && Slot_IsTablePlayer(player)) {
+            core = Sector_AnyCore(player);
+            if (core != null) {
+                gvg_heroHome[player] = UnitGetPosition(core);
+                gvg_heroHas[player] = true;
+                gvg_heroBackAt[player] = 0.0;
+            }
+        }
+        player = player + 1;
+    }
 }
 
 void Hero_Init () {
-    gv_hero = UnitGroupUnit(ObjectsGen_ScanHero(), 1);
-    if (gv_hero == null) {
-        return;
+    int player;
+
+    player = 1;
+    while (player <= 15) {
+        gvg_hero[player] = null;
+        gvg_heroHas[player] = false;
+        gvg_heroBackAt[player] = 0.0;
+        player = player + 1;
     }
 
-    // Where the character was placed is where it comes back. Deliberately not
-    // a separate marker: a respawn point that can drift away from the start
-    // point is a bug waiting to happen, and P0 has nothing that would move it.
-    gv_heroHome = UnitGetPosition(gv_hero);
+    Hero_Claim();
 
-    UnitSelect(gv_hero, c_p0Player, true);
-    CameraPan(c_p0Player, gv_heroHome, 0.0, -1.0, 10.0, true);
-
-    gv_heroRespawn = TimerCreate();
-
-    gt_heroBack = TriggerCreate("Hero_Back_Func");
-    TriggerAddEventTimer(gt_heroBack, gv_heroRespawn);
+    gt_heroTick = TriggerCreate("Hero_Tick_Func");
+    TriggerAddEventTimePeriodic(gt_heroTick, c_heroTick, c_timeGame);
 
     gt_heroDied = TriggerCreate("Hero_Died_Func");
     TriggerAddEventUnitDied(gt_heroDied, null);
@@ -5603,23 +5735,47 @@ bool Economy_MinerAssign_Func (bool testConds, bool runActions) {
 // Nothing is lost, because a number you can ask for at any moment is strictly
 // more than the same number arriving whether or not you wanted it.
 //
-// Device counts are still map-wide. They are the only thing here that is, and
-// pretending otherwise by taking a player argument for them would be worse than
-// saying so.
+// Anything ownable is counted for the asking player, and anything genuinely
+// shared says so on the line. That distinction is not cosmetic: the whole
+// baseline turns on which numbers are yours and which are the table's, and a
+// readout that quietly showed six players' SCVs as "workers" would be teaching
+// the opposite of the rule the design is built on.
 //--------------------------------------------------------------------------------------------------
+int Economy_CountOwned (unitgroup group, int player) {
+    unit who;
+    int count;
+    int mine;
+    int i;
+
+    count = UnitGroupCount(group, c_unitCountAlive);
+    mine = 0;
+    i = 1;
+    while (i <= count) {
+        who = UnitGroupUnit(group, i);
+        if (who != null && UnitGetOwner(who) == player) {
+            mine = mine + 1;
+        }
+        i = i + 1;
+    }
+    return mine;
+}
+
 string Economy_StatusLine (int player) {
     return "debris left=" + IntToString(UnitGroupCount(ObjectsGen_ScanDebris(), c_unitCountAlive))
-           + "  cleared=" + IntToString(gv_debrisCleared)
+           + " (map)  cleared=" + IntToString(gv_debrisCleared)
            + "  pile=" + IntToString(Economy_PileContents())
            + "  power=" + IntToString(PlayerGetPropertyInt(player, c_playerPropSuppliesUsed))
            + "/" + IntToString(PlayerGetPropertyInt(player, c_playerPropSuppliesMade))
            + " (" + IntToString(gv_devicesOnline) + "/" + IntToString(gv_devicesTotal)
-           + " devices online, map-wide)"
+           + " devices online, map)"
            + "  dept=" + Dept_NameOf(player)
            + "  inner=" + Sector_HeldText(player)
-           + "  workers=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Worker(), c_unitCountAlive))
-           + "  miners=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Miner(), c_unitCountAlive))
-           + "  energy=" + IntToString(gv_energy) + "/" + IntToString(gv_energyGoal);
+           + "  workers=" + IntToString(Economy_CountOwned(ObjectsGen_ScanSCV_Worker(), player))
+           + "  miners=" + IntToString(Economy_CountOwned(ObjectsGen_ScanSCV_Miner(), player))
+           + "  emp=" + IntToString(Economy_CountOwned(ObjectsGen_ScanEmp(), player))
+           + "  melt=" + IntToString(Melt_Level())
+           + "  energy=" + IntToString(gv_energy) + "/" + IntToString(gv_energyGoal)
+           + " (table)";
 }
 
 void Economy_Init () {
@@ -5854,10 +6010,12 @@ unitgroup Debug_TargetEmployees (int player) {
 // wherever they are looking.
 //--------------------------------------------------------------------------------------------------
 point Debug_SpawnPoint (int player) {
+    unit hero;
     unit core;
 
-    if (gv_hero != null && UnitIsAlive(gv_hero) && UnitGetOwner(gv_hero) == player) {
-        return UnitGetPosition(gv_hero);
+    hero = Hero_Of(player);
+    if (hero != null && UnitIsAlive(hero)) {
+        return UnitGetPosition(hero);
     }
     core = Sector_AnyCore(player);
     if (core != null) {

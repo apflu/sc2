@@ -128,10 +128,12 @@ unitgroup Debug_TargetEmployees (int player) {
 // wherever they are looking.
 //--------------------------------------------------------------------------------------------------
 point Debug_SpawnPoint (int player) {
+    unit hero;
     unit core;
 
-    if (gv_hero != null && UnitIsAlive(gv_hero) && UnitGetOwner(gv_hero) == player) {
-        return UnitGetPosition(gv_hero);
+    hero = Hero_Of(player);
+    if (hero != null && UnitIsAlive(hero)) {
+        return UnitGetPosition(hero);
     }
     core = Sector_AnyCore(player);
     if (core != null) {

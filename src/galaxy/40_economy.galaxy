@@ -104,23 +104,47 @@ bool Economy_MinerAssign_Func (bool testConds, bool runActions) {
 // Nothing is lost, because a number you can ask for at any moment is strictly
 // more than the same number arriving whether or not you wanted it.
 //
-// Device counts are still map-wide. They are the only thing here that is, and
-// pretending otherwise by taking a player argument for them would be worse than
-// saying so.
+// Anything ownable is counted for the asking player, and anything genuinely
+// shared says so on the line. That distinction is not cosmetic: the whole
+// baseline turns on which numbers are yours and which are the table's, and a
+// readout that quietly showed six players' SCVs as "workers" would be teaching
+// the opposite of the rule the design is built on.
 //--------------------------------------------------------------------------------------------------
+int Economy_CountOwned (unitgroup group, int player) {
+    unit who;
+    int count;
+    int mine;
+    int i;
+
+    count = UnitGroupCount(group, c_unitCountAlive);
+    mine = 0;
+    i = 1;
+    while (i <= count) {
+        who = UnitGroupUnit(group, i);
+        if (who != null && UnitGetOwner(who) == player) {
+            mine = mine + 1;
+        }
+        i = i + 1;
+    }
+    return mine;
+}
+
 string Economy_StatusLine (int player) {
     return "debris left=" + IntToString(UnitGroupCount(ObjectsGen_ScanDebris(), c_unitCountAlive))
-           + "  cleared=" + IntToString(gv_debrisCleared)
+           + " (map)  cleared=" + IntToString(gv_debrisCleared)
            + "  pile=" + IntToString(Economy_PileContents())
            + "  power=" + IntToString(PlayerGetPropertyInt(player, c_playerPropSuppliesUsed))
            + "/" + IntToString(PlayerGetPropertyInt(player, c_playerPropSuppliesMade))
            + " (" + IntToString(gv_devicesOnline) + "/" + IntToString(gv_devicesTotal)
-           + " devices online, map-wide)"
+           + " devices online, map)"
            + "  dept=" + Dept_NameOf(player)
            + "  inner=" + Sector_HeldText(player)
-           + "  workers=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Worker(), c_unitCountAlive))
-           + "  miners=" + IntToString(UnitGroupCount(ObjectsGen_ScanSCV_Miner(), c_unitCountAlive))
-           + "  energy=" + IntToString(gv_energy) + "/" + IntToString(gv_energyGoal);
+           + "  workers=" + IntToString(Economy_CountOwned(ObjectsGen_ScanSCV_Worker(), player))
+           + "  miners=" + IntToString(Economy_CountOwned(ObjectsGen_ScanSCV_Miner(), player))
+           + "  emp=" + IntToString(Economy_CountOwned(ObjectsGen_ScanEmp(), player))
+           + "  melt=" + IntToString(Melt_Level())
+           + "  energy=" + IntToString(gv_energy) + "/" + IntToString(gv_energyGoal)
+           + " (table)";
 }
 
 void Economy_Init () {

@@ -22,9 +22,12 @@
 const int c_zergPlayer = 7;
 const int c_abnoPlayer = 8;
 
-// Still single player for the parts of P0 that have not been made per-player
-// yet: the character, the economy readout. Not a claim about the map.
-const int c_p0Player = 1;
+// There used to be a c_p0Player = 1 here, for the parts of P0 that had not been
+// made per-player yet -- the character, the department, the economy readout. It
+// is gone because they all have been, and nothing refers to it. If a new one
+// appears, that is the signal to write the per-player version instead: this
+// constant is how a single-player assumption spreads, because it reads like a
+// configuration value and is actually a claim that there is one player.
 
 //--------------------------------------------------------------------------------------------------
 // Somebody at the table, as opposed to the swarm or whatever is loose.

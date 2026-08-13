@@ -51,6 +51,10 @@ const int c_deptHokma = 7;
 const int c_deptBinah = 8;
 const int c_deptCount = 9;
 
+// The four upper departments are contiguous and start at Malkuth, which is what
+// lets the placeholder deal round-robin without a table.
+const int c_deptAsiyahCount = 4;
+
 // Sephirot tiers, as the doc groups them.
 const int c_tierAsiyah = 0;
 const int c_tierBriah = 1;
@@ -239,6 +243,7 @@ bool Dept_UpgradeChanged_Func (bool testConds, bool runActions) {
 
 void Departments_Init () {
     int player;
+    int dealt;
 
     gvg_deptKey[c_deptMalkuth] = "Malkuth";
     gvg_deptKey[c_deptYesod] = "Yesod";
@@ -276,8 +281,24 @@ void Departments_Init () {
         player = player + 1;
     }
 
-    // Placeholder until there is a selection screen.
-    Dept_SetOf(c_p0Player, c_deptMalkuth);
+    // PLACEHOLDER until there is a selection screen. Baseline 7.1 has each
+    // player choosing, with repeats allowed but at least three distinct
+    // departments in a game; dealing the four Asiyah ones round-robin satisfies
+    // that for any table of three or more and needs nothing from the lobby.
+    //
+    // It used to hand Malkuth to player 1 and nothing to anybody else, which
+    // made Dept_Of a working test for "is this player 1" and a broken one for
+    // everything it is actually asked. Ally upgrade propagation walks the table
+    // by department, and the victory loop used to as well.
+    dealt = 0;
+    player = 1;
+    while (player <= 15) {
+        if (Slot_IsTablePlayer(player)) {
+            Dept_SetOf(player, c_deptMalkuth + dealt % c_deptAsiyahCount);
+            dealt = dealt + 1;
+        }
+        player = player + 1;
+    }
 
     gt_upgradeChanged = TriggerCreate("Dept_UpgradeChanged_Func");
     player = 1;
