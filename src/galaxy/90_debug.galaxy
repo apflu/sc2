@@ -795,7 +795,11 @@ void Debug_BuildHelp () {
         + "than of skill.<n/><n/>"
         + "Nothing is written until every player's file has finished syncing. "
         + "Writing during that window would put a fresh empty table over a real "
-        + "save, and nobody would be able to tell what happened.",
+        + "save, and nobody would be able to tell what happened.<n/><n/>"
+        + "<c val=\"ffff8a\">-codec</c>  round-trips the packer the save format "
+        + "will switch to when a key per value stops being enough. Nothing uses "
+        + "it yet; it exists so that \"compress it later\" is a checked plan "
+        + "rather than an assumption.",
         "Assets\\Textures\\btn-ability-terran-supplydrop.dds");
 
     Debug_Tip(
@@ -892,6 +896,9 @@ bool Debug_Chat_Func (bool testConds, bool runActions) {
     }
     else if (StringEqual(command, "-energy", false)) {
         Debug_Energy(player, StringWord(message, 2));
+    }
+    else if (StringEqual(command, "-codec", false)) {
+        Debug_Say(player, Codec_SelfTest());
     }
     else if (StringEqual(command, "-bank", false)) {
         Debug_Bank(player, StringWord(message, 2));

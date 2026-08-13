@@ -80,6 +80,20 @@ python3 tools/build_galaxy.py
 
 **Galaxy 要求先声明后使用**，而模块是按文件名顺序拼接的——所以一个写在自己定义上方的调用是编译错误。麻烦在于**编译器把它报在调用处、说的是 "invalid argument list"**，看起来像签名对不上，会把人引到完全错的地方去查。这个错已经花掉四轮调试，每一次都是"某个块被挪动了"或者"调用跨了模块边界"。`build_galaxy.py` 的 `check_forward_refs` 现在会在写文件前挡住它，并直接指出是哪个函数。
 
+**位运算：`<<` 和 `|` 确认可用，`>>` `&` `^` `~` 没有证据。**
+
+`<<` 和 `|` 在暴雪自己发布的脚本里到处都是，直接作用在 int 上并赋给 int 变量（`attackersLimit = 1 << diff;` 见 `MeleeAI.galaxy`；`(1 << (c_targetFilterDead - 32)) | (1 << ...)` 见 `NativeLib`），光 `1 << (` 就有一万五千处。
+
+而 `>>` `&` `^` `~`：**把暴雪发布的每个 `.galaxy` 文件 grep 一遍，没有一处 int 用法**，命中的全是注释里的散文。它们大概率能用，但**这台机器编译不了地图**，所以不要把存档格式之类的东西押在上面。要右移或掩码时，整数 `/` 和 `%` 在非负数上做同一件事，且毫无疑问：
+
+```
+v >> n   ==   v / (1 << n)          v & (2^n - 1)   ==   v % (1 << n)
+```
+
+另外有一个真正的 `bitmask` 类型，带 `BitMaskAndBitMask` / `OrBitMask` / `XorBitMask` / `Invert` / `LeftShift` / `CountOnBits` / `SetIndex` / `TrueIndex`。它是**堆对象不是值**，所以适合挂在单位上当标志位，不适合当编码器。
+
+**`StringFind` 返回 1-based 下标，找不到返回 -1**（不是 0）。暴雪代码里两处都验证了：`StringSub(s, 1, found - 1)` 和 `if (found == -1)`。`02_codec.galaxy` 的 base64 解码就靠这个语义。
+
 **显示给玩家的文本里，`<` `>` 会被当成 markup。**`<s>` 是字体样式标签，而一个没有 `val` 的样式标签等于在找名字为空的样式——那就是 `TextError: 无法找到字体样式[]` 的来源。旧的聊天版 `-help` 印的是 `-stat <s> <v>`，所以**每次有人打 `-help` 都会报一次**。占位符写成 `NAME` / `VALUE`，异想体文档里 wiki 留下的 `<name>` 由生成器转义成 `&lt;name&gt;`。合法的只有 `<n/>` 和 `<c val="...">`。
 
 ## 自检

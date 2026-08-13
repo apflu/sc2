@@ -1,0 +1,255 @@
+//--------------------------------------------------------------------------------------------------
+// Packing small numbers into short strings.
+//
+// This exists to answer one question before it becomes urgent: when the save
+// file outgrows a key per value, can this project pack everything into one
+// string? Yes, and this is the proof rather than the assurance.
+//
+// Nothing uses it yet. That is on purpose -- 16_bank works, no save file exists
+// in the world, and putting untested code into the one path that can destroy a
+// player's progress is a bad trade for bytes nobody is short of. What was worth
+// doing now is establishing that the capability is real, because "we will
+// compress it later" is only a plan if somebody has checked.
+//
+//--------------------------------------------------------------------------------------------------
+// What Galaxy actually has, checked rather than remembered.
+//
+// CONFIRMED, from shipped Blizzard code:
+//
+//   <<   `attackersLimit = 1 << diff;`                        (MeleeAI.galaxy)
+//   |    `(1 << (c_targetFilterDead - 32)) | (1 << ...)`       (NativeLib)
+//
+// Both on plain ints, both assigned to int variables. Fifteen thousand uses of
+// `1 << (` across the shipped scripts, so this is not a corner of the language.
+//
+// NOT CONFIRMED: >>, &, ^, ~. Grepping every .galaxy file Blizzard ships turns
+// up no int use of any of them -- every hit is prose in a comment. They very
+// probably work. This file does not bet on it, because the map cannot be
+// compiled on the machine this was written on, and a save format is a bad place
+// to find out. Where a shift-right or a mask is wanted, integer / and % do the
+// same job on non-negative values and are not in question:
+//
+//   v >> n   ==   v / (1 << n)          v & (2^n - 1)   ==   v % (1 << n)
+//
+// There is also a real `bitmask` type with BitMaskAndBitMask, BitMaskOrBitMask,
+// BitMaskXorBitMask, BitMaskInvert, BitMaskLeftShift and BitMaskCountOnBits, if
+// a genuine bitset is ever wanted. It is a heap object rather than a value, so
+// it suits flags on a unit far better than it suits an encoder.
+//
+//--------------------------------------------------------------------------------------------------
+// The encoding: base 64, five payload bits per character.
+//
+// Each character carries five bits of the number plus one continuation bit, low
+// group first, so small numbers cost one character and there is no length
+// prefix to keep in step with the data.
+//
+// The alphabet avoids < > & " ', all of which have to be escaped inside a bank
+// file, and every character in it is one byte. Decoding is StringFind against
+// the alphabet, which returns a 1-based index and -1 for absent -- confirmed
+// from shipped code doing StringSub(s, 1, found - 1) and testing found == -1.
+//
+// Negative numbers are not representable and are clamped to zero. Everything
+// this would ever store -- levels, counts, boxes, flags, quest progress -- is a
+// count, and a varint that handles signs costs a bit on every value to serve a
+// case that does not occur.
+//--------------------------------------------------------------------------------------------------
+
+const string c_codecAlphabet =
+    "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_";
+
+// Five bits of payload, and the sixth marks "another character follows".
+const int c_codecRadix = 32;
+const int c_codecMore = 32;
+
+// Ints are 32-bit and signed, so a field wider than this overflows into the
+// sign bit and stops being a number.
+const int c_codecMaxBits = 30;
+
+// The read cursor, 1-based into the string being decoded.
+int gv_codecAt;
+
+string Codec_Char (int digit) {
+    if (digit < 0 || digit >= 64) {
+        return "0";
+    }
+    return StringSub(c_codecAlphabet, digit + 1, digit + 1);
+}
+
+int Codec_Digit (string ch) {
+    int found;
+
+    found = StringFind(c_codecAlphabet, ch, true);
+    if (found < 1) {
+        return -1;
+    }
+    return found - 1;
+}
+
+//--------------------------------------------------------------------------------------------------
+// One number, as one or more characters.
+//--------------------------------------------------------------------------------------------------
+string Codec_Int (int value) {
+    string out;
+    int part;
+    bool more;
+
+    if (value < 0) {
+        value = 0;
+    }
+
+    out = "";
+    more = true;
+    while (more) {
+        part = value % c_codecRadix;
+        value = value / c_codecRadix;
+        more = value > 0;
+        if (more) {
+            part = part + c_codecMore;
+        }
+        out = out + Codec_Char(part);
+    }
+    return out;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Reading. The cursor is a global rather than a parameter because Galaxy has no
+// output parameters, and threading a position through every call site is how
+// decoders acquire off-by-one bugs.
+//--------------------------------------------------------------------------------------------------
+void Codec_Open () {
+    gv_codecAt = 1;
+}
+
+bool Codec_AtEnd (string s) {
+    return gv_codecAt > StringLength(s);
+}
+
+int Codec_Next (string s) {
+    int value;
+    int place;
+    int digit;
+    bool more;
+
+    value = 0;
+    place = 1;
+    more = true;
+
+    while (more && gv_codecAt <= StringLength(s)) {
+        digit = Codec_Digit(StringSub(s, gv_codecAt, gv_codecAt));
+        gv_codecAt = gv_codecAt + 1;
+        if (digit < 0) {
+            // Not one of ours. Stop rather than guess -- a corrupted save should
+            // read as short, not as an enormous number.
+            return value;
+        }
+        more = digit >= c_codecMore;
+        if (more) {
+            digit = digit - c_codecMore;
+        }
+        value = value + digit * place;
+        place = place * c_codecRadix;
+    }
+    return value;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Several small fields inside one int.
+//
+// Fields come back in the reverse of the order they went in, which is what a
+// stack does and is not worth hiding: the alternative is passing the total width
+// to every read so it can index from the top, and that number is exactly the
+// thing that drifts when a field is added.
+//
+// Uses << and | to write, / and % to read, so nothing here depends on an
+// operator that has not been seen in shipped code.
+//--------------------------------------------------------------------------------------------------
+int Codec_Width (int bits) {
+    if (bits < 1) {
+        bits = 1;
+    }
+    if (bits > c_codecMaxBits) {
+        bits = c_codecMaxBits;
+    }
+    return 1 << bits;
+}
+
+int Codec_Put (int packed, int value, int bits) {
+    int width;
+
+    width = Codec_Width(bits);
+    if (value < 0) {
+        value = 0;
+    }
+    return (packed << bits) | (value % width);
+}
+
+int Codec_Get (int packed, int bits) {
+    return packed % Codec_Width(bits);
+}
+
+int Codec_Drop (int packed, int bits) {
+    return packed / Codec_Width(bits);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Round trip, as a report rather than as a promise.
+//
+// Every number here is a boundary: zero, the last one-character value, the first
+// two-character value, and something long enough to need five. If this prints
+// anything but ok, the encoding is wrong and the save format must not adopt it.
+//--------------------------------------------------------------------------------------------------
+string Codec_SelfTest () {
+    string blob;
+    string bad;
+    int probe;
+    int packed;
+    int i;
+    int[8] want;
+
+    want[0] = 0;
+    want[1] = 1;
+    want[2] = 31;
+    want[3] = 32;
+    want[4] = 1023;
+    want[5] = 1024;
+    want[6] = 100000;
+    want[7] = 1073741823;
+
+    blob = "";
+    i = 0;
+    while (i < 8) {
+        blob = blob + Codec_Int(want[i]);
+        i = i + 1;
+    }
+
+    bad = "";
+    Codec_Open();
+    i = 0;
+    while (i < 8) {
+        probe = Codec_Next(blob);
+        if (probe != want[i]) {
+            bad = bad + " [" + IntToString(want[i]) + "->" + IntToString(probe) + "]";
+        }
+        i = i + 1;
+    }
+
+    // Three fields in one int, read back off the stack in reverse.
+    packed = Codec_Put(Codec_Put(Codec_Put(0, 4, 3), 700, 12), 1, 1);
+    if (Codec_Get(packed, 1) != 1) {
+        bad = bad + " [field1]";
+    }
+    packed = Codec_Drop(packed, 1);
+    if (Codec_Get(packed, 12) != 700) {
+        bad = bad + " [field700]";
+    }
+    packed = Codec_Drop(packed, 12);
+    if (Codec_Get(packed, 3) != 4) {
+        bad = bad + " [field4]";
+    }
+
+    if (bad != "") {
+        return "codec FAILED:" + bad;
+    }
+    return "codec ok -- 8 ints in " + IntToString(StringLength(blob))
+           + " chars (\"" + blob + "\"), field packing round-trips";
+}
