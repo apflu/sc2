@@ -6,25 +6,49 @@
 // that simply never presses Work is never in any danger. This is what makes
 // standing still cost something.
 //
-// Numbered 13 rather than 15 because Work_Finish has to call into it, and Galaxy
+// Numbered 13 rather than 15 because 14_work has to call into it, and Galaxy
 // needs a declaration before its use. It sorts after 13_containment on the
 // module name alone ("containment" < "meltdown"), which is load-bearing;
 // check_forward_refs in tools/build_galaxy.py is what catches it if that ever
 // stops being true.
 //
 //--------------------------------------------------------------------------------------------------
-// The whole rule, in one round:
+// The whole rule:
 //
-//     cells are named  ->  40 seconds  ->  any named cell that was not worked
-//                                          has its Qliphoth counter set to 0,
-//                                          and the table loses a share of the
-//                                          energy pool
+//     a cell is named  ->  60 seconds  ->  if no work has BEGUN on it, its
+//                                          Qliphoth counter is set to 0 and the
+//                                          table loses a share of the pool
 //
-// Set to zero, not decremented. A meltdown is not attrition -- it spends the
-// counter outright, which is why ignoring one is a decision and not a slow
-// leak. What an abnormality DOES at zero stays where it already was: per
-// abnormality, in its own document, and not decided here. For one that can
-// escape, zero is the escape.
+// Begun, not finished. The countdown answers to somebody being sent, not to the
+// work going well: a work started at second 55 would otherwise be a wasted trip,
+// and the decision a meltdown is asking about is "who do I send and to which
+// one", which is over the moment the employee walks. A work that then fails has
+// already cost that employee their SP; charging the meltdown for it as well
+// would be the same mistake twice.
+//
+// Set to zero, not decremented. A meltdown spends the counter outright, which is
+// why ignoring one is a decision and not a slow leak. What an abnormality DOES
+// at zero stays where it already was: per abnormality, in its own document, and
+// not decided here. For one that can escape, zero is the escape.
+//
+//--------------------------------------------------------------------------------------------------
+// A cell that was already busy when it got named does not start counting.
+//
+// Its countdown is held until that work ends -- finished, or interrupted by the
+// gate coming down, or by the employee dying or breaking. Only then do the 60
+// seconds begin.
+//
+// This is not a courtesy, it is the same rule read carefully. The countdown is
+// answered by a work BEGINNING, and a work already in flight cannot begin
+// again: the employee is inside and there is nothing the player can press. Left
+// alone, a cell named one second into a fourteen-second work would spend most of
+// its window in a state where the correct play is impossible. Holding it means
+// the window is always a window -- sixty seconds in which sending somebody is
+// actually a thing you can do.
+//
+// Note what it does NOT do: the work in flight does not itself answer the
+// meltdown. It started before anybody was named, so it was never a response to
+// one. When it ends the clock starts, and somebody still has to go.
 //
 //--------------------------------------------------------------------------------------------------
 // The level is global, the named cells are per player.
@@ -40,8 +64,8 @@
 // what they did.
 //
 // The energy drain is the one shared cost, and it is deliberate. Energy is a
-// scoreboard nobody spends from, so draining it moves the table further from
-// the door without touching any player's rate of getting there. That is the
+// scoreboard nobody spends from, so draining it moves the table further from the
+// door without touching any player's rate of getting there. That is the
 // difference between a shared win condition, which the baseline allows, and a
 // shared wallet, which it forbids.
 //
@@ -67,9 +91,12 @@
 //   it; both belong to systems that do not exist. Melt_Level is the read.
 //--------------------------------------------------------------------------------------------------
 
-// The countdown. One round runs straight into the next, so this is both the
-// grace period and the period.
-const fixed c_meltPeriod = 40.0;
+// How long a named cell has, once its countdown is actually running.
+const fixed c_meltWindow = 60.0;
+
+// How often a new round names cells. The same number, so that under no holds at
+// all a round runs straight into the next.
+const fixed c_meltPeriod = 60.0;
 
 // TUNING, all three. Nobody has designed a meltdown curve; these are stand-ins
 // picked to make the mechanic visible in a test, not balance.
@@ -77,29 +104,47 @@ const fixed c_meltPeriod = 40.0;
 // A player is named one more cell every this many levels.
 const int c_meltLevelsPerTarget = 3;
 
-// And never more than this many at once, however long the game runs.
+// And never more than this many outstanding at once, however long the game runs.
+// Counted against cells still pending, not against cells named this round, so a
+// held cell occupies a slot rather than adding to the pile.
 const int c_meltTargetsMax = 4;
 
 // Share of the energy pool lost per unattended cell, as a percent. A percent
-// rather than an amount so that the same miss means the same thing at minute
-// two and at minute forty.
+// rather than an amount so that the same miss means the same thing at minute two
+// and at minute forty.
 const int c_meltEnergyPenaltyPct = 10;
 
-// Level 0 is before the first round: nothing is named and nothing is scored.
+// Level 0 is before the first round: nothing is named.
 int gv_meltLevel;
 
-// When the current round resolves.
+// When the next round names cells.
 fixed gv_meltNextAt;
 
 // Per cell, indexed exactly as 13_containment indexes its cells. Sized to
 // c_cellMax, which Galaxy will not let be written as anything but a literal.
 bool[32] gvg_meltFlag;
-bool[32] gvg_meltDone;
 
-// Rounds this player handled cleanly: every cell named in their sector was
-// worked before the round ended. Control Team's quest 3 ("妥善处理3轮融毁")
-// reads this; nothing else does yet.
-int[16] gvg_meltHandled;
+// Held: named while a work was already running, and not counting down until
+// that work ends.
+bool[32] gvg_meltHeld;
+
+// When this cell resolves. Meaningless while held.
+fixed[32] gvg_meltDeadline;
+
+// How many works are running on this cell. A count rather than a flag because
+// nothing stops two employees being sent to the same door.
+int[32] gvg_meltBusy;
+
+// Named cells this player answered, and named cells this player let expire.
+//
+// Cells, not rounds. Control Team's quest 3 is "妥善处理3轮融毁" and reads
+// rounds, but a held cell can outlive several rounds, so "which round did this
+// belong to" is a question with a real answer and no cheap one. It is left to
+// the quest system, which does not exist; counting cells is the honest thing to
+// expose in the meantime and is not a stand-in that will silently be mistaken
+// for the other.
+int[16] gvg_meltAnswered;
+int[16] gvg_meltMissed;
 
 trigger gt_meltTick;
 
@@ -107,17 +152,51 @@ int Melt_Level () {
     return gv_meltLevel;
 }
 
-int Melt_HandledBy (int player) {
+int Melt_AnsweredBy (int player) {
     if (player < 1 || player > 15) {
         return 0;
     }
-    return gvg_meltHandled[player];
+    return gvg_meltAnswered[player];
 }
 
-fixed Melt_SecondsLeft () {
+int Melt_MissedBy (int player) {
+    if (player < 1 || player > 15) {
+        return 0;
+    }
+    return gvg_meltMissed[player];
+}
+
+fixed Melt_SecondsToRound () {
     fixed left;
 
     left = gv_meltNextAt - GameGetMissionTime();
+    if (left < 0.0) {
+        return 0.0;
+    }
+    return left;
+}
+
+bool Melt_IsFlagged (int slot) {
+    if (slot < 0 || slot >= gv_cellCount) {
+        return false;
+    }
+    return gvg_meltFlag[slot];
+}
+
+bool Melt_IsHeld (int slot) {
+    if (slot < 0 || slot >= gv_cellCount) {
+        return false;
+    }
+    return gvg_meltFlag[slot] && gvg_meltHeld[slot];
+}
+
+fixed Melt_SecondsLeft (int slot) {
+    fixed left;
+
+    if (slot < 0 || slot >= gv_cellCount || !gvg_meltFlag[slot] || gvg_meltHeld[slot]) {
+        return 0.0;
+    }
+    left = gvg_meltDeadline[slot] - GameGetMissionTime();
     if (left < 0.0) {
         return 0.0;
     }
@@ -200,87 +279,54 @@ bool Melt_CanBeNamed (int index) {
 }
 
 //--------------------------------------------------------------------------------------------------
-// Resolves the round that is ending.
-//
-// A named cell that was worked costs nothing, which is the entire reward for
-// having done it. One that was not has its counter spent and takes a bite out
-// of the pool.
+// Nobody went. The counter is spent and the table pays.
 //--------------------------------------------------------------------------------------------------
-void Melt_Resolve () {
+void Melt_Miss (int slot) {
     unit abno;
-    int slot;
     int owner;
-    int player;
     int lost;
-    int index;
-    bool[16] named;
-    bool[16] clean;
 
-    player = 1;
-    while (player <= 15) {
-        named[player] = false;
-        clean[player] = true;
-        player = player + 1;
+    abno = gvg_cellAbno[slot];
+    owner = Melt_OwnerOf(slot);
+
+    gvg_meltFlag[slot] = false;
+    gvg_meltHeld[slot] = false;
+
+    if (owner >= 1 && owner <= 15) {
+        gvg_meltMissed[owner] = gvg_meltMissed[owner] + 1;
     }
 
-    slot = 0;
-    while (slot < gv_cellCount) {
-        if (gvg_meltFlag[slot]) {
-            owner = Melt_OwnerOf(slot);
-            abno = gvg_cellAbno[slot];
-            index = AbnoGen_IndexOf(abno);
-
-            if (owner >= 1 && owner <= 15) {
-                named[owner] = true;
-                if (!gvg_meltDone[slot]) {
-                    clean[owner] = false;
-                }
-            }
-
-            if (!gvg_meltDone[slot]) {
-                // Set to zero rather than decremented: a meltdown spends the
-                // counter, it does not chip at it. An abnormality with no
-                // counter has nothing here to spend, and what any of them does
-                // at zero is its own business.
-                if (Cont_CounterDefault(abno) > 0) {
-                    Cont_SetCounter(abno, 0);
-                }
-                lost = Energy_Drain(c_meltEnergyPenaltyPct);
-                UIDisplayMessage(
-                    PlayerGroupAll(), c_messageAreaSubtitle,
-                    StringToText(gvg_abnoName[index] + " went unattended -- Qliphoth 0, "
-                                 + IntToString(lost) + " energy lost"));
-            }
-        }
-        gvg_meltFlag[slot] = false;
-        gvg_meltDone[slot] = false;
-        slot = slot + 1;
+    // Set to zero rather than decremented: a meltdown spends the counter, it
+    // does not chip at it. An abnormality with no counter has nothing here to
+    // spend, and what any of them does at zero is its own business.
+    if (Cont_CounterDefault(abno) > 0) {
+        Cont_SetCounter(abno, 0);
     }
+    lost = Energy_Drain(c_meltEnergyPenaltyPct);
 
-    player = 1;
-    while (player <= 15) {
-        if (named[player] && clean[player]) {
-            gvg_meltHandled[player] = gvg_meltHandled[player] + 1;
-            UIDisplayMessage(
-                PlayerGroupSingle(player), c_messageAreaSubtitle,
-                StringToText("meltdown handled (" + IntToString(gvg_meltHandled[player])
-                             + " so far)"));
-        }
-        player = player + 1;
-    }
+    UIDisplayMessage(
+        PlayerGroupAll(), c_messageAreaSubtitle,
+        StringToText(gvg_abnoName[AbnoGen_IndexOf(abno)]
+                     + " went unattended -- Qliphoth 0, "
+                     + IntToString(lost) + " energy lost"));
 }
 
 //--------------------------------------------------------------------------------------------------
-// Names the cells for the round that is starting.
+// Names the cells for a round.
 //
 // Per player, and only among the cells that could actually be worked: one
 // already loose, or behind a dropped door, is a problem the player is having
-// rather than one to hand them. Selection walks from a random offset so that a
-// player with more cells than targets does not get the same ones every round.
+// rather than one to hand them. Cells still pending from an earlier round count
+// against the target, so a held cell holds a place in the queue instead of
+// letting the pile grow behind it.
+//
+// Selection walks from a random offset so that a player with more cells than
+// targets does not get the same ones every round.
 //--------------------------------------------------------------------------------------------------
 void Melt_NameFor (int player) {
+    unit abno;
     int want;
-    int found;
+    int have;
     int step;
     int slot;
     int start;
@@ -290,36 +336,58 @@ void Melt_NameFor (int player) {
     }
 
     want = Melt_Targets();
-    found = 0;
-    start = RandomInt(0, gv_cellCount - 1);
 
+    have = 0;
+    slot = 0;
+    while (slot < gv_cellCount) {
+        if (gvg_meltFlag[slot] && Melt_OwnerOf(slot) == player) {
+            have = have + 1;
+        }
+        slot = slot + 1;
+    }
+
+    start = RandomInt(0, gv_cellCount - 1);
     step = 0;
-    while (step < gv_cellCount && found < want) {
+    while (step < gv_cellCount && have < want) {
         slot = (start + step) % gv_cellCount;
-        if (Melt_OwnerOf(slot) == player
-            && Melt_CanBeNamed(AbnoGen_IndexOf(gvg_cellAbno[slot]))
+        abno = gvg_cellAbno[slot];
+        if (!gvg_meltFlag[slot]
+            && Melt_OwnerOf(slot) == player
+            && Melt_CanBeNamed(AbnoGen_IndexOf(abno))
             && gvg_cellState[slot] == c_cellContained
-            && Cont_DoorIsUp(gvg_cellAbno[slot])) {
+            && Cont_DoorIsUp(abno)) {
+
             gvg_meltFlag[slot] = true;
-            gvg_meltDone[slot] = false;
-            found = found + 1;
-            UIDisplayMessage(
-                PlayerGroupSingle(player), c_messageAreaSubtitle,
-                StringToText("MELTDOWN: " + gvg_abnoName[AbnoGen_IndexOf(gvg_cellAbno[slot])]
-                             + " -- work it within " + IntToString(FixedToInt(c_meltPeriod))
-                             + "s"));
+            have = have + 1;
+
+            // Already busy: hold it. The employee inside cannot begin again, so
+            // the window would not be a window.
+            if (gvg_meltBusy[slot] > 0) {
+                gvg_meltHeld[slot] = true;
+                UIDisplayMessage(
+                    PlayerGroupSingle(player), c_messageAreaSubtitle,
+                    StringToText("MELTDOWN: " + gvg_abnoName[AbnoGen_IndexOf(abno)]
+                                 + " -- held until the work in progress ends"));
+            }
+            else {
+                gvg_meltHeld[slot] = false;
+                gvg_meltDeadline[slot] = GameGetMissionTime() + c_meltWindow;
+                UIDisplayMessage(
+                    PlayerGroupSingle(player), c_messageAreaSubtitle,
+                    StringToText("MELTDOWN: " + gvg_abnoName[AbnoGen_IndexOf(abno)]
+                                 + " -- send somebody within "
+                                 + IntToString(FixedToInt(c_meltWindow)) + "s"));
+            }
         }
         step = step + 1;
     }
 }
 
 //--------------------------------------------------------------------------------------------------
-// Resolve the round that was, raise the level, name the next round's cells.
+// A new round: the level rises and more cells are named.
 //--------------------------------------------------------------------------------------------------
 void Melt_Advance () {
     int player;
-
-    Melt_Resolve();
 
     gv_meltLevel = gv_meltLevel + 1;
     gv_meltNextAt = GameGetMissionTime() + c_meltPeriod;
@@ -337,46 +405,102 @@ void Melt_Advance () {
 }
 
 bool Melt_Tick_Func (bool testConds, bool runActions) {
+    fixed now;
+    int slot;
+
     if (!runActions) {
         return true;
     }
-    if (GameGetMissionTime() >= gv_meltNextAt) {
+
+    now = GameGetMissionTime();
+
+    slot = 0;
+    while (slot < gv_cellCount) {
+        if (gvg_meltFlag[slot]) {
+            if (gvg_meltHeld[slot]) {
+                // The work that was in flight has ended, however it ended. The
+                // window opens now.
+                if (gvg_meltBusy[slot] <= 0) {
+                    gvg_meltHeld[slot] = false;
+                    gvg_meltDeadline[slot] = now + c_meltWindow;
+                    UIDisplayMessage(
+                        PlayerGroupSingle(Melt_OwnerOf(slot)), c_messageAreaSubtitle,
+                        StringToText(gvg_abnoName[AbnoGen_IndexOf(gvg_cellAbno[slot])]
+                                     + " is free -- "
+                                     + IntToString(FixedToInt(c_meltWindow))
+                                     + "s to send somebody"));
+                }
+            }
+            else if (now >= gvg_meltDeadline[slot]) {
+                Melt_Miss(slot);
+            }
+        }
+        slot = slot + 1;
+    }
+
+    if (now >= gv_meltNextAt) {
         Melt_Advance();
     }
     return true;
 }
 
 //--------------------------------------------------------------------------------------------------
-// A finished work. Called from Work_Finish, which is why this module sorts
-// first.
+// A work started. Called from Work_Begin, which is why this module sorts first.
 //
-// The flag clears whoever did the work: the cell was named, and it got attended
-// to. Which player gets credit for the round is decided at resolve time by who
-// owns the cell -- so a neighbour walking over to cover for you is help, and
-// Control Team lv2's cross-department work is help by design rather than by an
-// exception written here.
+// Any work beginning after the naming answers it, whoever sent the employee.
+// Which player gets the credit is decided here by who owns the CELL -- so a
+// neighbour walking over to cover for you is help, and Control Team lv2's
+// cross-department work is help by design rather than by an exception written
+// here.
+//
+// A work that was already running when the cell was named does not reach this,
+// because it began before there was anything to answer.
 //--------------------------------------------------------------------------------------------------
-void Melt_NoteWork (unit abno) {
+void Melt_NoteWorkBegin (unit abno) {
+    int slot;
+    int owner;
+
+    slot = Cont_SlotOf(abno);
+    if (slot < 0) {
+        return;
+    }
+
+    gvg_meltBusy[slot] = gvg_meltBusy[slot] + 1;
+
+    if (!gvg_meltFlag[slot]) {
+        return;
+    }
+
+    gvg_meltFlag[slot] = false;
+    gvg_meltHeld[slot] = false;
+
+    owner = Melt_OwnerOf(slot);
+    if (owner >= 1 && owner <= 15) {
+        gvg_meltAnswered[owner] = gvg_meltAnswered[owner] + 1;
+        UIDisplayMessage(
+            PlayerGroupSingle(owner), c_messageAreaSubtitle,
+            StringToText(gvg_abnoName[AbnoGen_IndexOf(abno)] + " -- meltdown answered"));
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// A work left the table, however it left: finished, or interrupted by the gate
+// coming down, or by the employee dying or breaking.
+//
+// One exit for all of them, because a held cell does not care which one it was.
+// Called from Work_Drop, which every work goes through.
+//--------------------------------------------------------------------------------------------------
+void Melt_NoteWorkEnd (unit abno) {
     int slot;
 
     slot = Cont_SlotOf(abno);
-    if (slot >= 0 && gvg_meltFlag[slot]) {
-        gvg_meltDone[slot] = true;
+    if (slot < 0) {
+        return;
     }
-}
-
-bool Melt_IsFlagged (int slot) {
-    if (slot < 0 || slot >= gv_cellCount) {
-        return false;
+    gvg_meltBusy[slot] = gvg_meltBusy[slot] - 1;
+    if (gvg_meltBusy[slot] < 0) {
+        gvg_meltBusy[slot] = 0;
     }
-    return gvg_meltFlag[slot];
-}
-
-bool Melt_IsDone (int slot) {
-    if (slot < 0 || slot >= gv_cellCount) {
-        return false;
-    }
-    return gvg_meltDone[slot];
 }
 
 void Meltdown_Init () {
@@ -388,13 +512,16 @@ void Meltdown_Init () {
     i = 0;
     while (i < 32) {
         gvg_meltFlag[i] = false;
-        gvg_meltDone[i] = false;
+        gvg_meltHeld[i] = false;
+        gvg_meltDeadline[i] = 0.0;
+        gvg_meltBusy[i] = 0;
         i = i + 1;
     }
 
     i = 1;
     while (i <= 15) {
-        gvg_meltHandled[i] = 0;
+        gvg_meltAnswered[i] = 0;
+        gvg_meltMissed[i] = 0;
         i = i + 1;
     }
 

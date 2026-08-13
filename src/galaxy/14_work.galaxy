@@ -275,6 +275,10 @@ bool Work_Begin (unit abno, unit emp, int work) {
     gvg_workNextBox[gv_workCount] = GameGetMissionTime() + Work_BoxInterval(emp, index);
     gv_workCount = gv_workCount + 1;
 
+    // The meltdown clock answers to this, not to Work_Finish. Somebody has been
+    // sent, which is the decision a meltdown was asking about.
+    Melt_NoteWorkBegin(abno);
+
     // Order, not OrderTargetingPoint: stop takes no target, and handing it one
     // is a trigger error rather than a no-op.
     UnitIssueOrder(emp, Order(AbilityCommand("stop", 0)), c_orderQueueReplace);
@@ -283,9 +287,15 @@ bool Work_Begin (unit abno, unit emp, int work) {
 
 //--------------------------------------------------------------------------------------------------
 // Drops row `slot`, keeping the rows dense by moving the last one into the gap.
+//
+// Every work leaves through here, finished or interrupted, which is why the
+// meltdown clock is told about it here and nowhere else -- a held cell does not
+// care which of the two it was.
 //--------------------------------------------------------------------------------------------------
 void Work_Drop (int slot) {
     int last;
+
+    Melt_NoteWorkEnd(gvg_workAbno[slot]);
 
     last = gv_workCount - 1;
     gvg_workEmp[slot] = gvg_workEmp[last];
@@ -352,11 +362,6 @@ void Work_Finish (int slot) {
     // this abnormality's encyclopedia, and the table's shared energy.
     Cont_AddBoxes(owner, index, boxes);
     Energy_Add(boxes);
-
-    // Clears a meltdown flag if this cell was named. Any result counts, Bad
-    // included: what a meltdown asks for is that somebody went, not that it went
-    // well. A work that fails already costs the employee their SP.
-    Melt_NoteWork(abno);
 
     if (cell >= 0) {
         gvg_workReadyAt[cell] = GameGetMissionTime() + gvg_abnoCooldown[index];
@@ -498,9 +503,17 @@ bool Work_Tick_Func (bool testConds, bool runActions) {
     slot = gv_workCount - 1;
     while (slot >= 0) {
         if (gvg_workEmp[slot] == null || !UnitIsAlive(gvg_workEmp[slot])
-            || Cont_State(gvg_workAbno[slot]) != c_cellContained) {
-            // The worker died, or the thing they were working on got out. Either
-            // way the work is over and pays nothing.
+            || Emp_IsPanicked(gvg_workEmp[slot])
+            || Cont_State(gvg_workAbno[slot]) != c_cellContained
+            || !Cont_DoorIsUp(gvg_workAbno[slot])) {
+            // Interrupted. The employee died or broke, the thing they were
+            // working on got out, or the gate came down around it. Every one of
+            // them ends the work where it stands and pays nothing.
+            //
+            // Panic is here rather than only in Work_Refusal because an employee
+            // can break DURING a work -- a missed box is White damage, so a bad
+            // enough work breaks the person doing it, and somebody who has
+            // stopped functioning has stopped working.
             Work_Drop(slot);
         }
         else if (now >= gvg_workNextBox[slot]) {

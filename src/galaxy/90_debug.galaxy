@@ -247,13 +247,11 @@ void Debug_ReportCells (int player) {
             line = line + " door=DOWN";
         }
 
-        if (Melt_IsFlagged(slot)) {
-            if (Melt_IsDone(slot)) {
-                line = line + " melt=named,worked";
-            }
-            else {
-                line = line + " melt=NAMED";
-            }
+        if (Melt_IsHeld(slot)) {
+            line = line + " melt=HELD";
+        }
+        else if (Melt_IsFlagged(slot)) {
+            line = line + " melt=NAMED " + IntToString(FixedToInt(Melt_SecondsLeft(slot))) + "s";
         }
 
         Debug_Say(player, line);
@@ -280,9 +278,10 @@ void Debug_Meltdown (int player, string word) {
     }
 
     Debug_Say(player, "meltdown level " + IntToString(Melt_Level())
-                      + "  next in " + IntToString(FixedToInt(Melt_SecondsLeft())) + "s"
-                      + "  naming " + IntToString(Melt_Targets()) + " per player"
-                      + "  handled=" + IntToString(Melt_HandledBy(player)));
+                      + "  next round in " + IntToString(FixedToInt(Melt_SecondsToRound())) + "s"
+                      + "  up to " + IntToString(Melt_Targets()) + " outstanding per player"
+                      + "  answered=" + IntToString(Melt_AnsweredBy(player))
+                      + " missed=" + IntToString(Melt_MissedBy(player)));
 
     slot = 0;
     while (slot < gv_cellCount) {
@@ -295,11 +294,11 @@ void Debug_Meltdown (int player, string word) {
         else {
             line = line + IntToString(owner);
         }
-        if (Melt_IsFlagged(slot)) {
-            line = line + " NAMED";
-            if (Melt_IsDone(slot)) {
-                line = line + " (worked)";
-            }
+        if (Melt_IsHeld(slot)) {
+            line = line + " HELD (a work is still running)";
+        }
+        else if (Melt_IsFlagged(slot)) {
+            line = line + " NAMED " + IntToString(FixedToInt(Melt_SecondsLeft(slot))) + "s left";
         }
         Debug_Say(player, line);
         slot = slot + 1;
@@ -647,12 +646,17 @@ void Debug_BuildHelp () {
     Debug_Tip(
         "Meltdown",
         "<c val=\"ffff8a\">-melt</c>  the clock, and who owns each cell.<n/>"
-        + "<c val=\"ffff8a\">-melt now</c>  resolve this round and start the next one.<n/><n/>"
-        + "Every 40 seconds a meltdown names cells in each player's own sector. "
-        + "A named cell has to be worked before the countdown runs out -- any "
-        + "result counts, Bad included, because what it asks is that somebody "
-        + "went. A cell that is missed has its Qliphoth counter set to zero, not "
-        + "reduced, and the table loses a share of the energy pool.<n/><n/>"
+        + "<c val=\"ffff8a\">-melt now</c>  start the next round immediately.<n/><n/>"
+        + "Every 60 seconds a meltdown names cells in each player's own sector, "
+        + "and a named cell has 60 seconds for a work to BEGIN on it. Begin, not "
+        + "finish: what it asks is that somebody was sent. A cell that is missed "
+        + "has its Qliphoth counter set to zero, not reduced, and the table "
+        + "loses a share of the energy pool.<n/><n/>"
+        + "A cell that was already busy when it got named is HELD -- it does not "
+        + "start counting until that work ends, however it ends. The employee "
+        + "inside cannot be sent again, so the window would not be a window. The "
+        + "work in flight does not answer the meltdown either; when it ends, "
+        + "somebody still has to go.<n/><n/>"
         + "The clock is shared but the named cells are yours. A neighbour who "
         + "ignores theirs breaches their own abnormality, and what reaches you "
         + "is a fight -- never a cut to your income or your employees.",
