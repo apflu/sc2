@@ -5659,6 +5659,303 @@ void Hero_Init () {
 }
 
 //--------------------------------------------------------------------------------------------------
+// src/galaxy/16_bank.galaxy
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// The save file.
+//
+// Design 8.1 is the whole specification and it is one sentence: store unlocks,
+// never numbers. The model is Risk of Rain 2 rather than Deep Rock -- what
+// carries between games is the variety of what can show up, not how strong
+// anybody is.
+//
+// So this saves the encyclopedia and nothing else, because the encyclopedia is
+// the only thing on the persist list that exists yet:
+//
+//     observation level   how much of an abnormality a player has bought
+//     PE-Boxes            what they have left to buy the next section with
+//
+// Both are per player AND per abnormality, and a bank is already per player, so
+// the abnormality's own type id is the key and there is no player dimension
+// inside the file at all.
+//
+// PE-Boxes are saved on purpose and it was asked for outright -- boxes count
+// toward the save and buy that one abnormality's encyclopedia. They are not the
+// kind of number 8.1 forbids: they buy knowledge, they never enter a combat
+// calculation, and they cannot be moved to a different abnormality because the
+// storage has no index that would let them.
+//
+// Not saved, because none of it exists: the abnormality unlock pool, quest
+// progress, core suppression progress, department unlocks, titles, records.
+// Each gets its own section when it arrives; nothing here has to change shape
+// for them.
+//
+// Never saved, whatever happens: employee stats, upgrade levels, resources,
+// energy. Design 8.2 gives three reasons and the first is the strongest -- a
+// persisted number makes character strength a function of hours played rather
+// than of skill, which is the highest design principle with the sign flipped.
+//
+//--------------------------------------------------------------------------------------------------
+// The multiplayer part, which is the only hard part.
+//
+// A bank is a local file. Galaxy runs in lockstep on every machine, so reading
+// a file that differs between machines and branching on it is a desync, not a
+// bug you find later.
+//
+// The engine's answer is that a loaded bank is SYNCHRONIZED, and BankWait is the
+// barrier that says the sync has landed. That is not deduced -- Blizzard's own
+// campaign code does exactly this, and names the trigger it does it in
+// "ArchivesBankLoadSyncComplete":
+//
+//     BankLoad(name, player)      then, in a trigger:  BankWait(bank)
+//
+// BankPreload looks like it belongs here and does not. It carries no FlagNative
+// in NativeLib.TriggerLib and both its parameters are ParamFlagPreload, which
+// makes it a compile-time declaration the editor collects rather than a function
+// hand-written Galaxy can call.
+//
+// BankWait blocks, so it runs in its own trigger started with TriggerExecute's
+// wait-for-it flag off. Init does not stall behind six file loads.
+//
+//--------------------------------------------------------------------------------------------------
+// Two rules that stop this from eating somebody's save file:
+//
+//   Nothing is written until everything is read. An autosave that fired during
+//   the load window would write a fresh empty table over a real save, and the
+//   player who lost forty games of encyclopedia would have no way to tell what
+//   happened. gv_bankLoaded gates every write.
+//
+//   Saving is driven by a comparison, not by a call. The modules that change
+//   observation (13_containment buys a section, 14_work adds boxes) both sort
+//   BEFORE this one and cannot call into it, and threading a dirty flag
+//   backwards through the module order to fix that would be worse than the
+//   thing it fixes. So this holds a snapshot of what it last wrote and saves
+//   when the live tables stop matching it -- which is the same behaviour with
+//   nobody having to remember to announce anything.
+//
+// The signature is on and nothing is gated on it. Design 8.2.3: the key is in
+// the map script and can be extracted, and that is the strongest argument for
+// storing only unlocks rather than a reason to fight. Editing a flag unlocks
+// something you would have unlocked anyway; editing a number would ruin four
+// other people's game, and there are no numbers here to edit.
+//--------------------------------------------------------------------------------------------------
+
+const string c_bankName = "LobotomyShiphold";
+const string c_bankSecLevel = "observation";
+const string c_bankSecBoxes = "boxes";
+
+const fixed c_bankPeriod = 5.0;
+
+bank[16] gvg_bank;
+bool gv_bankLoaded;
+
+// What was last written, in the same flattened layout 13_containment uses for
+// the live tables.
+int[1024] gvg_bankSavedLevel;
+int[1024] gvg_bankSavedBoxes;
+
+trigger gt_bankReady;
+trigger gt_bankTick;
+
+//--------------------------------------------------------------------------------------------------
+// Reads one player's file into the live tables.
+//--------------------------------------------------------------------------------------------------
+void Bank_ReadPlayer (int player) {
+    bank b;
+    string key;
+    int index;
+    int i;
+
+    b = gvg_bank[player];
+    if (b == null) {
+        return;
+    }
+
+    index = 0;
+    while (index < c_abnoCount) {
+        key = gvg_abnoType[index];
+        i = Cont_BoxIndex(player, index);
+        if (i >= 0) {
+            if (BankKeyExists(b, c_bankSecLevel, key)) {
+                gvg_obsLevel[i] = BankValueGetAsInt(b, c_bankSecLevel, key);
+            }
+            if (BankKeyExists(b, c_bankSecBoxes, key)) {
+                gvg_obsBoxes[i] = BankValueGetAsInt(b, c_bankSecBoxes, key);
+            }
+        }
+        index = index + 1;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// Writes one player's file, and records what was written.
+//--------------------------------------------------------------------------------------------------
+void Bank_WritePlayer (int player) {
+    bank b;
+    string key;
+    int index;
+    int i;
+
+    b = gvg_bank[player];
+    if (b == null) {
+        return;
+    }
+
+    BankSectionCreate(b, c_bankSecLevel);
+    BankSectionCreate(b, c_bankSecBoxes);
+
+    index = 0;
+    while (index < c_abnoCount) {
+        key = gvg_abnoType[index];
+        i = Cont_BoxIndex(player, index);
+        if (i >= 0) {
+            BankValueSetFromInt(b, c_bankSecLevel, key, gvg_obsLevel[i]);
+            BankValueSetFromInt(b, c_bankSecBoxes, key, gvg_obsBoxes[i]);
+            gvg_bankSavedLevel[i] = gvg_obsLevel[i];
+            gvg_bankSavedBoxes[i] = gvg_obsBoxes[i];
+        }
+        index = index + 1;
+    }
+
+    BankSave(b);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether this player's live tables have moved away from what is on disk.
+//--------------------------------------------------------------------------------------------------
+bool Bank_Dirty (int player) {
+    int index;
+    int i;
+
+    index = 0;
+    while (index < c_abnoCount) {
+        i = Cont_BoxIndex(player, index);
+        if (i >= 0
+            && (gvg_bankSavedLevel[i] != gvg_obsLevel[i]
+                || gvg_bankSavedBoxes[i] != gvg_obsBoxes[i])) {
+            return true;
+        }
+        index = index + 1;
+    }
+    return false;
+}
+
+void Bank_SaveAll () {
+    int player;
+
+    if (!gv_bankLoaded) {
+        return;
+    }
+    player = 1;
+    while (player <= 15) {
+        if (Slot_IsTablePlayer(player) && Bank_Dirty(player)) {
+            Bank_WritePlayer(player);
+        }
+        player = player + 1;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// Throws a player's save away. Debug only, and the reason it exists is that
+// "does a fresh account work" is otherwise a question you can only ask once.
+//--------------------------------------------------------------------------------------------------
+void Bank_Wipe (int player) {
+    bank b;
+    int index;
+    int i;
+
+    b = gvg_bank[player];
+    if (b != null) {
+        BankSectionRemove(b, c_bankSecLevel);
+        BankSectionRemove(b, c_bankSecBoxes);
+        BankSave(b);
+    }
+
+    index = 0;
+    while (index < c_abnoCount) {
+        i = Cont_BoxIndex(player, index);
+        if (i >= 0) {
+            gvg_obsLevel[i] = 0;
+            gvg_obsBoxes[i] = 0;
+            gvg_bankSavedLevel[i] = 0;
+            gvg_bankSavedBoxes[i] = 0;
+        }
+        index = index + 1;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// Waits out the sync, then reads. Its own trigger because BankWait blocks and
+// InitMap must not.
+//--------------------------------------------------------------------------------------------------
+bool Bank_Ready_Func (bool testConds, bool runActions) {
+    int player;
+
+    if (!runActions) {
+        return true;
+    }
+
+    player = 1;
+    while (player <= 15) {
+        if (gvg_bank[player] != null) {
+            BankWait(gvg_bank[player]);
+        }
+        player = player + 1;
+    }
+
+    player = 1;
+    while (player <= 15) {
+        if (gvg_bank[player] != null) {
+            Bank_ReadPlayer(player);
+        }
+        player = player + 1;
+    }
+
+    // Only now, and this ordering is the whole safety property: until the last
+    // file has been read, every table in memory is a lie about somebody's save.
+    gv_bankLoaded = true;
+    return true;
+}
+
+bool Bank_Tick_Func (bool testConds, bool runActions) {
+    if (!runActions) {
+        return true;
+    }
+    Bank_SaveAll();
+    return true;
+}
+
+void Bank_Init () {
+    int player;
+    int i;
+
+    gv_bankLoaded = false;
+
+    i = 0;
+    while (i < 1024) {
+        gvg_bankSavedLevel[i] = 0;
+        gvg_bankSavedBoxes[i] = 0;
+        i = i + 1;
+    }
+
+    player = 1;
+    while (player <= 15) {
+        gvg_bank[player] = null;
+        if (Slot_IsTablePlayer(player)) {
+            gvg_bank[player] = BankLoad(c_bankName, player);
+            BankOptionSet(gvg_bank[player], c_bankOptionSignature, true);
+        }
+        player = player + 1;
+    }
+
+    gt_bankReady = TriggerCreate("Bank_Ready_Func");
+    TriggerExecute(gt_bankReady, true, false);
+
+    gt_bankTick = TriggerCreate("Bank_Tick_Func");
+    TriggerAddEventTimePeriodic(gt_bankTick, c_bankPeriod, c_timeGame);
+}
+
+//--------------------------------------------------------------------------------------------------
 // src/galaxy/20_devices.galaxy
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
@@ -6508,6 +6805,58 @@ void Debug_ReportCells (int player) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// -bank [save|wipe]
+//
+// What is on disk for this player, next to what is in memory. Printed together
+// because the only interesting bank question is whether they agree.
+//--------------------------------------------------------------------------------------------------
+void Debug_Bank (int player, string word) {
+    int index;
+    string line;
+
+    if (StringEqual(word, "wipe", false)) {
+        Bank_Wipe(player);
+        Debug_Say(player, "bank: wiped -- this is what a first game looks like");
+    }
+    else if (StringEqual(word, "save", false)) {
+        if (!gv_bankLoaded) {
+            Debug_Say(player, "bank: not loaded yet, refusing to write over it");
+        }
+        else {
+            Bank_WritePlayer(player);
+            Debug_Say(player, "bank: saved");
+        }
+    }
+
+    if (!gv_bankLoaded) {
+        Debug_Say(player, "bank: still syncing (nothing is written until it lands)");
+        return;
+    }
+
+    line = "bank " + c_bankName;
+    if (gvg_bank[player] == null) {
+        Debug_Say(player, line + ": none for this slot");
+        return;
+    }
+    if (!BankVerify(gvg_bank[player])) {
+        line = line + " [UNSIGNED/edited -- accepted anyway, it only holds unlocks]";
+    }
+    Debug_Say(player, line);
+
+    index = 0;
+    while (index < c_abnoCount) {
+        Debug_Say(player, "  " + gvg_abnoType[index]
+                          + "  obs=" + IntToString(Cont_ObservationOfPlayer(player, index)) + "/4"
+                          + "  box=" + IntToString(Cont_BoxesOf(player, index))
+                          + "  (on disk obs="
+                          + IntToString(gvg_bankSavedLevel[Cont_BoxIndex(player, index)])
+                          + " box="
+                          + IntToString(gvg_bankSavedBoxes[Cont_BoxIndex(player, index)]) + ")");
+        index = index + 1;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
 // -diff [easy|normal|hard|brutal]
 //
 // Stands in for the lobby dropdown. Prints the whole table, because the point of
@@ -6977,6 +7326,22 @@ void Debug_BuildHelp () {
         "Assets\\Textures\\btn-ability-terran-stimpack-color.dds");
 
     Debug_Tip(
+        "The save file",
+        "<c val=\"ffff8a\">-bank</c>  what is in memory next to what is on disk.<n/>"
+        + "<c val=\"ffff8a\">-bank save</c>  write now.  "
+        + "<c val=\"ffff8a\">-bank wipe</c>  throw it away, which is the only way to "
+        + "ask \"does a fresh account work\" more than once.<n/><n/>"
+        + "It stores unlocks and never numbers: your observation level on each "
+        + "abnormality and the PE-Boxes left to buy the next section with. Not "
+        + "employee stats, not upgrades, not resources -- a persisted number "
+        + "would make a character's strength a function of hours played rather "
+        + "than of skill.<n/><n/>"
+        + "Nothing is written until every player's file has finished syncing. "
+        + "Writing during that window would put a fresh empty table over a real "
+        + "save, and nobody would be able to tell what happened.",
+        "Assets\\Textures\\btn-ability-terran-supplydrop.dds");
+
+    Debug_Tip(
         "Difficulty",
         "<c val=\"ffff8a\">-diff</c>  the whole table's settings.<n/>"
         + "<c val=\"ffff8a\">-diff casual|normal|hard|brutal</c>  set yours.<n/><n/>"
@@ -7071,6 +7436,9 @@ bool Debug_Chat_Func (bool testConds, bool runActions) {
     else if (StringEqual(command, "-energy", false)) {
         Debug_Energy(player, StringWord(message, 2));
     }
+    else if (StringEqual(command, "-bank", false)) {
+        Debug_Bank(player, StringWord(message, 2));
+    }
     else if (StringEqual(command, "-diff", false)) {
         Debug_Difficulty(player, StringWord(message, 2));
     }
@@ -7113,6 +7481,7 @@ void InitMap () {
     Meltdown_Init();
     Work_Init();
     Hero_Init();
+    Bank_Init();
     Devices_Init();
     Clearing_Init();
     Workers_Init();

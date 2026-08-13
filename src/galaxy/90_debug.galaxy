@@ -262,6 +262,58 @@ void Debug_ReportCells (int player) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// -bank [save|wipe]
+//
+// What is on disk for this player, next to what is in memory. Printed together
+// because the only interesting bank question is whether they agree.
+//--------------------------------------------------------------------------------------------------
+void Debug_Bank (int player, string word) {
+    int index;
+    string line;
+
+    if (StringEqual(word, "wipe", false)) {
+        Bank_Wipe(player);
+        Debug_Say(player, "bank: wiped -- this is what a first game looks like");
+    }
+    else if (StringEqual(word, "save", false)) {
+        if (!gv_bankLoaded) {
+            Debug_Say(player, "bank: not loaded yet, refusing to write over it");
+        }
+        else {
+            Bank_WritePlayer(player);
+            Debug_Say(player, "bank: saved");
+        }
+    }
+
+    if (!gv_bankLoaded) {
+        Debug_Say(player, "bank: still syncing (nothing is written until it lands)");
+        return;
+    }
+
+    line = "bank " + c_bankName;
+    if (gvg_bank[player] == null) {
+        Debug_Say(player, line + ": none for this slot");
+        return;
+    }
+    if (!BankVerify(gvg_bank[player])) {
+        line = line + " [UNSIGNED/edited -- accepted anyway, it only holds unlocks]";
+    }
+    Debug_Say(player, line);
+
+    index = 0;
+    while (index < c_abnoCount) {
+        Debug_Say(player, "  " + gvg_abnoType[index]
+                          + "  obs=" + IntToString(Cont_ObservationOfPlayer(player, index)) + "/4"
+                          + "  box=" + IntToString(Cont_BoxesOf(player, index))
+                          + "  (on disk obs="
+                          + IntToString(gvg_bankSavedLevel[Cont_BoxIndex(player, index)])
+                          + " box="
+                          + IntToString(gvg_bankSavedBoxes[Cont_BoxIndex(player, index)]) + ")");
+        index = index + 1;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
 // -diff [easy|normal|hard|brutal]
 //
 // Stands in for the lobby dropdown. Prints the whole table, because the point of
@@ -731,6 +783,22 @@ void Debug_BuildHelp () {
         "Assets\\Textures\\btn-ability-terran-stimpack-color.dds");
 
     Debug_Tip(
+        "The save file",
+        "<c val=\"ffff8a\">-bank</c>  what is in memory next to what is on disk.<n/>"
+        + "<c val=\"ffff8a\">-bank save</c>  write now.  "
+        + "<c val=\"ffff8a\">-bank wipe</c>  throw it away, which is the only way to "
+        + "ask \"does a fresh account work\" more than once.<n/><n/>"
+        + "It stores unlocks and never numbers: your observation level on each "
+        + "abnormality and the PE-Boxes left to buy the next section with. Not "
+        + "employee stats, not upgrades, not resources -- a persisted number "
+        + "would make a character's strength a function of hours played rather "
+        + "than of skill.<n/><n/>"
+        + "Nothing is written until every player's file has finished syncing. "
+        + "Writing during that window would put a fresh empty table over a real "
+        + "save, and nobody would be able to tell what happened.",
+        "Assets\\Textures\\btn-ability-terran-supplydrop.dds");
+
+    Debug_Tip(
         "Difficulty",
         "<c val=\"ffff8a\">-diff</c>  the whole table's settings.<n/>"
         + "<c val=\"ffff8a\">-diff casual|normal|hard|brutal</c>  set yours.<n/><n/>"
@@ -824,6 +892,9 @@ bool Debug_Chat_Func (bool testConds, bool runActions) {
     }
     else if (StringEqual(command, "-energy", false)) {
         Debug_Energy(player, StringWord(message, 2));
+    }
+    else if (StringEqual(command, "-bank", false)) {
+        Debug_Bank(player, StringWord(message, 2));
     }
     else if (StringEqual(command, "-diff", false)) {
         Debug_Difficulty(player, StringWord(message, 2));
