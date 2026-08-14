@@ -33,6 +33,24 @@ trigger gt_debugChat;
 // FontStyles are marked requiredtoload. That suspicion is dead: the error was
 // an unescaped <s> in the old chat help text, and the debug area never had
 // anything to do with it.
+//--------------------------------------------------------------------------------------------------
+// What to call an abnormality in DEVELOPER output.
+//
+// Its unit type, not its display name. The name is a localised string now and
+// cannot come back as a Galaxy string at all -- but the type is also the better
+// answer: "O_03_03" is the document filename, the CUnit id and the thing you
+// would grep for, where the display name is the player's handle for it.
+//--------------------------------------------------------------------------------------------------
+string Debug_AbnoName (unit abno) {
+    int index;
+
+    index = AbnoGen_IndexOf(abno);
+    if (index < 0) {
+        return UnitGetType(abno);
+    }
+    return gvg_abnoType[index];
+}
+
 void Debug_Say (int player, string line) {
     UIDisplayMessage(PlayerGroupSingle(player), c_messageAreaDebug, StringToText(line));
 }
@@ -236,7 +254,7 @@ void Debug_ReportCells (int player) {
         abno = gvg_cellAbno[slot];
         door = Cont_DoorAt(gvg_cellHome[slot]);
 
-        line = "cell " + IntToString(slot) + " " + gvg_abnoName[AbnoGen_IndexOf(abno)]
+        line = "cell " + IntToString(slot) + " " + Debug_AbnoName(abno)
                + " [" + Risk_Name(Risk_Of(abno)) + "]"
                + " " + Debug_CellStateName(gvg_cellState[slot])
                + " qlip=" + IntToString(Cont_Counter(abno))
@@ -566,7 +584,7 @@ void Debug_Meltdown (int player, string word) {
     while (slot < gv_cellCount) {
         owner = Cont_OwnerOf(slot);
         line = "  cell " + IntToString(slot) + " "
-               + gvg_abnoName[AbnoGen_IndexOf(gvg_cellAbno[slot])] + " owner=";
+               + Debug_AbnoName(gvg_cellAbno[slot]) + " owner=";
         if (owner == 0) {
             line = line + "NOBODY (no panel, no core)";
         }
@@ -701,7 +719,7 @@ void Debug_Work (int player, string word) {
         // The cost of being wrong belongs next to the odds of being wrong. On
         // one abnormality a missed box is a bad afternoon; on another it is a
         // funeral, and that is not visible from a percentage.
-        line = "  " + gvg_abnoName[AbnoGen_IndexOf(abno)]
+        line = "  " + Debug_AbnoName(abno)
                + " [miss: " + AbnoGen_DmgText(AbnoGen_IndexOf(abno)) + "]:";
         work = 0;
         while (work < c_workCount) {

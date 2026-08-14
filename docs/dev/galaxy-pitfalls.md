@@ -44,6 +44,22 @@ trigger doodad actor byte  string unit  revealer
 
 `build_galaxy.py` 的 `check_type_names` 现在会挡住它，并指出是哪一行哪个词。完整类型表是从 `~/SC2GameData/` 的 native 声明里扒出来的，不是手列的。
 
+### 改名留下的引用，报的还是 "invalid args list"
+
+第三次了。同一句报错，三个完全不同的原因：
+
+| 真正的原因 | 报在哪 | 挡它的闸 |
+|---|---|---|
+| 先用后声明 | **调用处** | `check_forward_refs` |
+| 变量名撞上类型名 | **函数头那一行** | `check_type_names` |
+| 引用了已改名/不存在的全局 | **那个值下一次被用的地方**（常常是一句拼接） | `check_globals` |
+
+`gvg_abnoName` 改成 `gvg_abnoNameKey` 之后，`90_debug` 里有三行还在问旧名字，编译器指着一句字符串拼接说 "invalid args list"。
+
+Galaxy 没有一句能读的"未声明标识符"报错，所以这个只能在构建期挡。`check_globals` 只认 `gv_` / `gvg_` 前缀——**这正是本项目全局变量的命名约定，而且从不用于别的东西**。
+
+> 一次跨机器往返太贵，所以规则是：**同一句报错咬第二次，就不修那一例，去 `tools/` 里加一道闸。**现在这句话已经对应三道了。
+
 ### 没有数组初始化语法
 
 所以生成的每张表都是"上面一句声明 + Init 里一串赋值"，两者之间**没有任何东西把它们绑在一起**。

@@ -135,6 +135,41 @@ def check_type_names(text: str) -> None:
         )
 
 
+GLOBAL_DECL_RE = re.compile(
+    r"^(?:const\s+)?\w+\s*(?:\[\s*\d+\s*\])?\s+(gv_\w+|gvg_\w+)\s*(?:=|;)", re.M)
+GLOBAL_USE_RE = re.compile(r"\b(gv_\w+|gvg_\w+)\b")
+
+
+def check_globals(text: str) -> None:
+    """Refuse to emit a script that reads a global nobody declares.
+
+    This is what a rename leaves behind. gvg_abnoName became gvg_abnoNameKey and
+    three lines in the debug module kept asking for the old one, and the
+    compiler's answer was "invalid args list" pointing at a string
+    concatenation -- the same misleading shape as a forward reference and as a
+    type-name collision, for the third distinct cause.
+
+    Galaxy has no undeclared-identifier message worth reading, so the guard has
+    to be here. It only knows the gv_/gvg_ prefixes, which is exactly the
+    convention this project uses for globals and never for anything else.
+    """
+    stripped = re.sub(r"//[^\n]*", "", text)
+    declared = set(GLOBAL_DECL_RE.findall(stripped))
+
+    bad = {}
+    for m in GLOBAL_USE_RE.finditer(stripped):
+        if m.group(1) not in declared:
+            bad.setdefault(m.group(1), text.count("\n", 0, m.start(1)) + 1)
+
+    if bad:
+        raise SystemExit(
+            "global used but never declared -- usually the far side of a rename.\n"
+            'Galaxy reports this as "invalid args list" wherever the value is\n'
+            "next used, which is rarely the line you need:\n"
+            + "\n".join(f"  MapScript.galaxy line {line}: {name}"
+                         for name, line in sorted(bad.items())))
+
+
 def main() -> int:
     if not SRC.is_dir():
         print(f"error: no source directory at {SRC}", file=sys.stderr)
@@ -213,6 +248,7 @@ def main() -> int:
     parts.append("}\n")
 
     check_type_names("".join(parts))
+    check_globals("".join(parts))
     check_forward_refs("".join(parts))
     OUT.write_text("".join(parts), encoding="utf-8")
 
