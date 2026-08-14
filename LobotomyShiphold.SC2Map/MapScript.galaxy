@@ -8007,8 +8007,49 @@ string[36] gvg_questTitle;
 // source document leaves the line blank.
 bool[36] gvg_questCountable;
 
+// Anything the player cannot read off the task text. Empty for most.
+string[36] gvg_questNote;
+
 // Flattened player * 36 + quest, sized for 16 players.
 bool[576] gvg_questDone;
+
+//--------------------------------------------------------------------------------------------------
+// The objectives panel.
+//
+// The stock one, opened with F9, which the engine already draws, sorts,
+// animates on completion, splits into primary and secondary, and persists
+// across the whole game. Writing any of that would have been writing something
+// worse.
+//
+// Indexed player * 4 + n rather than by quest id, because a player only ever
+// has their own department's four. So this is 64 entries and not 576, and
+// changing department is destroy-four-create-four rather than a search.
+//
+// Two natives carry the whole thing:
+//
+//   ObjectiveCreateForPlayers   per player, which is what makes six players
+//                               with six departments each see only their own
+//   ObjectiveSetName            progress, exactly as Blizzard's campaigns do it:
+//                               the count lives in the name, "(2/4)"
+//
+// The last count pushed is remembered so the name is only rewritten when the
+// number actually moves. Every two seconds against four objectives times six
+// players is 24 text rebuilds a tick otherwise, for a string that is usually
+// identical to the one already there.
+//
+// The [challenge] task of each department is created SECONDARY. That is not a
+// label chosen here -- the engine already has a notion of an optional
+// objective, draws it in its own section, and the document already marks
+// exactly one task per department as 挑战.
+//
+// An uncountable task is created Hidden. The panel is what a PLAYER reads, and
+// showing somebody a task that cannot be completed is worse than not showing
+// it; -quest is what a developer reads and still lists all thirty-six with
+// their reasons. When a missing system lands, flipping countable makes its
+// tasks appear, in one place.
+//--------------------------------------------------------------------------------------------------
+int[64] gvg_questObj;
+int[64] gvg_questShown;
 
 const fixed c_questPeriod = 2.0;
 
@@ -8172,9 +8213,40 @@ int Quest_Progress (int player, int quest) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// The panel entry belonging to one of a player's four.
+//--------------------------------------------------------------------------------------------------
+int Quest_ObjectiveOf (int player, int quest) {
+    if (player < 1 || player > 15 || quest < 0 || quest >= c_questCount) {
+        return c_invalidObjectiveId;
+    }
+    if (Quest_DeptOf(quest) != Dept_Of(player)) {
+        return c_invalidObjectiveId;
+    }
+    return gvg_questObj[player * c_questPerDept + Quest_NumberOf(quest) - 1];
+}
+
+//--------------------------------------------------------------------------------------------------
+// What the panel says. The count goes in the NAME, which is Blizzard's own
+// convention for a counted objective and the reason the panel needs no
+// description to be readable at a glance.
+//--------------------------------------------------------------------------------------------------
+text Quest_NameText (int player, int quest) {
+    string line;
+
+    line = gvg_questTitle[quest];
+    if (gvg_questCountable[quest]) {
+        line = line + "  (" + IntToString(Quest_Progress(player, quest))
+               + "/" + IntToString(gvg_questGoal[quest]) + ")";
+    }
+    return StringToText(line);
+}
+
+//--------------------------------------------------------------------------------------------------
 // Marks one done, once.
 //--------------------------------------------------------------------------------------------------
 void Quest_Complete (int player, int quest) {
+    int obj;
+
     if (player < 1 || player > 15 || quest < 0 || quest >= c_questCount) {
         return;
     }
@@ -8183,11 +8255,71 @@ void Quest_Complete (int player, int quest) {
     }
     gvg_questDone[player * c_questCount + quest] = true;
 
+    // The panel animates the tick itself; the subtitle is for the player who
+    // was looking at the other end of the map when it happened.
+    obj = Quest_ObjectiveOf(player, quest);
+    if (obj != c_invalidObjectiveId) {
+        ObjectiveSetName(obj, Quest_NameText(player, quest));
+        ObjectiveSetState(obj, c_objectiveStateCompleted);
+    }
+
     UIDisplayMessage(
         PlayerGroupSingle(player), c_messageAreaSubtitle,
-        StringToText("task complete -- " + gvg_deptName[Quest_DeptOf(quest)] + " "
-                     + IntToString(Quest_NumberOf(quest)) + ": "
-                     + gvg_questTitle[quest]));
+        StringToText("task complete -- " + gvg_questTitle[quest]));
+}
+
+//--------------------------------------------------------------------------------------------------
+// Builds a player's four panel entries, replacing whatever was there.
+//
+// Called at init and again whenever a player's department changes, which right
+// now only the debug command does but a selection screen will do for real.
+//--------------------------------------------------------------------------------------------------
+void Quest_Publish (int player) {
+    int dept;
+    int quest;
+    int state;
+    int n;
+
+    n = 0;
+    while (n < c_questPerDept) {
+        if (gvg_questObj[player * c_questPerDept + n] != c_invalidObjectiveId) {
+            ObjectiveDestroy(gvg_questObj[player * c_questPerDept + n]);
+        }
+        gvg_questObj[player * c_questPerDept + n] = c_invalidObjectiveId;
+        gvg_questShown[player * c_questPerDept + n] = -1;
+        n = n + 1;
+    }
+
+    dept = Dept_Of(player);
+    if (dept < 0 || dept >= c_deptCount) {
+        return;
+    }
+
+    n = 0;
+    while (n < c_questPerDept) {
+        quest = dept * c_questPerDept + n;
+
+        state = c_objectiveStateActive;
+        if (Quest_IsDone(player, quest)) {
+            state = c_objectiveStateCompleted;
+        }
+        else if (!gvg_questCountable[quest]) {
+            state = c_objectiveStateHidden;
+        }
+
+        // The fourth of every department is the document's 挑战, and the engine
+        // already has a place for an optional objective.
+        gvg_questObj[player * c_questPerDept + n] = ObjectiveCreateForPlayers(
+            Quest_NameText(player, quest),
+            StringToText(gvg_deptName[dept] + " " + IntToString(n + 1)
+                         + gvg_questNote[quest]),
+            state,
+            n < c_questPerDept - 1,
+            PlayerGroupSingle(player));
+        gvg_questShown[player * c_questPerDept + n] = Quest_Progress(player, quest);
+
+        n = n + 1;
+    }
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -8203,11 +8335,17 @@ void Quest_Complete (int player, int quest) {
 // Every two seconds against a handful of integer comparisons is nothing, and
 // completion is a latch, so the only cost of being a moment late is being a
 // moment late.
+//
+// The panel is only written when a number actually moves. Rebuilding four
+// identical strings per player per tick would be the whole cost of this module
+// spent on saying nothing.
 //--------------------------------------------------------------------------------------------------
 bool Quest_Tick_Func (bool testConds, bool runActions) {
     int player;
     int quest;
     int dept;
+    int slot;
+    int now;
 
     if (!runActions) {
         return true;
@@ -8220,10 +8358,20 @@ bool Quest_Tick_Func (bool testConds, bool runActions) {
             if (dept >= 0 && dept < c_deptCount) {
                 quest = dept * c_questPerDept;
                 while (quest < dept * c_questPerDept + c_questPerDept) {
-                    if (gvg_questCountable[quest]
-                        && !Quest_IsDone(player, quest)
-                        && Quest_Progress(player, quest) >= gvg_questGoal[quest]) {
-                        Quest_Complete(player, quest);
+                    if (gvg_questCountable[quest] && !Quest_IsDone(player, quest)) {
+                        now = Quest_Progress(player, quest);
+                        if (now >= gvg_questGoal[quest]) {
+                            Quest_Complete(player, quest);
+                        }
+                        else {
+                            slot = player * c_questPerDept + Quest_NumberOf(quest) - 1;
+                            if (now != gvg_questShown[slot]
+                                && gvg_questObj[slot] != c_invalidObjectiveId) {
+                                ObjectiveSetName(gvg_questObj[slot],
+                                                 Quest_NameText(player, quest));
+                                gvg_questShown[slot] = now;
+                            }
+                        }
                     }
                     quest = quest + 1;
                 }
@@ -8246,6 +8394,13 @@ void Quest_Declare (int quest, int goal, bool countable, string title) {
     gvg_questGoal[quest] = goal;
     gvg_questCountable[quest] = countable;
     gvg_questTitle[quest] = title;
+    gvg_questNote[quest] = "";
+}
+
+// A second line under the task in the panel, for the one thing about it a
+// player could not work out by reading it.
+void Quest_Note (int quest, string note) {
+    gvg_questNote[quest] = " -- " + note;
 }
 
 void Quests_Init () {
@@ -8276,7 +8431,8 @@ void Quests_Init () {
     // Training Team.
     Quest_Declare(c_qHod1, 2, true, "2 employees promoted");
     Quest_Declare(c_qHod2, 1, true, "an employee at rank IV");
-    Quest_Declare(c_qHod3, 4, true, "4 distinct abnormalities suppressed (table-wide)");
+    Quest_Declare(c_qHod3, 4, true, "4 distinct abnormalities suppressed");
+    Quest_Note(c_qHod3, "your teammates' suppressions count too");
     Quest_Declare(c_qHod4, 1, false, "[challenge] finish with every employee at rank V");
 
     // Disciplinary Team. Unlocks at ten tasks, so nothing here is reachable
@@ -8285,6 +8441,20 @@ void Quests_Init () {
     Quest_Declare(c_deptGeburah * c_questPerDept + 1, 5, false, "suppress 3 HE+ and 2 WAW+");
     Quest_Declare(c_deptGeburah * c_questPerDept + 2, 3, false, "suppress 3 distinct Aleph");
     Quest_Declare(c_deptGeburah * c_questPerDept + 3, 1, false, "[challenge] survive a Midnight ordeal");
+
+    // After the table, because publishing reads it. Departments are dealt in
+    // Departments_Init, which the build orders before this one.
+    i = 1;
+    while (i <= 15) {
+        gvg_questObj[i * c_questPerDept + 0] = c_invalidObjectiveId;
+        gvg_questObj[i * c_questPerDept + 1] = c_invalidObjectiveId;
+        gvg_questObj[i * c_questPerDept + 2] = c_invalidObjectiveId;
+        gvg_questObj[i * c_questPerDept + 3] = c_invalidObjectiveId;
+        if (Slot_IsTablePlayer(i)) {
+            Quest_Publish(i);
+        }
+        i = i + 1;
+    }
 
     gt_questTick = TriggerCreate("Quest_Tick_Func");
     TriggerAddEventTimePeriodic(gt_questTick, c_questPeriod, c_timeGame);
@@ -8646,6 +8816,9 @@ void Debug_Quests (int player, string word) {
     want = Debug_Int(word, -1);
     if (want >= 0 && want < c_deptCount) {
         Dept_SetOf(player, want);
+        // The panel is four objectives belonging to the department you were
+        // holding a moment ago, so it has to be torn down and rebuilt.
+        Quest_Publish(player);
         Debug_Say(player, "quest: you are now " + gvg_deptName[want]);
     }
 
@@ -9272,7 +9445,11 @@ void Debug_BuildHelp () {
         + "been suppressed. Those are counted where they happen.<n/><n/>"
         + "Completion is a latch -- employees die and buildings fall, but a task "
         + "that was done stays done. It is NOT saved yet, so it is forgotten "
-        + "when the game ends.",
+        + "when the game ends.<n/><n/>"
+        + "Your four are in the stock objectives panel, on F9. The [challenge] "
+        + "one is a secondary objective, and the ones with no channel are "
+        + "hidden there -- the panel is what a player reads, this command is "
+        + "what you read.",
         "Assets\\Textures\\btn-ability-terran-scannersweep.dds");
 
     Debug_Tip(

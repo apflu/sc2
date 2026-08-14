@@ -351,6 +351,9 @@ void Debug_Quests (int player, string word) {
     want = Debug_Int(word, -1);
     if (want >= 0 && want < c_deptCount) {
         Dept_SetOf(player, want);
+        // The panel is four objectives belonging to the department you were
+        // holding a moment ago, so it has to be torn down and rebuilt.
+        Quest_Publish(player);
         Debug_Say(player, "quest: you are now " + gvg_deptName[want]);
     }
 
@@ -977,7 +980,11 @@ void Debug_BuildHelp () {
         + "been suppressed. Those are counted where they happen.<n/><n/>"
         + "Completion is a latch -- employees die and buildings fall, but a task "
         + "that was done stays done. It is NOT saved yet, so it is forgotten "
-        + "when the game ends.",
+        + "when the game ends.<n/><n/>"
+        + "Your four are in the stock objectives panel, on F9. The [challenge] "
+        + "one is a secondary objective, and the ones with no channel are "
+        + "hidden there -- the panel is what a player reads, this command is "
+        + "what you read.",
         "Assets\\Textures\\btn-ability-terran-scannersweep.dds");
 
     Debug_Tip(
