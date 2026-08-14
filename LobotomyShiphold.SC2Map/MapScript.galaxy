@@ -3956,11 +3956,41 @@ int gv_energy;
 int gv_energyGoal;
 bool gv_energySubmitted;
 
+//--------------------------------------------------------------------------------------------------
+// The one BONUS objective, and the reason that word means something here.
+//
+// The engine's two sections are labelled "Main Objectives" and "Bonus
+// Objectives", and the split this map puts on them is not challenge versus
+// ordinary -- it is PERMANENT versus THIS EVENING. A department task is main
+// because finishing it changes every game after this one. Tonight's energy
+// target is bonus because when the ship leaves, it is spent.
+//
+// Which is the Lobotomy reading of its own premise, and worth stating because
+// it looks upside down: the session is the disposable part. Surviving the night
+// is not the achievement, it is the price of having a record at all.
+//
+// Every path that moves the pool ends up in Energy_Add, Energy_Drain,
+// Energy_Retarget or Energy_Submit, so refreshing from those four is
+// exhaustive and there is no tick.
+//--------------------------------------------------------------------------------------------------
+int gv_energyObj;
+
+void Energy_Refresh () {
+    if (gv_energyObj == c_invalidObjectiveId) {
+        return;
+    }
+    ObjectiveSetName(gv_energyObj,
+                     StringToText("deliver the energy quota  ("
+                                  + IntToString(gv_energy) + "/"
+                                  + IntToString(gv_energyGoal) + ")"));
+}
+
 void Energy_Add (int amount) {
     gv_energy = gv_energy + amount;
     if (gv_energy < 0) {
         gv_energy = 0;
     }
+    Energy_Refresh();
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -3982,6 +4012,7 @@ int Energy_Drain (int percent) {
         lost = gv_energy;
     }
     gv_energy = gv_energy - lost;
+    Energy_Refresh();
     return lost;
 }
 
@@ -3996,6 +4027,9 @@ void Energy_Submit (int player) {
         return;
     }
     gv_energySubmitted = true;
+    if (gv_energyObj != c_invalidObjectiveId) {
+        ObjectiveSetState(gv_energyObj, c_objectiveStateCompleted);
+    }
 
     UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle,
                      StringToText("energy delivered -- the ship makes it out"));
@@ -4029,11 +4063,27 @@ const int c_energyGoalBase = 200;
 //--------------------------------------------------------------------------------------------------
 void Energy_Retarget () {
     gv_energyGoal = Diff_GoalFrom(c_energyGoalBase);
+    Energy_Refresh();
 }
 
 void Energy_Init () {
     gv_energy = 0;
     gv_energySubmitted = false;
+    gv_energyObj = c_invalidObjectiveId;
+
+    // Created before the target is computed, so the first Refresh has something
+    // to write to. Not per player: the pool is one number for the table, and
+    // the panel should say so by being the same line in front of everybody.
+    gv_energyObj = ObjectiveCreate(
+        StringToText("deliver the energy quota"),
+        StringToText("Every box a work produces pays into this and into that "
+                     + "abnormality's encyclopedia, both in full. Studying them "
+                     + "and getting out are the same activity.<n/><n/>"
+                     + "Spent when the ship leaves -- which is why it is a bonus "
+                     + "objective and your department's tasks are not."),
+        c_objectiveStateActive,
+        false);
+
     Energy_Retarget();
 }
 
@@ -8007,7 +8057,13 @@ string[36] gvg_questTitle;
 // source document leaves the line blank.
 bool[36] gvg_questCountable;
 
-// Anything the player cannot read off the task text. Empty for most.
+// The flavour half of a task's tooltip. Empty everywhere until somebody writes
+// it, because it is authored content and belongs to whoever writes usr/, not
+// to this file inventing lines for nine departments.
+string[36] gvg_questLore;
+
+// The one mechanical thing about a task a player could not work out by reading
+// its name. Empty for most.
 string[36] gvg_questNote;
 
 // Flattened player * 36 + quest, sized for 16 players.
@@ -8016,10 +8072,9 @@ bool[576] gvg_questDone;
 //--------------------------------------------------------------------------------------------------
 // The objectives panel.
 //
-// The stock one, opened with F9, which the engine already draws, sorts,
-// animates on completion, splits into primary and secondary, and persists
-// across the whole game. Writing any of that would have been writing something
-// worse.
+// The stock objectives panel, which the engine already draws, sorts, animates
+// on completion, splits into two sections and persists across the whole game.
+// Writing any of that would have been writing something worse.
 //
 // Indexed player * 4 + n rather than by quest id, because a player only ever
 // has their own department's four. So this is 64 entries and not 576, and
@@ -8037,10 +8092,33 @@ bool[576] gvg_questDone;
 // players is 24 text rebuilds a tick otherwise, for a string that is usually
 // identical to the one already there.
 //
-// The [challenge] task of each department is created SECONDARY. That is not a
-// label chosen here -- the engine already has a notion of an optional
-// objective, draws it in its own section, and the document already marks
-// exactly one task per department as 挑战.
+//--------------------------------------------------------------------------------------------------
+// Every department task is a MAIN objective.
+//
+// The engine's two sections are labelled "Main Objectives" and "Bonus
+// Objectives", and the line between them here is PERMANENT versus THIS EVENING
+// -- not challenge versus ordinary. Finishing a department task changes every
+// game after this one, so all four are main, the 挑战 one included. Tonight's
+// energy quota is the bonus objective, in 12_energy, because when the ship
+// leaves it is spent.
+//
+// Which reads upside down until you say it out loud: the session is the
+// disposable half. Surviving the night is the price of having a record, not
+// the record.
+//
+//--------------------------------------------------------------------------------------------------
+// There are two text fields, not three.
+//
+// UI/Layout/UI/ObjectivePanel.SC2Layout puts the NAME in the list line and the
+// DESCRIPTION in ObjectiveTooltip's TipLabel -- the description IS the hover
+// tooltip, they are not separate slots. So the one tooltip carries both things
+// worth saying, reward first because it is actionable and lore second because
+// it is not:
+//
+//   Reward: ...          derived from the completed-task COUNT, because that is
+//                        how usr/department.md keys its passives -- "与其已完成
+//                        的任务数有关" -- not per task
+//   <lore>               authored, and empty everywhere until it is written
 //
 // An uncountable task is created Hidden. The panel is what a PLAYER reads, and
 // showing somebody a task that cannot be completed is worse than not showing
@@ -8242,6 +8320,30 @@ text Quest_NameText (int player, int quest) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// The hover tooltip: what finishing it is worth, then what it is about.
+//
+// The reward is stated as a COUNT because that is how the source keys it.
+// usr/department.md gives each department a passive whose strength is "与其已
+// 完成的任务数有关" -- four tiers against four tasks -- so which task you finish
+// does not decide what you get, only how many. Writing a per-task reward would
+// be inventing a rule the design does not have, and it is also what keeps this
+// string constant: order-independent, so it never needs refreshing.
+//--------------------------------------------------------------------------------------------------
+text Quest_DescText (int quest) {
+    string line;
+
+    line = gvg_deptName[Quest_DeptOf(quest)] + " " + IntToString(Quest_NumberOf(quest))
+           + gvg_questNote[quest] + "<n/><n/>"
+           + "Reward: one more tier of your department's passive, from your "
+           + "NEXT game onward. Which task does not matter; how many do.";
+
+    if (gvg_questLore[quest] != "") {
+        line = line + "<n/><n/>" + gvg_questLore[quest];
+    }
+    return StringToText(line);
+}
+
+//--------------------------------------------------------------------------------------------------
 // Marks one done, once.
 //--------------------------------------------------------------------------------------------------
 void Quest_Complete (int player, int quest) {
@@ -8307,14 +8409,14 @@ void Quest_Publish (int player) {
             state = c_objectiveStateHidden;
         }
 
-        // The fourth of every department is the document's 挑战, and the engine
-        // already has a place for an optional objective.
+        // Primary, all four. What earns that section is that finishing it
+        // survives the game, and the 挑战 one survives exactly as hard as the
+        // other three. The bonus section belongs to tonight's quota.
         gvg_questObj[player * c_questPerDept + n] = ObjectiveCreateForPlayers(
             Quest_NameText(player, quest),
-            StringToText(gvg_deptName[dept] + " " + IntToString(n + 1)
-                         + gvg_questNote[quest]),
+            Quest_DescText(quest),
             state,
-            n < c_questPerDept - 1,
+            true,
             PlayerGroupSingle(player));
         gvg_questShown[player * c_questPerDept + n] = Quest_Progress(player, quest);
 
@@ -8395,12 +8497,20 @@ void Quest_Declare (int quest, int goal, bool countable, string title) {
     gvg_questCountable[quest] = countable;
     gvg_questTitle[quest] = title;
     gvg_questNote[quest] = "";
+    gvg_questLore[quest] = "";
 }
 
-// A second line under the task in the panel, for the one thing about it a
-// player could not work out by reading it.
+// The one mechanical thing about a task a player could not work out by reading
+// its name. Sits on the department line, above the reward.
 void Quest_Note (int quest, string note) {
     gvg_questNote[quest] = " -- " + note;
+}
+
+// Flavour, last in the tooltip. Nothing calls this yet: the nine departments
+// have no written lore, and inventing it here would be authoring content in the
+// wrong place. The channel is open so that writing it is a one-line change.
+void Quest_Lore (int quest, string lore) {
+    gvg_questLore[quest] = lore;
 }
 
 void Quests_Init () {
@@ -9446,10 +9556,13 @@ void Debug_BuildHelp () {
         + "Completion is a latch -- employees die and buildings fall, but a task "
         + "that was done stays done. It is NOT saved yet, so it is forgotten "
         + "when the game ends.<n/><n/>"
-        + "Your four are in the stock objectives panel, on F9. The [challenge] "
-        + "one is a secondary objective, and the ones with no channel are "
-        + "hidden there -- the panel is what a player reads, this command is "
-        + "what you read.",
+        + "Your four are in the stock objectives panel, all four as MAIN "
+        + "objectives. What earns that section is surviving the game: a "
+        + "department task changes every game after this one, so tonight's "
+        + "energy quota is the bonus objective and these are not.<n/><n/>"
+        + "Tasks with no channel are hidden there -- the panel is what a "
+        + "player reads, this command is what you read. Hover one for its "
+        + "reward; the description IS the tooltip, there is no third field.",
         "Assets\\Textures\\btn-ability-terran-scannersweep.dds");
 
     Debug_Tip(

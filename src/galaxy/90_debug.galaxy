@@ -981,10 +981,13 @@ void Debug_BuildHelp () {
         + "Completion is a latch -- employees die and buildings fall, but a task "
         + "that was done stays done. It is NOT saved yet, so it is forgotten "
         + "when the game ends.<n/><n/>"
-        + "Your four are in the stock objectives panel, on F9. The [challenge] "
-        + "one is a secondary objective, and the ones with no channel are "
-        + "hidden there -- the panel is what a player reads, this command is "
-        + "what you read.",
+        + "Your four are in the stock objectives panel, all four as MAIN "
+        + "objectives. What earns that section is surviving the game: a "
+        + "department task changes every game after this one, so tonight's "
+        + "energy quota is the bonus objective and these are not.<n/><n/>"
+        + "Tasks with no channel are hidden there -- the panel is what a "
+        + "player reads, this command is what you read. Hover one for its "
+        + "reward; the description IS the tooltip, there is no third field.",
         "Assets\\Textures\\btn-ability-terran-scannersweep.dds");
 
     Debug_Tip(

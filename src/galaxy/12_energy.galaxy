@@ -31,11 +31,41 @@ int gv_energy;
 int gv_energyGoal;
 bool gv_energySubmitted;
 
+//--------------------------------------------------------------------------------------------------
+// The one BONUS objective, and the reason that word means something here.
+//
+// The engine's two sections are labelled "Main Objectives" and "Bonus
+// Objectives", and the split this map puts on them is not challenge versus
+// ordinary -- it is PERMANENT versus THIS EVENING. A department task is main
+// because finishing it changes every game after this one. Tonight's energy
+// target is bonus because when the ship leaves, it is spent.
+//
+// Which is the Lobotomy reading of its own premise, and worth stating because
+// it looks upside down: the session is the disposable part. Surviving the night
+// is not the achievement, it is the price of having a record at all.
+//
+// Every path that moves the pool ends up in Energy_Add, Energy_Drain,
+// Energy_Retarget or Energy_Submit, so refreshing from those four is
+// exhaustive and there is no tick.
+//--------------------------------------------------------------------------------------------------
+int gv_energyObj;
+
+void Energy_Refresh () {
+    if (gv_energyObj == c_invalidObjectiveId) {
+        return;
+    }
+    ObjectiveSetName(gv_energyObj,
+                     StringToText("deliver the energy quota  ("
+                                  + IntToString(gv_energy) + "/"
+                                  + IntToString(gv_energyGoal) + ")"));
+}
+
 void Energy_Add (int amount) {
     gv_energy = gv_energy + amount;
     if (gv_energy < 0) {
         gv_energy = 0;
     }
+    Energy_Refresh();
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -57,6 +87,7 @@ int Energy_Drain (int percent) {
         lost = gv_energy;
     }
     gv_energy = gv_energy - lost;
+    Energy_Refresh();
     return lost;
 }
 
@@ -71,6 +102,9 @@ void Energy_Submit (int player) {
         return;
     }
     gv_energySubmitted = true;
+    if (gv_energyObj != c_invalidObjectiveId) {
+        ObjectiveSetState(gv_energyObj, c_objectiveStateCompleted);
+    }
 
     UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle,
                      StringToText("energy delivered -- the ship makes it out"));
@@ -104,10 +138,26 @@ const int c_energyGoalBase = 200;
 //--------------------------------------------------------------------------------------------------
 void Energy_Retarget () {
     gv_energyGoal = Diff_GoalFrom(c_energyGoalBase);
+    Energy_Refresh();
 }
 
 void Energy_Init () {
     gv_energy = 0;
     gv_energySubmitted = false;
+    gv_energyObj = c_invalidObjectiveId;
+
+    // Created before the target is computed, so the first Refresh has something
+    // to write to. Not per player: the pool is one number for the table, and
+    // the panel should say so by being the same line in front of everybody.
+    gv_energyObj = ObjectiveCreate(
+        StringToText("deliver the energy quota"),
+        StringToText("Every box a work produces pays into this and into that "
+                     + "abnormality's encyclopedia, both in full. Studying them "
+                     + "and getting out are the same activity.<n/><n/>"
+                     + "Spent when the ship leaves -- which is why it is a bonus "
+                     + "objective and your department's tasks are not."),
+        c_objectiveStateActive,
+        false);
+
     Energy_Retarget();
 }

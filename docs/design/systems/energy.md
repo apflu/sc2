@@ -27,6 +27,16 @@
 
 按**全桌平均难度**缩放，见 [`difficulty.md`](difficulty.md)。基数 `c_energyGoalBase = 200` 是 TUNING，且是这个模块里唯一一个凭空定的数。
 
+## 它是面板上唯一的 bonus objective
+
+指标进原生任务面板的 **Bonus Objectives** 栏，和部门任务的 Main Objectives 栏并排。
+
+这条分界不是"挑战 / 普通"，是**永久 / 今晚**：部门任务做完改变的是之后的每一局，而能源指标**船一开走就花掉了**。所以反过来看是对的——**一局游戏才是可丢弃的那一半**，活过今晚是拿到记录的代价，不是记录本身。详见 [`quests.md`](quests.md)。
+
+刷新不用 tick：动这个池子的路径只有 `Energy_Add` / `Energy_Drain` / `Energy_Retarget` / `Energy_Submit` 四条，四条各调一次 `Energy_Refresh()` 就是穷尽的。
+
+它是 `ObjectiveCreate` 而不是 `...ForPlayers`——池子是全桌一个数，面板就该在每个人面前是同一行。
+
 ## 模块位置
 
 能源池住在 `12_energy.galaxy` 而不是 `14_work.galaxy` 里，因为**融毁要扣它、而工作完成要回调融毁**——两边都得比对方早。搬完之后反而更对：工作往里填、融毁往外扣，**两者都不拥有它**。
