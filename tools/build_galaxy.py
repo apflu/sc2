@@ -177,7 +177,7 @@ def main() -> int:
 
     # Regenerate the editor-derived tables first, so a rebuild always reflects
     # whatever was last saved in the editor.
-    _, categories, groups, regions, upgrades = gen_objects.generate()
+    _, categories, groups, regions, upgrades, builds = gen_objects.generate()
     print("generated src/galaxy/05_objects_gen.galaxy")
     for name, types in categories.items():
         print(f"  {name}: {', '.join(types)}")
@@ -188,6 +188,8 @@ def main() -> int:
     for u in upgrades:
         print(f"  upgrade {u['id']}: line {u['line']} lv{u['level']}"
               + (" (ally)" if u["ally"] else ""))
+    for b in builds:
+        print(f"  build {b['unit']}: {b['abil']}[{b['index']}]")
 
     # The abnormality table comes from the design docs rather than the editor,
     # so it is generated here too and its complaints are printed rather than

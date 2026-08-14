@@ -52,22 +52,14 @@ bool Workers_Assign_Func (bool testConds, bool runActions) {
         if (worker != null && UnitIsAlive(worker)) {
             where = UnitGetPosition(worker);
 
-            // Asked even of a busy worker, because the one that matters is the
-            // worker already walking to a slot: arriving is what puts the
-            // building up, and it has a move order the whole way there.
-            slot = Fort_JobFor(worker);
-            if (slot >= 0) {
-                Fort_RaiseIfArrived(worker, slot);
-                slot = Fort_JobFor(worker);
-            }
-
             if (UnitOrderCount(worker) == 0) {
+                // The build order carries the walk with it, so an idle worker
+                // is the only one worth asking. The previous version had to
+                // pester busy ones too, because arriving was when it conjured
+                // the building; the engine does that now.
+                slot = Fort_JobFor(worker);
                 if (slot >= 0) {
-                    UnitIssueOrder(
-                        worker,
-                        OrderTargetingPoint(AbilityCommand("move", 0), Fort_SlotPoint(slot)),
-                        c_orderQueueReplace
-                    );
+                    Fort_OrderBuild(worker, slot);
                 }
                 else {
                     target = UnitGroupClosestToPoint(damaged, where);

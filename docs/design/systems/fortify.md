@@ -39,26 +39,40 @@ SC2 的 Repair 按单位自身 `Cost` 的一部分收费。所以"SCV 免费重�
 
 这和这个模块别处避免的"记账"不是一回事。**一本"哪些建好了"的账可以和世界不一致；一个单位句柄就是世界**，`UnitIsAlive` 替它回答。被换掉的不是账本，是**一个被当成身份用的描述**——而那个描述最后既配上了不止一个东西，又配不上全部。
 
-## 建筑走引擎的建造计时器
+## 建筑是被"下令建造"的，不是被创建的
 
-`Fort_Raise` 给建筑加 `c_unitCreateConstruct`（守军不加，守军是折跃进来的完成品）。之后是引擎在盖，工人立刻走向下一个点位。
+**守军**用 `UnitCreate` 凭空生成——它不是盖出来的，它是折跃进来的。
 
-第一版是"8% 血立起来，让工人修上去"。错在两处，第二处不是观点问题：
+**建筑**是给工人下**地图自己的 build 命令**，引擎负责剩下全部：走过去时的建造虚影、放下几乎 0 血的工地、SCV 锁在上面、计时器、取消按钮。
 
-- **Repair 根本碰不到它。**`Repair` 的 `TargetFilters` 是 `Mechanical,Visible;Self,Enemy,Missile,UnderConstruction,Dead,Hidden`，分号后面是**排除项**——SCV 不被允许修一座没盖完的建筑。那条命令是被直接拒掉的。
-- **"更多 scv 让修建更快"从来不是指一座建筑。**它指的是**同时有好几个点位可以开工**：工人立起一座就走向下一座，于是**整批**更早完成。一座建筑就是一个计时器。
+前面两版都想从外面模仿这件事，都失败了，两次的失败方式都值得记住：
 
-顺带解决了一件事：**半成品不再自燃了。**Terran 建筑在 1/3 血以下会持续掉血，8% 在那条线以下，所以以前每一座工事一立起来就在慢慢烧死自己。
+| 试过的 | 为什么不行 |
+|---|---|
+| 8% 血 + 让工人维修 | `Repair` 的 `TargetFilters` 排除 `UnderConstruction`，**SCV 根本不被允许修没盖完的建筑**，命令被直接拒。而且 Terran 建筑 1/3 血以下会自燃，8% 在线下，每座工事一立起来就在烧死自己 |
+| `c_unitCreateConstruct` | 造出来的是**穿着工地外观的成品**——满血，而且会开火。没有任何建造在发生，只有一套戏服 |
 
-### 在建 ≠ 建好
+**教训是同一条：建造不是一个能从外面刷到单位身上的状态，它是工人和工地之间的一种关系，而只有 build ability 能建立它。**所以代码不再试图当建造者，改成告诉建造者要造什么。
 
-`Fort_BuildingsComplete` 现在要求它**不在施工中**。否则守军会折跃进一个炮塔还是地基的房间，而且下一级会在这一级实际存在之前就可买。
+### 命令下标必须从数据里读
 
-`Fort_Damaged()` 同理排除在建的——SCV 修不了它们，把它们列进维修队列只会让工人跑过去被拒。
+`(ability, index)` 这一对只存在于 catalog 的形状里：`CAbilBuild` 的 `InfoArray` 行就是它的命令，从 0 开始数。`gen_objects.py` 构建时从地图的 `AbilData.xml` 里读出来，emit 成 `ObjectsGen_BuildAbil` / `ObjectsGen_BuildIndex`。
+
+不这么做的话脚本里就得硬写一个数字，而**任何人在它上面插一行，那个数字就错了**——而且是静默地错成盖出别的建筑。
+
+（依据不是猜的：liberty 的 `thanson02` 用 `AbilityCommand("TerranBuild", 1)` 造出来的是 SupplyDepot，而 `Build2` 就是 SupplyDepot 那一行。）
+
+**没有 build 命令的点位是惰性的**，不是坏的：`ObjectsGen_BuildIndex` 返回 -1，`Fort_JobFor` 跳过它，`-fort` 会打出 `(N have no build command)`。沉默的话它看起来就只是工人偷懒。
+
+### 谁去建：问世界，不记账
+
+`Fort_SlotClaimed` 遍历工人，看有没有谁**当前的命令**就是这个 build ability、且目标点就是这个位置（`UnitOrderHasAbil` + `OrderGetTargetPoint`）。
+
+一份写下来的"认领"会比认领它的那个工人活得更久。
 
 ### 一座建筑多个 scv：那是安保部的升级
 
-liberty 战役的 `AdvancedConstruction` 就是这件事，而且它的形状对我们特别有利——**纯 EffectArray，一行脚本都不用**：
+liberty 战役的 `AdvancedConstruction` 就是这件事，而且**纯 EffectArray，一行脚本都不用**：
 
 ```xml
 <CUpgrade id="AdvancedConstruction">
@@ -68,16 +82,17 @@ liberty 战役的 `AdvancedConstruction` 就是这件事，而且它的形状对
 </CUpgrade>
 ```
 
-`MaxBuilders` 1→10、每个额外工人加 60% 速度、额外工人不额外收费。这正是 `12_departments.galaxy` 那套升级机制预设的形状：**大多数效果是数据里的 EffectArray 行，不需要脚本**。做成 `Netzach_UpgN_L` 抄这三行就行。
+`MaxBuilders` 1→10、每个额外工人 +60% 速度、额外工人不额外收费。这正是 `12_departments.galaxy` 那套升级机制预设的形状。做成 `Netzach_UpgN_L` 抄这三行就行，代码侧零改动，而且升级逐玩家，天然不违反"不惩罚未犯错的玩家"。
 
-而且升级是逐玩家的，所以它天然不违反"不惩罚未犯错的玩家"。
+**在这条升级之前，"更多 scv 更快"指的是同时开工的点位更多**——一个工人立起一座就走向下一座，整批更早完成。一座建筑一个计时器。
 
-## 编辑器侧：摆真的单位，被读一次然后删掉
+## 编辑器侧：摆真的单位，被读一次然后删掉## 编辑器侧：摆真的单位，被读一次然后删掉
 
 | | |
 |---|---|
 | region `room_*` / `corridor_*` | 一个位置 |
 | group `fort1` / `fort2` / `fort3` | 一个点位，属于那个等级 |
+| `CAbilBuild` 里的一行 | 这个建筑**能被造出来**，否则点位永远空着 |
 
 **把真正的 `Lob_Turret_Basic` 或 `Lob_Guard_Marine` 摆在它该站的地方，加进对应等级的 group。**init 时读走它的类型、坐标、朝向、归属，然后把它删掉。以后盖起来的是同一个单位、同一个位置、同一个朝向。
 

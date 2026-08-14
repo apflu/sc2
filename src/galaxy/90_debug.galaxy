@@ -305,6 +305,7 @@ void Debug_Fortify (int player, string word) {
     int slot;
     int standing;
     int total;
+    int unbuildable;
     int want;
 
     want = Debug_Int(word, -1);
@@ -348,6 +349,12 @@ void Debug_Fortify (int player, string word) {
             line = line + IntToString(Fort_OwnerOf(loc));
         }
         line = line + "  standing " + IntToString(standing) + "/" + IntToString(total);
+        if (unbuildable > 0) {
+            // No CAbilBuild row for that unit type, so nothing can order it
+            // built and the position will stay empty forever. Silence here
+            // would look exactly like a lazy worker.
+            line = line + "  (" + IntToString(unbuildable) + " have no build command)";
+        }
         if (gvg_locLevel[loc] < c_fortMaxLevel) {
             line = line + "  next " + IntToString(gvg_fortCost[gvg_locLevel[loc] + 1]) + "m";
         }

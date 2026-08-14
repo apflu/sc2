@@ -1320,6 +1320,23 @@ unitgroup ObjectsGen_Group (string name) {
     return found;
 }
 
+//--------------------------------------------------------------------------------------------------
+// Build commands, read out of the map's own AbilData.xml.
+//
+// A CAbilBuild's InfoArray rows ARE its commands, in order, counting from
+// zero. Nothing else can supply this pair: (ability, index) exists only as
+// the shape of the catalog, and a script that wanted to order a real build
+// would otherwise have to hardcode a number that moves whenever somebody
+// inserts a row above it.
+//
+// Empty until a CAbilBuild is authored, which is what keeps the code that
+// reads it inert rather than broken.
+//--------------------------------------------------------------------------------------------------
+const int c_buildCount = 0;
+string[1] gvg_buildUnit;
+string[1] gvg_buildAbil;
+int[1] gvg_buildIndex;
+
 // Department upgrades, split out of their ids. The ally variant is
 // resolved here so the script never has to build a name by hand.
 const int c_deptUpgradeCount = 2;
@@ -1333,6 +1350,39 @@ bool[2] gvg_deptUpgradeIsAlly;
 const int c_regionCount = 2;
 string[2] gvg_regionNames;
 int[2] gvg_regionIds;
+
+//--------------------------------------------------------------------------------------------------
+// The ability command that builds this unit type, and its index.
+//
+// "" and -1 when the map has no build command for it, which is the
+// answer callers have to be able to act on: an emplacement nobody can
+// order built is a position that stays empty, not a crash.
+//--------------------------------------------------------------------------------------------------
+string ObjectsGen_BuildAbil (string unitType) {
+    int i;
+
+    i = 0;
+    while (i < c_buildCount) {
+        if (gvg_buildUnit[i] == unitType) {
+            return gvg_buildAbil[i];
+        }
+        i = i + 1;
+    }
+    return "";
+}
+
+int ObjectsGen_BuildIndex (string unitType) {
+    int i;
+
+    i = 0;
+    while (i < c_buildCount) {
+        if (gvg_buildUnit[i] == unitType) {
+            return gvg_buildIndex[i];
+        }
+        i = i + 1;
+    }
+    return -1;
+}
 
 //--------------------------------------------------------------------------------------------------
 // The editor region of that name, or an empty region if there is none.

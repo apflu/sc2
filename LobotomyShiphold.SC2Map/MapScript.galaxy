@@ -2316,6 +2316,23 @@ unitgroup ObjectsGen_Group (string name) {
     return found;
 }
 
+//--------------------------------------------------------------------------------------------------
+// Build commands, read out of the map's own AbilData.xml.
+//
+// A CAbilBuild's InfoArray rows ARE its commands, in order, counting from
+// zero. Nothing else can supply this pair: (ability, index) exists only as
+// the shape of the catalog, and a script that wanted to order a real build
+// would otherwise have to hardcode a number that moves whenever somebody
+// inserts a row above it.
+//
+// Empty until a CAbilBuild is authored, which is what keeps the code that
+// reads it inert rather than broken.
+//--------------------------------------------------------------------------------------------------
+const int c_buildCount = 0;
+string[1] gvg_buildUnit;
+string[1] gvg_buildAbil;
+int[1] gvg_buildIndex;
+
 // Department upgrades, split out of their ids. The ally variant is
 // resolved here so the script never has to build a name by hand.
 const int c_deptUpgradeCount = 2;
@@ -2329,6 +2346,39 @@ bool[2] gvg_deptUpgradeIsAlly;
 const int c_regionCount = 2;
 string[2] gvg_regionNames;
 int[2] gvg_regionIds;
+
+//--------------------------------------------------------------------------------------------------
+// The ability command that builds this unit type, and its index.
+//
+// "" and -1 when the map has no build command for it, which is the
+// answer callers have to be able to act on: an emplacement nobody can
+// order built is a position that stays empty, not a crash.
+//--------------------------------------------------------------------------------------------------
+string ObjectsGen_BuildAbil (string unitType) {
+    int i;
+
+    i = 0;
+    while (i < c_buildCount) {
+        if (gvg_buildUnit[i] == unitType) {
+            return gvg_buildAbil[i];
+        }
+        i = i + 1;
+    }
+    return "";
+}
+
+int ObjectsGen_BuildIndex (string unitType) {
+    int i;
+
+    i = 0;
+    while (i < c_buildCount) {
+        if (gvg_buildUnit[i] == unitType) {
+            return gvg_buildIndex[i];
+        }
+        i = i + 1;
+    }
+    return -1;
+}
 
 //--------------------------------------------------------------------------------------------------
 // The editor region of that name, or an empty region if there is none.
@@ -7081,9 +7131,6 @@ const fixed c_fortTick = 2.0;
 // How close a unit has to be to a position to count as standing on it.
 const fixed c_fortSlotRadius = 1.5;
 
-// How close a worker has to get before the building goes up.
-const fixed c_fortBuildRange = 2.5;
-
 // And how far an enemy has to be for the position to be usable at all. An
 // occupied slot is refused rather than contested: docs/usr/Defense.md has the
 // worker cancel and go do something else, which a command queue then covers.
@@ -7317,48 +7364,93 @@ bool Fort_BuildingsComplete (int loc, int level) {
 // Puts one position's occupant back on the map, facing the way it was placed.
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
-// Puts the thing in the position.
+// Putting a thing in a position, which is two different jobs.
 //
-// A BUILDING goes up under construction, on the engine's own build timer. A
-// GUARD warps in finished, because it is not built.
+// A GUARD is conjured whole. It is not built, it warps in, and UnitCreate is
+// the honest expression of that.
 //
-// Under construction rather than "at a sliver of life for a worker to repair",
-// which is what this did first. Two reasons, and the second is not an opinion:
+// A BUILDING is ORDERED, not created. The worker is issued the map's own build
+// command at the position and the engine does the rest: the placement ghost
+// while it walks, the site put down at almost no life, the SCV locked to it,
+// the timer, the cancel button. Two earlier attempts tried to imitate that
+// from the outside and both failed in ways worth remembering:
 //
-//   Repair cannot touch it anyway. Repair's TargetFilters are
-//   "Mechanical,Visible;Self,Enemy,Missile,UnderConstruction,Dead,Hidden" and
-//   everything after the semicolon is excluded -- an SCV is not allowed to
-//   repair a building that is not finished. The order was being rejected.
+//   life 8% + repair       Repair's TargetFilters exclude UnderConstruction, so
+//                          an SCV is not permitted to repair an unfinished
+//                          building. The order was rejected outright. And a
+//                          Terran structure under a third life burns, so every
+//                          emplacement began by quietly killing itself.
 //
-//   "More SCVs build faster" was never about one building. It is about there
-//   being several positions to start at once: a worker puts one up, walks to
-//   the next, and the SET finishes sooner. One building has one timer, and
-//   liberty's AdvancedConstruction is what changes that -- see below.
+//   c_unitCreateConstruct  produces the finished unit wearing a site's
+//                          appearance -- full life, and it shoots. There is no
+//                          construction happening, only a costume.
 //
-// It also means a half-built emplacement no longer burns down. A Terran
-// structure under a third life takes fire damage, and 8% was under it, so
-// every emplacement started by quietly dying.
+// The lesson both times: construction is not a state you can paint onto a unit
+// from outside, it is a relationship between a worker and a site that only the
+// build ability creates. So the code stops trying to be the builder and becomes
+// the thing that tells a builder what to build.
+//
+// The pair (ability, command index) comes from ObjectsGen, read out of the
+// map's AbilData.xml at build time. Nothing else can supply it: the index is
+// the position of a row in a CAbilBuild's InfoArray and it moves whenever
+// somebody inserts a row above it.
 //--------------------------------------------------------------------------------------------------
-unit Fort_Raise (int slot) {
+unit Fort_Warp (int slot) {
     unit made;
     int owner;
-    int flags;
 
     owner = Fort_SlotOwner(slot);
     if (owner < 1 || owner > 15) {
         return null;
     }
 
-    flags = c_unitCreateIgnorePlacement;
-    if (!gvg_slotGuard[slot]) {
-        flags = flags | c_unitCreateConstruct;
-    }
-
-    UnitCreate(1, gvg_slotType[slot], flags, owner,
+    UnitCreate(1, gvg_slotType[slot], c_unitCreateIgnorePlacement, owner,
                gvg_slotAt[slot], gvg_slotFacing[slot]);
     made = UnitLastCreated();
     gvg_slotUnit[slot] = made;
     return made;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether anything can order this position built at all.
+//--------------------------------------------------------------------------------------------------
+bool Fort_SlotBuildable (int slot) {
+    return ObjectsGen_BuildIndex(gvg_slotType[slot]) >= 0;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a worker is already on its way to build here.
+//
+// Asked of the world rather than remembered: a worker's current order carries
+// the ability and the point it is aimed at, so "somebody is already doing this"
+// is a question the game can answer. A claim written down here would outlive
+// the worker that made it.
+//--------------------------------------------------------------------------------------------------
+bool Fort_SlotClaimed (int slot) {
+    unitgroup workers;
+    unit who;
+    string abil;
+    int count;
+    int i;
+
+    abil = ObjectsGen_BuildAbil(gvg_slotType[slot]);
+    if (abil == "") {
+        return false;
+    }
+
+    workers = ObjectsGen_ScanSCV_Worker();
+    count = UnitGroupCount(workers, c_unitCountAlive);
+    i = 1;
+    while (i <= count) {
+        who = UnitGroupUnit(workers, i);
+        if (who != null && UnitOrderCount(who) > 0 && UnitOrderHasAbil(who, abil)
+            && DistanceBetweenPoints(OrderGetTargetPoint(UnitOrder(who, 0)),
+                                     gvg_slotAt[slot]) <= c_fortSlotRadius) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
 }
 
 
@@ -7379,7 +7471,7 @@ void Fort_SeedGarrison (int loc, int upTo, bool replaceOnly) {
         if (gvg_slotLoc[slot] == loc && gvg_slotGuard[slot] && lvl <= upTo
             && (!replaceOnly || gvg_locSeeded[loc * 4 + lvl])
             && !Fort_SlotFilled(slot)) {
-            Fort_Raise(slot);
+            Fort_Warp(slot);
         }
         slot = slot + 1;
     }
@@ -7453,64 +7545,35 @@ bool Fort_Upgrade (int player, int loc) {
 // Asked by 30_workers before it considers devices or debris, which is the
 // ordering docs/usr/Defense.md gives: a worker clears debris when it has nothing
 // else to do.
-//--------------------------------------------------------------------------------------------------
-int Fort_JobFor (unit worker) {
-    point where;
-    fixed bestDist;
-    fixed d;
-    int best;
-    int slot;
-    int loc;
-
-    if (worker == null || !UnitIsAlive(worker)) {
-        return -1;
-    }
-    where = UnitGetPosition(worker);
-    best = -1;
-    bestDist = 0.0;
-
-    slot = 0;
-    while (slot < gv_slotCount) {
-        loc = gvg_slotLoc[slot];
-        if (!gvg_slotGuard[slot] && gvg_slotLevel[slot] <= gvg_locLevel[loc]
-            && !Fort_SlotFilled(slot) && !Fort_SlotBlocked(slot, Fort_SlotOwner(slot))) {
-            d = DistanceBetweenPoints(gvg_slotAt[slot], where);
-            if (best < 0 || d < bestDist) {
-                best = slot;
-                bestDist = d;
-            }
-        }
-        slot = slot + 1;
-    }
-    return best;
-}
-
-point Fort_SlotPoint (int slot) {
-    if (slot < 0 || slot >= gv_slotCount) {
-        return Point(0.0, 0.0);
-    }
-    return gvg_slotAt[slot];
-}
 
 //--------------------------------------------------------------------------------------------------
 // A worker that has arrived puts the building up, at a sliver of life. Repair
 // does the rest, which is what makes worker count the build speed.
 //--------------------------------------------------------------------------------------------------
-void Fort_RaiseIfArrived (unit worker, int slot) {
-    unit made;
+// Sends a worker to build a position.
+//
+// One order, and the engine owns everything after it -- the walk, the ghost,
+// the site, the timer. There is no arrival check here any more because there is
+// nothing to do on arrival: the previous version had to watch for the worker
+// getting close so it could conjure the building itself, which is exactly the
+// job this hands back.
+//--------------------------------------------------------------------------------------------------
+void Fort_OrderBuild (unit worker, int slot) {
+    string abil;
 
-    if (slot < 0 || slot >= gv_slotCount || Fort_SlotFilled(slot)) {
+    if (slot < 0 || slot >= gv_slotCount || worker == null) {
         return;
     }
-    if (DistanceBetweenPoints(UnitGetPosition(worker), gvg_slotAt[slot])
-        > c_fortBuildRange) {
+    abil = ObjectsGen_BuildAbil(gvg_slotType[slot]);
+    if (abil == "") {
         return;
     }
 
-    // And then the worker is free. It started this one; the engine finishes it,
-    // and the worker walks to the next position -- which is the whole of "more
-    // SCVs build faster" and the reason it is not a per-building speed.
-    Fort_Raise(slot);
+    UnitIssueOrder(
+        worker,
+        OrderTargetingPoint(AbilityCommand(abil, ObjectsGen_BuildIndex(gvg_slotType[slot])),
+                            gvg_slotAt[slot]),
+        c_orderQueueReplace);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -7793,22 +7856,14 @@ bool Workers_Assign_Func (bool testConds, bool runActions) {
         if (worker != null && UnitIsAlive(worker)) {
             where = UnitGetPosition(worker);
 
-            // Asked even of a busy worker, because the one that matters is the
-            // worker already walking to a slot: arriving is what puts the
-            // building up, and it has a move order the whole way there.
-            slot = Fort_JobFor(worker);
-            if (slot >= 0) {
-                Fort_RaiseIfArrived(worker, slot);
-                slot = Fort_JobFor(worker);
-            }
-
             if (UnitOrderCount(worker) == 0) {
+                // The build order carries the walk with it, so an idle worker
+                // is the only one worth asking. The previous version had to
+                // pester busy ones too, because arriving was when it conjured
+                // the building; the engine does that now.
+                slot = Fort_JobFor(worker);
                 if (slot >= 0) {
-                    UnitIssueOrder(
-                        worker,
-                        OrderTargetingPoint(AbilityCommand("move", 0), Fort_SlotPoint(slot)),
-                        c_orderQueueReplace
-                    );
+                    Fort_OrderBuild(worker, slot);
                 }
                 else {
                     target = UnitGroupClosestToPoint(damaged, where);
@@ -9477,6 +9532,7 @@ void Debug_Fortify (int player, string word) {
     int slot;
     int standing;
     int total;
+    int unbuildable;
     int want;
 
     want = Debug_Int(word, -1);
@@ -9520,6 +9576,12 @@ void Debug_Fortify (int player, string word) {
             line = line + IntToString(Fort_OwnerOf(loc));
         }
         line = line + "  standing " + IntToString(standing) + "/" + IntToString(total);
+        if (unbuildable > 0) {
+            // No CAbilBuild row for that unit type, so nothing can order it
+            // built and the position will stay empty forever. Silence here
+            // would look exactly like a lazy worker.
+            line = line + "  (" + IntToString(unbuildable) + " have no build command)";
+        }
         if (gvg_locLevel[loc] < c_fortMaxLevel) {
             line = line + "  next " + IntToString(gvg_fortCost[gvg_locLevel[loc] + 1]) + "m";
         }

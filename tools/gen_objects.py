@@ -40,6 +40,7 @@ ROOT = Path(__file__).resolve().parent.parent
 MAP = ROOT / "LobotomyShiphold.SC2Map"
 UNIT_DATA = MAP / "Base.SC2Data" / "GameData" / "UnitData.xml"
 UPGRADE_DATA = MAP / "Base.SC2Data" / "GameData" / "UpgradeData.xml"
+ABIL_DATA = MAP / "Base.SC2Data" / "GameData" / "AbilData.xml"
 OBJECTS = MAP / "Objects"
 REGIONS = MAP / "Regions"
 OUT = ROOT / "src" / "galaxy" / "05_objects_gen.galaxy"
@@ -182,6 +183,31 @@ def read_upgrades() -> list[dict]:
     return sorted(upgrades, key=lambda u: (u["line"], u["level"], u["ally"]))
 
 
+def read_builds() -> list[dict]:
+    """Which ability command puts up which unit.
+
+    A CAbilBuild's InfoArray rows are its commands in order, and the command
+    index is that position counting from zero -- Build1 is 0, Build2 is 1. Not
+    a guess: liberty's thanson02 issues AbilityCommand("TerranBuild", 1) at a
+    point and gets a SupplyDepot, which is the Build2 row.
+
+    Reading it here is what lets the fortification code order a real build
+    instead of conjuring the finished unit. Nothing else can supply the pair
+    (ability, index) -- it exists only as the shape of the catalog.
+    """
+    if not ABIL_DATA.is_file():
+        return []
+
+    builds = []
+    for abil in ET.parse(ABIL_DATA).getroot().iter("CAbilBuild"):
+        link = abil.get("id", "")
+        for index, info in enumerate(abil.iter("InfoArray")):
+            unit = info.get("Unit", "")
+            if unit:
+                builds.append({"unit": unit, "abil": link, "index": index})
+    return sorted(builds, key=lambda b: b["unit"])
+
+
 def read_regions() -> list[tuple[str, int]]:
     """Editor regions, as (name, id).
 
@@ -244,6 +270,7 @@ def build() -> str:
     groups = read_groups()
     regions = read_regions()
     upgrades = read_upgrades()
+    builds = read_builds()
 
     out = [HEADER]
     fills: list[str] = []
@@ -345,6 +372,32 @@ def build() -> str:
         "}\n"
     )
 
+    builds = read_builds()
+    n = max(len(builds), 1)
+    out.append(
+        "\n//--------------------------------------------------------------------------------------------------\n"
+        "// Build commands, read out of the map's own AbilData.xml.\n"
+        "//\n"
+        "// A CAbilBuild's InfoArray rows ARE its commands, in order, counting from\n"
+        "// zero. Nothing else can supply this pair: (ability, index) exists only as\n"
+        "// the shape of the catalog, and a script that wanted to order a real build\n"
+        "// would otherwise have to hardcode a number that moves whenever somebody\n"
+        "// inserts a row above it.\n"
+        "//\n"
+        "// Empty until a CAbilBuild is authored, which is what keeps the code that\n"
+        "// reads it inert rather than broken.\n"
+        "//--------------------------------------------------------------------------------------------------\n"
+        f"const int c_buildCount = {len(builds)};\n"
+        f"string[{n}] gvg_buildUnit;\n"
+        f"string[{n}] gvg_buildAbil;\n"
+        f"int[{n}] gvg_buildIndex;\n"
+    )
+    fills.extend(
+        f'    gvg_buildUnit[{i}] = "{b["unit"]}";\n'
+        f'    gvg_buildAbil[{i}] = "{b["abil"]}";\n'
+        f"    gvg_buildIndex[{i}] = {b['index']};"
+        for i, b in enumerate(builds)
+    )
     known = {u["id"] for u in upgrades}
     out.append(
         "\n// Department upgrades, split out of their ids. The ally variant is\n"
@@ -383,6 +436,43 @@ def build() -> str:
     fills.extend(
         f'    gvg_regionNames[{i}] = "{n}";\n    gvg_regionIds[{i}] = {rid};'
         for i, (n, rid) in enumerate(regions)
+    )
+
+    out.append(
+        "\n//----------------------------------------------------------------"
+        "----------------------------------\n"
+        "// The ability command that builds this unit type, and its index.\n"
+        "//\n"
+        "// \"\" and -1 when the map has no build command for it, which is the\n"
+        "// answer callers have to be able to act on: an emplacement nobody can\n"
+        "// order built is a position that stays empty, not a crash.\n"
+        "//----------------------------------------------------------------"
+        "----------------------------------\n"
+        "string ObjectsGen_BuildAbil (string unitType) {\n"
+        "    int i;\n"
+        "\n"
+        "    i = 0;\n"
+        "    while (i < c_buildCount) {\n"
+        "        if (gvg_buildUnit[i] == unitType) {\n"
+        "            return gvg_buildAbil[i];\n"
+        "        }\n"
+        "        i = i + 1;\n"
+        "    }\n"
+        "    return \"\";\n"
+        "}\n"
+        "\n"
+        "int ObjectsGen_BuildIndex (string unitType) {\n"
+        "    int i;\n"
+        "\n"
+        "    i = 0;\n"
+        "    while (i < c_buildCount) {\n"
+        "        if (gvg_buildUnit[i] == unitType) {\n"
+        "            return gvg_buildIndex[i];\n"
+        "        }\n"
+        "        i = i + 1;\n"
+        "    }\n"
+        "    return -1;\n"
+        "}\n"
     )
 
     out.append(
@@ -431,9 +521,10 @@ def generate():
     groups = read_groups()
     regions = read_regions()
     upgrades = read_upgrades()
+    builds = read_builds()
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(build(), encoding="utf-8")
-    return OUT, categories, groups, regions, upgrades
+    return OUT, categories, groups, regions, upgrades, builds
 
 
 if __name__ == "__main__":
