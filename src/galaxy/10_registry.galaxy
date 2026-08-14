@@ -30,6 +30,10 @@ string Registry_ScanLine () {
 }
 
 void Registry_Init () {
-    UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle,
+    // The debug area, not the subtitle. This is developer text and it was
+    // landing on every player's screen at map start; the answer to developer
+    // text a player can see is to take it off their screen, not to translate
+    // it. -scan prints the same line on demand.
+    UIDisplayMessage(PlayerGroupAll(), c_messageAreaDebug,
                      StringToText(Registry_ScanLine()));
 }

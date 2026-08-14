@@ -7,7 +7,10 @@
 
 const int c_abnoCount = 2;
 string[2] gvg_abnoType;
-string[2] gvg_abnoName;
+// The KEY of the display name, not the name. Everything a player reads
+// lives in src/strings/ and arrives through StringExternal; this file
+// writes the English into src/strings/abnormality.enUS.txt beside it.
+string[2] gvg_abnoNameKey;
 int[2] gvg_abnoRisk;
 // -1 means the abnormality has no counter at all, which is not
 // the same as a counter that has run out.
@@ -48,11 +51,11 @@ int[8] gvg_abnoObsCost;
 // Pushed onto the panel's buttons with UnitSetInfoButtonTooltip, which
 // is per unit INSTANCE -- so four generic abilities serve every
 // abnormality and nothing has to be generated into the catalogs.
-string[8] gvg_abnoLore;
+string[8] gvg_abnoLoreKey;
 
 void AbnoGen_Init () {
     gvg_abnoType[0] = "0_00_00";
-    gvg_abnoName[0] = "Standard Training-Dummy Rabbit";
+    gvg_abnoNameKey[0] = "Lob/Abno/Name/0_00_00";
     gvg_abnoRisk[0] = 1;
     gvg_abnoCounter[0] = -1;
     gvg_abnoMaxBox[0] = 10;
@@ -74,13 +77,13 @@ void AbnoGen_Init () {
     gvg_abnoObsSpeed[4] = 0;
     gvg_abnoObsSuccess[4] = 0;
     gvg_abnoObsCost[0] = 0;
-    gvg_abnoLore[0] = "Its special ability activates when its  Qliphoth Counter reaches 0. It will decrease by 1 when Repression.png Repression is used on it.<n/>When the counter is depleted, the Abnormality will breach but will remain immobile outside the Containment Unit's door. It possesses low  HP at 100 and doesn't have any other special abilities. It is easy to suppress and will flip upside down when defeated.";
+    gvg_abnoLoreKey[0] = "Lob/Abno/Lore/0_00_00/0";
     gvg_abnoObsCost[1] = 0;
-    gvg_abnoLore[1] = "No preference data.";
+    gvg_abnoLoreKey[1] = "Lob/Abno/Lore/0_00_00/1";
     gvg_abnoObsCost[2] = 0;
-    gvg_abnoLore[2] = "";
+    gvg_abnoLoreKey[2] = "Lob/Abno/Lore/0_00_00/2";
     gvg_abnoObsCost[3] = 0;
-    gvg_abnoLore[3] = "";
+    gvg_abnoLoreKey[3] = "Lob/Abno/Lore/0_00_00/3";
     gvg_abnoPref[0] = 50;
     gvg_abnoPref[1] = 50;
     gvg_abnoPref[2] = 50;
@@ -102,7 +105,7 @@ void AbnoGen_Init () {
     gvg_abnoPref[18] = 50;
     gvg_abnoPref[19] = 50;
     gvg_abnoType[1] = "O_03_03";
-    gvg_abnoName[1] = "One Sin and Hundreds of Good Deeds";
+    gvg_abnoNameKey[1] = "Lob/Abno/Name/O_03_03";
     gvg_abnoRisk[1] = 0;
     gvg_abnoCounter[1] = -1;
     gvg_abnoMaxBox[1] = 10;
@@ -124,13 +127,13 @@ void AbnoGen_Init () {
     gvg_abnoObsSpeed[9] = 10;
     gvg_abnoObsSuccess[9] = 10;
     gvg_abnoObsCost[4] = 8;
-    gvg_abnoLore[4] = "Its special ability restores 4 points of SP of the agent who was working on it if the Work Result is Good. If the employee collects all the 10 E-Boxes, One Sin will heal 4 points of SP to all Agents belonging to the department.";
+    gvg_abnoLoreKey[4] = "Lob/Abno/Lore/O_03_03/0";
     gvg_abnoObsCost[5] = 8;
-    gvg_abnoLore[5] = "Success per box, by the matching stat's level:<n/>        I   II  III IV  V<n/>Instinct   50  40  30  30  30 <n/>Insight    70  70  50  50  50 <n/>Attachment 70  70  70  70  70 <n/>Repression 50  40  30  30  30 ";
+    gvg_abnoLoreKey[5] = "Lob/Abno/Lore/O_03_03/1";
     gvg_abnoObsCost[6] = 8;
-    gvg_abnoLore[6] = "1  One Sin and Hundreds of Good Deeds will restore the employee’s mental state when the work result is Good. &lt;name&gt;, who received this benediction, commented that it felt refreshing.<n/>2  After the maximum number of PE-Boxes was produced with One Sin and Hundreds of Good Deeds, it restored the mental health of every employee in the department.";
+    gvg_abnoLoreKey[6] = "Lob/Abno/Lore/O_03_03/2";
     gvg_abnoObsCost[7] = 8;
-    gvg_abnoLore[7] = "Qliphoth counter X<n/>Non-Escaping Entity";
+    gvg_abnoLoreKey[7] = "Lob/Abno/Lore/O_03_03/3";
     gvg_abnoPref[20] = 50;
     gvg_abnoPref[21] = 40;
     gvg_abnoPref[22] = 30;
@@ -256,13 +259,24 @@ int AbnoGen_ObsCost (int index, int obs) {
 }
 
 //--------------------------------------------------------------------------------------------------
-// What section `sec` of this abnormality says.
+// What this abnormality is CALLED, for a player to read.
 //--------------------------------------------------------------------------------------------------
-string AbnoGen_Lore (int index, int sec) {
-    if (index < 0 || index >= c_abnoCount || sec < 0 || sec >= 4) {
-        return "";
+text AbnoGen_NameText (int index) {
+    if (index < 0 || index >= c_abnoCount) {
+        return StringToText("");
     }
-    return gvg_abnoLore[index * 4 + sec];
+    return StringExternal(gvg_abnoNameKey[index]);
+}
+
+//--------------------------------------------------------------------------------------------------
+// What section `sec` of this abnormality says -- one of the four
+// encyclopedia entries, pushed onto a control panel button.
+//--------------------------------------------------------------------------------------------------
+text AbnoGen_LoreText (int index, int sec) {
+    if (index < 0 || index >= c_abnoCount || sec < 0 || sec >= 4) {
+        return StringToText("");
+    }
+    return StringExternal(gvg_abnoLoreKey[index * 4 + sec]);
 }
 
 //--------------------------------------------------------------------------------------------------

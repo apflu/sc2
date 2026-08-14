@@ -260,3 +260,18 @@ void Difficulty_Init () {
         player = player + 1;
     }
 }
+
+//--------------------------------------------------------------------------------------------------
+// The four names for a PLAYER to read. Diff_Name stays a Galaxy string for the
+// debug console, which is not translated.
+//--------------------------------------------------------------------------------------------------
+text Diff_NameText (int level) {
+    if (level == c_diffCasual) { return Msg("Lob/Diff/Casual"); }
+    if (level == c_diffHard) { return Msg("Lob/Diff/Hard"); }
+    if (level == c_diffBrutal) { return Msg("Lob/Diff/Brutal"); }
+    return Msg("Lob/Diff/Normal");
+}
+
+text Diff_NameTextOf (int player) {
+    return Diff_NameText(Diff_Of(player));
+}

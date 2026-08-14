@@ -97,6 +97,12 @@ SC2 的 Repair 按单位自身 `Cost` 的一部分收费。所以"SCV 免费重�
 
 速率故意很差。它是地板，不是策略。
 
+## 位置名现在直接把 region id 给玩家看
+
+`Fort_Upgrade` 的播报用的是 `gvg_locName[loc]`，而那是 region 的名字——玩家会看到 `corridor_b`。
+
+其余玩家可见文本都进了 `src/strings/`（见 [`../../dev/pipeline.md`](../../dev/pipeline.md)），**只有这一条没有**，因为它的内容在编辑器里、还没有房间。等房间画好了，做法是给每个 `room_*` / `corridor_*` 配一个 `Lob/Place/<name>` 字符串——`gen_objects.py` 已经在解析 region 表，所以那道校验可以是构建期的。
+
 ## 待定
 
 - **电力**。基线 4.3 说工事运行费电力，而 6.2 那条"电费由房主付还是出资者付"仍然待定。**当前实现完全不涉及电。**

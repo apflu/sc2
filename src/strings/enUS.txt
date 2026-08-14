@@ -104,3 +104,67 @@ Lob/Quest/Complete=Task complete:
 # --- The session objective ---------------------------------------------------
 Lob/Objective/Energy/Name=Deliver the Energy Quota
 Lob/Objective/Energy/Desc=Every box a work produces pays into this and into that abnormality's encyclopedia, both in full. Studying them and getting out are the same activity.<n/><n/>Spent when the ship leaves, which is why it is a bonus objective and your department's tasks are not.
+
+# --- Risk grades -------------------------------------------------------------
+Lob/Risk/Zayin=ZAYIN
+Lob/Risk/Teth=TETH
+Lob/Risk/HE=HE
+Lob/Risk/WAW=WAW
+Lob/Risk/Aleph=ALEPH
+
+# --- Difficulty --------------------------------------------------------------
+Lob/Diff/Casual=Casual
+Lob/Diff/Normal=Normal
+Lob/Diff/Hard=Hard
+Lob/Diff/Brutal=Brutal
+
+# --- Work --------------------------------------------------------------------
+Lob/Work/Name/Instinct=Instinct
+Lob/Work/Name/Insight=Insight
+Lob/Work/Name/Attachment=Attachment
+Lob/Work/Name/Repression=Repression
+Lob/Work/Result/Good=Good
+Lob/Work/Result/Normal=Normal
+Lob/Work/Result/Bad=Bad
+
+# Why an order was refused. Shown to the player who gave it, so they are
+# sentences rather than error codes.
+Lob/Work/Refused=Cannot work: %REASON%
+Lob/Work/Refusal/NoEmployee=nobody was sent
+Lob/Work/Refusal/Busy=that employee is already working
+Lob/Work/Refusal/TooMany=too many works are running at once
+Lob/Work/Refusal/NoAbnormality=there is no abnormality behind that door
+Lob/Work/Refusal/NoDocument=that unit has no abnormality document
+Lob/Work/Refusal/NotRegistered=that abnormality is not in the cell registry
+Lob/Work/Refusal/DoorDown=the door is down
+Lob/Work/Refusal/NotInCell=it is not in its cell
+Lob/Work/Refusal/Cooldown=it is still on work cooldown
+Lob/Work/NotADoor=Cannot work: that is not a containment door (%UNIT%)
+Lob/Work/NoCell=Cannot work: no cell is registered at that door
+
+# --- The encyclopedia --------------------------------------------------------
+# The four sections themselves are generated into abnormality.enUS.txt from
+# docs/usr/abnormality/*.md. This is only the unbought state.
+Lob/Abno/Unobserved=Unobserved. %COST% PE-Boxes.<n/>You have %HELD%.
+
+# --- Messages ----------------------------------------------------------------
+# %TOKENS% are substituted by the code. Keep them exactly, move them freely --
+# the whole reason these are sentences and not glued-together fragments is that
+# a translator may need the number somewhere else.
+Lob/Msg/InnerLayerLost=Inner layer lost. Repair the core to get it back.
+Lob/Msg/EnergyDelivered=Energy delivered. The ship makes it out.
+Lob/Msg/Breach=%RISK% containment breach
+Lob/Msg/DoorStrain=%RISK% is working on its door
+Lob/Msg/Suppressed=%RISK% suppressed
+Lob/Msg/MeltLevel=Meltdown level %LEVEL%
+Lob/Msg/MeltNamed=MELTDOWN: %ABNORMALITY% -- send somebody within %SECONDS%s
+Lob/Msg/MeltHeld=MELTDOWN: %ABNORMALITY% -- held until the work in progress ends
+Lob/Msg/MeltFreed=%ABNORMALITY% is free -- %SECONDS%s to send somebody
+Lob/Msg/MeltAnswered=%ABNORMALITY% -- meltdown answered
+Lob/Msg/MeltMissed=%ABNORMALITY% went unattended -- Qliphoth 0, %AMOUNT% energy lost
+Lob/Msg/WorkBegin=%ABNORMALITY%: %WORK% started
+Lob/Msg/WorkResult=%ABNORMALITY%: %WORK% -- %BOXES% boxes, %RESULT%  (+%STAT%)
+Lob/Msg/AgentDown=Agent down. Back in %SECONDS%s.
+Lob/Msg/Wave=Wave %WAVE% -- %COUNT% incoming (%DIFFICULTY%)
+Lob/Msg/FortLevel=%PLACE% defence level %LEVEL%
+

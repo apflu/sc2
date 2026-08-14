@@ -298,9 +298,9 @@ void Melt_Miss (int slot) {
 
     UIDisplayMessage(
         PlayerGroupAll(), c_messageAreaSubtitle,
-        StringToText(gvg_abnoName[AbnoGen_IndexOf(abno)]
-                     + " went unattended -- Qliphoth 0, "
-                     + IntToString(lost) + " energy lost"));
+        Msg2("Lob/Msg/MeltMissed",
+             "%ABNORMALITY%", AbnoGen_NameText(AbnoGen_IndexOf(abno)),
+             "%AMOUNT%", MsgInt(lost)));
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -358,17 +358,17 @@ void Melt_NameFor (int player) {
                 gvg_meltHeld[slot] = true;
                 UIDisplayMessage(
                     PlayerGroupSingle(player), c_messageAreaSubtitle,
-                    StringToText("MELTDOWN: " + gvg_abnoName[AbnoGen_IndexOf(abno)]
-                                 + " -- held until the work in progress ends"));
+                    Msg1("Lob/Msg/MeltHeld", "%ABNORMALITY%",
+                         AbnoGen_NameText(AbnoGen_IndexOf(abno))));
             }
             else {
                 gvg_meltHeld[slot] = false;
                 gvg_meltDeadline[slot] = GameGetMissionTime() + c_meltWindow;
                 UIDisplayMessage(
                     PlayerGroupSingle(player), c_messageAreaSubtitle,
-                    StringToText("MELTDOWN: " + gvg_abnoName[AbnoGen_IndexOf(abno)]
-                                 + " -- send somebody within "
-                                 + IntToString(FixedToInt(c_meltWindow)) + "s"));
+                    Msg2("Lob/Msg/MeltNamed",
+                         "%ABNORMALITY%", AbnoGen_NameText(AbnoGen_IndexOf(abno)),
+                         "%SECONDS%", MsgInt(FixedToInt(c_meltWindow))));
             }
         }
         step = step + 1;
@@ -391,7 +391,7 @@ void Melt_Advance () {
     gv_meltNextAt = GameGetMissionTime() + c_meltPeriod;
 
     UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle,
-                     StringToText("meltdown level " + IntToString(gv_meltLevel)));
+                     Msg1("Lob/Msg/MeltLevel", "%LEVEL%", MsgInt(gv_meltLevel)));
 
     player = 1;
     while (player <= 15) {
@@ -423,10 +423,10 @@ bool Melt_Tick_Func (bool testConds, bool runActions) {
                     gvg_meltDeadline[slot] = now + c_meltWindow;
                     UIDisplayMessage(
                         PlayerGroupSingle(Cont_OwnerOf(slot)), c_messageAreaSubtitle,
-                        StringToText(gvg_abnoName[AbnoGen_IndexOf(gvg_cellAbno[slot])]
-                                     + " is free -- "
-                                     + IntToString(FixedToInt(c_meltWindow))
-                                     + "s to send somebody"));
+                        Msg2("Lob/Msg/MeltFreed",
+                             "%ABNORMALITY%",
+                             AbnoGen_NameText(AbnoGen_IndexOf(gvg_cellAbno[slot])),
+                             "%SECONDS%", MsgInt(FixedToInt(c_meltWindow))));
                 }
             }
             else if (now >= gvg_meltDeadline[slot]) {
@@ -477,7 +477,8 @@ void Melt_NoteWorkBegin (unit abno) {
         gvg_meltAnswered[owner] = gvg_meltAnswered[owner] + 1;
         UIDisplayMessage(
             PlayerGroupSingle(owner), c_messageAreaSubtitle,
-            StringToText(gvg_abnoName[AbnoGen_IndexOf(abno)] + " -- meltdown answered"));
+            Msg1("Lob/Msg/MeltAnswered", "%ABNORMALITY%",
+                 AbnoGen_NameText(AbnoGen_IndexOf(abno))));
     }
 }
 

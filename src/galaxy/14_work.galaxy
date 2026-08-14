@@ -249,35 +249,35 @@ string Work_Refusal (unit abno, unit emp) {
     int cell;
 
     if (emp == null || !UnitIsAlive(emp)) {
-        return "no employee";
+        return "Lob/Work/Refusal/NoEmployee";
     }
     if (Work_IsBusy(emp)) {
-        return "already working";
+        return "Lob/Work/Refusal/Busy";
     }
     if (gv_workCount >= c_workMax) {
-        return "too many works at once";
+        return "Lob/Work/Refusal/TooMany";
     }
     if (abno == null) {
-        return "no abnormality at that door";
+        return "Lob/Work/Refusal/NoAbnormality";
     }
     if (AbnoGen_IndexOf(abno) < 0) {
-        return "that unit has no abnormality document";
+        return "Lob/Work/Refusal/NoDocument";
     }
 
     cell = Cont_SlotOf(abno);
     if (cell < 0) {
-        return "that abnormality is not in the cell registry";
+        return "Lob/Work/Refusal/NotRegistered";
     }
     // A dropped door is exactly and only this: you cannot work on it. That is
     // the whole consequence for an abnormality that does not escape.
     if (!Cont_DoorIsUp(abno)) {
-        return "the door is down";
+        return "Lob/Work/Refusal/DoorDown";
     }
     if (Cont_State(abno) != c_cellContained) {
-        return "it is not in its cell";
+        return "Lob/Work/Refusal/NotInCell";
     }
     if (GameGetMissionTime() < gvg_workReadyAt[cell]) {
-        return "still on work cooldown";
+        return "Lob/Work/Refusal/Cooldown";
     }
     return "";
 }
@@ -330,6 +330,19 @@ void Work_Drop (int slot) {
     gvg_workDone[slot] = gvg_workDone[last];
     gvg_workNextBox[slot] = gvg_workNextBox[last];
     gv_workCount = last;
+}
+
+text Work_NameText (int work) {
+    if (work == c_workInsight) { return Msg("Lob/Work/Name/Insight"); }
+    if (work == c_workAttachment) { return Msg("Lob/Work/Name/Attachment"); }
+    if (work == c_workRepression) { return Msg("Lob/Work/Name/Repression"); }
+    return Msg("Lob/Work/Name/Instinct");
+}
+
+text Work_ResultText (int result) {
+    if (result == c_resultGood) { return Msg("Lob/Work/Result/Good"); }
+    if (result == c_resultNormal) { return Msg("Lob/Work/Result/Normal"); }
+    return Msg("Lob/Work/Result/Bad");
 }
 
 string Work_ResultName (int result) {
@@ -401,11 +414,18 @@ void Work_Finish (int slot) {
 
     UIDisplayMessage(
         PlayerGroupSingle(owner), c_messageAreaSubtitle,
-        StringToText(gvg_abnoName[index] + ": " + Work_Name(gvg_workType[slot])
-                     + " -- " + IntToString(boxes) + " boxes, "
-                     + Work_ResultName(result)
-                     + "  (+" + IntToString(gain) + " " + Emp_StatName(Work_Stat(gvg_workType[slot]))
-                     + ")"));
+        TextReplaceWord(
+            TextReplaceWord(
+                Msg3("Lob/Msg/WorkResult",
+                     "%ABNORMALITY%", AbnoGen_NameText(index),
+                     "%WORK%", Work_NameText(gvg_workType[slot]),
+                     "%BOXES%", MsgInt(boxes)),
+                StringToText("%RESULT%"), Work_ResultText(result),
+                c_stringReplaceAll, c_stringCase),
+            StringToText("%STAT%"),
+            StringToText(IntToString(gain) + " ")
+            + Emp_StatNameText(Work_Stat(gvg_workType[slot])),
+            c_stringReplaceAll, c_stringCase));
 
     Work_Drop(slot);
 }
@@ -490,8 +510,8 @@ bool Work_Cast_Func (bool testConds, bool runActions) {
     }
     if (!Cont_IsDoor(door)) {
         UIDisplayMessage(PlayerGroupSingle(owner), c_messageAreaSubtitle,
-                         StringToText("work: not a containment door ("
-                                      + UnitGetType(door) + ")"));
+                         Msg1("Lob/Work/NotADoor", "%UNIT%",
+                              StringToText(UnitGetType(door))));
         return true;
     }
 
@@ -502,21 +522,22 @@ bool Work_Cast_Func (bool testConds, bool runActions) {
             why = Work_Refusal(abno, emp);
             if (why != "") {
                 UIDisplayMessage(PlayerGroupSingle(owner), c_messageAreaSubtitle,
-                                 StringToText("work: " + why));
+                                 Msg1("Lob/Work/Refused", "%REASON%", Msg(why)));
                 return true;
             }
             Work_Begin(abno, emp, Work_DefaultOf(owner));
             UIDisplayMessage(
                 PlayerGroupSingle(owner), c_messageAreaSubtitle,
-                StringToText(gvg_abnoName[AbnoGen_IndexOf(abno)] + ": "
-                             + Work_Name(Work_DefaultOf(owner)) + " started"));
+                Msg2("Lob/Msg/WorkBegin",
+                     "%ABNORMALITY%", AbnoGen_NameText(AbnoGen_IndexOf(abno)),
+                     "%WORK%", Work_NameText(Work_DefaultOf(owner))));
             return true;
         }
         slot = slot + 1;
     }
 
     UIDisplayMessage(PlayerGroupSingle(owner), c_messageAreaSubtitle,
-                     StringToText("work: no cell is registered at that door"));
+                     Msg("Lob/Work/NoCell"));
     return true;
 }
 

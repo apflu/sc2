@@ -75,3 +75,42 @@ bool Slot_IsTablePlayer (int player) {
 //--------------------------------------------------------------------------------------------------
 const string c_questProgressStyle = "ObjectivePanelProgress_Terran";
 
+//--------------------------------------------------------------------------------------------------
+// Assembling a message out of a translated string and some numbers.
+//
+// NOT by concatenation. "%RISK% containment breach" is one sentence in the
+// strings file and stays one sentence in every language; glued together from
+// three fragments it is three fragments that only line up in English, and the
+// translator who needs the number in front has nowhere to put it.
+//
+// So the string owns the whole sentence including its placeholders, and the
+// code substitutes. That is Blizzard's own shape -- their campaign strings are
+// full of "Do Not Let %NumberDead% Colonists Die" driven through exactly this
+// native.
+//
+// Tokens are written %LIKE_THIS% so that a translator can see at a glance which
+// pieces they must keep and must not translate.
+//--------------------------------------------------------------------------------------------------
+text Msg (string key) {
+    return StringExternal(key);
+}
+
+text Msg1 (string key, string token, text value) {
+    return TextReplaceWord(StringExternal(key), StringToText(token), value,
+                           c_stringReplaceAll, c_stringCase);
+}
+
+text Msg2 (string key, string t1, text v1, string t2, text v2) {
+    return TextReplaceWord(Msg1(key, t1, v1), StringToText(t2), v2,
+                           c_stringReplaceAll, c_stringCase);
+}
+
+text Msg3 (string key, string t1, text v1, string t2, text v2, string t3, text v3) {
+    return TextReplaceWord(Msg2(key, t1, v1, t2, v2), StringToText(t3), v3,
+                           c_stringReplaceAll, c_stringCase);
+}
+
+// The commonest substitution by a distance: a plain number.
+text MsgInt (int value) {
+    return IntToText(value);
+}

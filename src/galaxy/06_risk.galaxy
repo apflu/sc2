@@ -68,6 +68,23 @@ string Risk_Name (int level) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// The same five for a PLAYER to read.
+//
+// Keyed rather than returned as English even though the five are transliterated
+// Hebrew letters and most translations keep them: the grade also appears as a
+// renamed unit attribute in the text editor, and a message that spelt it out
+// itself could drift from the panel that shows it. One name, one place.
+//--------------------------------------------------------------------------------------------------
+text Risk_NameText (int level) {
+    if (level == c_riskZayin) { return Msg("Lob/Risk/Zayin"); }
+    if (level == c_riskTeth) { return Msg("Lob/Risk/Teth"); }
+    if (level == c_riskHE) { return Msg("Lob/Risk/HE"); }
+    if (level == c_riskWAW) { return Msg("Lob/Risk/WAW"); }
+    if (level == c_riskAleph) { return Msg("Lob/Risk/Aleph"); }
+    return StringToText("");
+}
+
+//--------------------------------------------------------------------------------------------------
 // A unit type's grade, or c_riskNone.
 //
 // Searched downwards so that a unit mistakenly carrying two grades reads as the

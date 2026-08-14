@@ -80,6 +80,14 @@ unitgroup ObjectsGen_Group (string)     // 具名 group 成员（仅预放）
 
 **摆放的设计意图**：内层、设备、虫群入口三者的距离关系，决定了"跑过去修" vs "留下来打"这个取舍存不存在。设备离内层太近，玩家就不需要做选择，P0 白测。让至少一个设备远到跑一趟要付出真实代价——角色移速 3.0，往返 30 格是 20 秒，对着 45 秒的波次周期才算数。
 
+## 异想体文档里的文字会变成玩家看到的字
+
+`docs/usr/abnormality/<单位id>.md` 里的**名称**和**图鉴四段**会被 `gen_abnormalities.py` 抽进 `src/strings/abnormality.enUS.txt`，再合进地图的 `GameStrings.txt`。
+
+所以：**写文档仍然是唯一的作者动作**，但那些字从此是可翻译资源。代码里拿到的是 key（`Lob/Abno/Lore/O_03_03/2`），不是文字。
+
+要改措辞就改文档再构建；**不要改 `abnormality.enUS.txt`**，它每次构建都会被整体覆盖。
+
 ## 数据文件
 
 `Base.SC2Data/GameData/` 下目前有四个 catalog，都是手写的：

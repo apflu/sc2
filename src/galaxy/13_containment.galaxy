@@ -407,16 +407,16 @@ void Cont_SyncPanel (int slot) {
         if (sec < level) {
             UnitAbilityEnable(panel, gvg_obsAbil[sec], false);
             UnitSetInfoButtonTooltip(panel, gvg_obsAbil[sec],
-                                     StringToText(AbnoGen_Lore(index, sec)));
+                                     AbnoGen_LoreText(index, sec));
         }
         else {
             UnitAbilityEnable(panel, gvg_obsAbil[sec], sec == level);
             cost = AbnoGen_ObsCost(index, sec);
             UnitSetInfoButtonTooltip(
                 panel, gvg_obsAbil[sec],
-                StringToText("Unobserved. " + IntToString(cost) + " PE-Boxes."
-                             + "<n/>You have " + IntToString(
-                                 Cont_BoxesOf(UnitGetOwner(panel), index)) + "."));
+                Msg2("Lob/Abno/Unobserved",
+                     "%COST%", MsgInt(cost),
+                     "%HELD%", MsgInt(Cont_BoxesOf(UnitGetOwner(panel), index))));
         }
         sec = sec + 1;
     }
@@ -532,7 +532,7 @@ void Cont_GoLoose (unit abno) {
 
     UIDisplayMessage(
         PlayerGroupAll(), c_messageAreaSubtitle,
-        StringToText(Risk_Name(Risk_Of(abno)) + " containment breach"));
+        Msg1("Lob/Msg/Breach", "%RISK%", Risk_NameText(Risk_Of(abno))));
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -569,7 +569,7 @@ void Cont_BeginEscape (unit abno) {
                        c_orderQueueReplace);
         UIDisplayMessage(
             PlayerGroupAll(), c_messageAreaSubtitle,
-            StringToText(Risk_Name(Risk_Of(abno)) + " is working on its door"));
+            Msg1("Lob/Msg/DoorStrain", "%RISK%", Risk_NameText(Risk_Of(abno))));
         return;
     }
 
@@ -699,7 +699,7 @@ void Cont_Suppress (unit abno) {
 
     UIDisplayMessage(
         PlayerGroupAll(), c_messageAreaSubtitle,
-        StringToText(Risk_Name(Risk_Of(abno)) + " suppressed"));
+        Msg1("Lob/Msg/Suppressed", "%RISK%", Risk_NameText(Risk_Of(abno))));
 }
 
 void Cont_Return (int slot) {

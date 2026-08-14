@@ -7,7 +7,8 @@
 | 路径 | 性质 | 谁维护 |
 |------|------|--------|
 | `src/galaxy/*.galaxy` | **真相源**，所有游戏逻辑 | 代码侧 |
-| `src/strings/enUS.txt` | **真相源**，所有玩家可见文本 | 代码侧 |
+| `src/strings/enUS.txt` | **真相源**，手写的玩家可见文本 | 代码侧 |
+| `src/strings/abnormality.enUS.txt` | **生成物**，异想体名称与图鉴四段 | `tools/gen_abnormalities.py` |
 | `enUS.SC2Data/LocalizedData/GameStrings.txt` | 半生成物：`Lob/` 命名空间由构建覆盖，其余原样保留 | 两边 |
 | `<其他语言>.SC2Data/LocalizedData/GameStrings.txt` | 翻译，**构建永不触碰** | 编辑器 / 译者 |
 | `LobotomyShiphold.SC2Map/MapScript.galaxy` | **生成物**，已提交 | `tools/build_galaxy.py` |
@@ -44,6 +45,8 @@ ObjectiveSetName(obj, StringExternal("Lob/Objective/Energy/Name")
                       + StringToText("  (37/200)"));
 ```
 
+`src/strings/` 下**所有 `*.enUS.txt`** 一起构成 `Lob/` 命名空间。手写的在 `enUS.txt`，异想体的名称和图鉴四段由 `gen_abnormalities.py` 从 `docs/usr/abnormality/*.md` 生成到 `abnormality.enUS.txt`——**写文档仍然是唯一的作者动作**，只是产物多了一份字符串表。
+
 `tools/gen_strings.py` 把这些合并进地图的 enUS `GameStrings.txt`：**只覆盖 `Lob/` 命名空间**，数据编辑器写的那一百多行 `Abil/Name`、`Button/Tooltip` 原样读回写出。别的语言的文件构建从不写——**加一种语言就是往那儿放一个文件，仅此而已**。
 
 两条检查，因为它替掉的失败模式是无声的：Galaxy 引用了一个没定义的 `Lob/` key，游戏里渲染出来是**什么都没有**，看起来像布局 bug 而不是缺字符串。
@@ -57,7 +60,29 @@ ObjectiveSetName(obj, StringExternal("Lob/Objective/Energy/Name")
 
 拼接用的前缀（`"Lob/Dept/Name/" + 部门 id`）两边都不算：它不是 key，也不能证明哪个 key 活着。
 
+### 拼接是有害的，用占位符
+
+```galaxy
+Msg1("Lob/Msg/Breach", "%RISK%", Risk_NameText(Risk_Of(abno)))
+```
+
+字符串里是**整句**：`%RISK% containment breach`。粘出来的话它就是三个碎片，只在英语里排得对，而需要把数字放前面的译者无处可放。
+
+这是 Blizzard 自己的形状——战役字符串里满是 `Do Not Let %NumberDead% Colonists Die`，走的就是 `TextReplaceWord`。辅助函数在 `00_config.galaxy`：`Msg` / `Msg1` / `Msg2` / `Msg3` / `MsgInt`。
+
+占位符写成 `%LIKE_THIS%`，让译者一眼看出哪些块必须保留、不能翻译。
+
+### 属性名不另开 key
+
+```galaxy
+StringExternal("Behavior/Name/" + Emp_StatBehavior(stat))
+```
+
+数据编辑器已经写了 `Behavior/Name/Lob_Attr_Fortitude`，单位面板也在显示它。消息里再拼一份英文就是第二份拷贝，可以自由地和它描述的那个面板漂开。**校验只管 `Lob/`**，引用别人的命名空间不被检查——这是有意的，那些 key 的所有权在编辑器那边。
+
 **调试输出故意不走这条路。**`-quest`、`-fort`、F12 那些是开发者文本，翻译它们等于让译者去渲染一条只有我会看的消息。
+
+反过来说：**开发者文本出现在玩家屏幕上，答案是把它从屏幕上拿走，不是翻译它。**开局那行 `scan:` 以前打在字幕区，现在打在调试区。
 
 > Galaxy 有 `StringToText` 而**没有 `TextToString`**。本地化字符串是单向的——一旦某个读数需要它，那一整行就得全程按 `text` 拼。`Debug_SayText` 就是为此存在的。
 

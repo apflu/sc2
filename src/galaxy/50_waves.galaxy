@@ -134,9 +134,10 @@ bool Waves_Spawn_Func (bool testConds, bool runActions) {
         if (owner >= 1 && owner <= 15) {
             UIDisplayMessage(
                 PlayerGroupSingle(owner), c_messageAreaSubtitle,
-                StringToText("wave " + IntToString(gv_waveNumber) + " -- "
-                             + IntToString(Waves_SizeFor(owner)) + " incoming ("
-                             + Diff_NameOf(owner) + ")"));
+                Msg3("Lob/Msg/Wave",
+                     "%WAVE%", MsgInt(gv_waveNumber),
+                     "%COUNT%", MsgInt(Waves_SizeFor(owner)),
+                     "%DIFFICULTY%", Diff_NameTextOf(owner)));
         }
         i = i + 1;
     }

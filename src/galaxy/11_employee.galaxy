@@ -136,6 +136,18 @@ string Emp_StatName (int stat) {
 //--------------------------------------------------------------------------------------------------
 // One stat's value, 0 to the cap.
 //--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// The stat's name for a PLAYER to read.
+//
+// Not a Lob/ key of its own: it reuses Behavior/Name/Lob_Attr_Fortitude, which
+// the data editor already wrote and the unit panel already shows. A message
+// that spelt the name out itself would be a second copy free to drift from the
+// panel it is describing.
+//--------------------------------------------------------------------------------------------------
+text Emp_StatNameText (int stat) {
+    return StringExternal("Behavior/Name/" + Emp_StatBehavior(stat));
+}
+
 int Emp_Stat (unit who, int stat) {
     if (who == null || stat < 0 || stat >= c_statCount) {
         return 0;

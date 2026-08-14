@@ -114,8 +114,8 @@ bool Hero_Died_Func (bool testConds, bool runActions) {
     // that meltdown and containment are both already using.
     UIDisplayMessage(
         PlayerGroupSingle(player), c_messageAreaSubtitle,
-        StringToText("agent down -- back in "
-                     + IntToString(FixedToInt(c_heroRespawnDelay)) + "s"));
+        Msg1("Lob/Msg/AgentDown", "%SECONDS%",
+             MsgInt(FixedToInt(c_heroRespawnDelay))));
     return true;
 }
 

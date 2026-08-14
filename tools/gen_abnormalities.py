@@ -33,6 +33,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs" / "usr" / "abnormality"
 UNIT_DATA = ROOT / "LobotomyShiphold.SC2Map" / "Base.SC2Data" / "GameData" / "UnitData.xml"
 OUT = ROOT / "src" / "galaxy" / "04_abno_gen.galaxy"
+STRINGS = ROOT / "src" / "strings" / "abnormality.enUS.txt"
 
 # Must match c_risk* in 06_risk.galaxy, and the attribute each grade lives in.
 RISKS = ["ZAYIN", "TETH", "HE", "WAW", "ALEPH"]
@@ -388,7 +389,10 @@ def build(entries: list[dict]) -> str:
 
     out.append(f"const int c_abnoCount = {len(entries)};\n")
     out.append(f"string[{n}] gvg_abnoType;\n")
-    out.append(f"string[{n}] gvg_abnoName;\n")
+    out.append("// The KEY of the display name, not the name. Everything a player reads\n"
+               "// lives in src/strings/ and arrives through StringExternal; this file\n"
+               "// writes the English into src/strings/abnormality.enUS.txt beside it.\n")
+    out.append(f"string[{n}] gvg_abnoNameKey;\n")
     out.append(f"int[{n}] gvg_abnoRisk;\n")
     out.append("// -1 means the abnormality has no counter at all, which is not\n"
                "// the same as a counter that has run out.\n")
@@ -429,11 +433,11 @@ def build(entries: list[dict]) -> str:
                "// Pushed onto the panel's buttons with UnitSetInfoButtonTooltip, which\n"
                "// is per unit INSTANCE -- so four generic abilities serve every\n"
                "// abnormality and nothing has to be generated into the catalogs.\n")
-    out.append(f"string[{max(len(entries) * 4, 1)}] gvg_abnoLore;\n\n")
+    out.append(f"string[{max(len(entries) * 4, 1)}] gvg_abnoLoreKey;\n\n")
 
     for i, e in enumerate(entries):
         fills.append(f'    gvg_abnoType[{i}] = "{e["id"]}";')
-        fills.append(f'    gvg_abnoName[{i}] = "{e["name"]}";')
+        fills.append(f'    gvg_abnoNameKey[{i}] = "Lob/Abno/Name/{e["id"]}";')
         fills.append(f"    gvg_abnoRisk[{i}] = {e['risk']};")
         fills.append(f"    gvg_abnoCounter[{i}] = {e['counter']};")
         fills.append(f"    gvg_abnoMaxBox[{i}] = {e['max_box']};")
@@ -451,7 +455,8 @@ def build(entries: list[dict]) -> str:
             fills.append(f"    gvg_abnoObsSuccess[{i * 5 + lvl}] = {obs_success[lvl]};")
         for sec in range(4):
             fills.append(f"    gvg_abnoObsCost[{i * 4 + sec}] = {e['costs'][sec]};")
-            fills.append(f'    gvg_abnoLore[{i * 4 + sec}] = "{e["lore"][sec]}";')
+            fills.append(
+                f'    gvg_abnoLoreKey[{i * 4 + sec}] = "Lob/Abno/Lore/{e["id"]}/{sec}";')
         for w, work in enumerate(WORKS):
             row = e["prefs"].get(work, [50] * 5)
             for lvl, pct in enumerate(row):
@@ -555,13 +560,23 @@ def build(entries: list[dict]) -> str:
         "    return gvg_abnoObsCost[index * 4 + obs];\n"
         "}\n\n"
         "//--------------------------------------------------------------------------------------------------\n"
-        "// What section `sec` of this abnormality says.\n"
+        "// What this abnormality is CALLED, for a player to read.\n"
         "//--------------------------------------------------------------------------------------------------\n"
-        "string AbnoGen_Lore (int index, int sec) {\n"
-        "    if (index < 0 || index >= c_abnoCount || sec < 0 || sec >= 4) {\n"
-        "        return \"\";\n"
+        "text AbnoGen_NameText (int index) {\n"
+        "    if (index < 0 || index >= c_abnoCount) {\n"
+        "        return StringToText(\"\");\n"
         "    }\n"
-        "    return gvg_abnoLore[index * 4 + sec];\n"
+        "    return StringExternal(gvg_abnoNameKey[index]);\n"
+        "}\n\n"
+        "//--------------------------------------------------------------------------------------------------\n"
+        "// What section `sec` of this abnormality says -- one of the four\n"
+        "// encyclopedia entries, pushed onto a control panel button.\n"
+        "//--------------------------------------------------------------------------------------------------\n"
+        "text AbnoGen_LoreText (int index, int sec) {\n"
+        "    if (index < 0 || index >= c_abnoCount || sec < 0 || sec >= 4) {\n"
+        "        return StringToText(\"\");\n"
+        "    }\n"
+        "    return StringExternal(gvg_abnoLoreKey[index * 4 + sec]);\n"
         "}\n\n"
         "//--------------------------------------------------------------------------------------------------\n"
         "// What a missed box on this abnormality costs. Defaults to White so that\n"
@@ -602,12 +617,43 @@ def build(entries: list[dict]) -> str:
     return "".join(out)
 
 
+STRINGS_HEADER = """# GENERATED FILE -- DO NOT EDIT.
+#
+# Built from docs/usr/abnormality/*.md by tools/gen_abnormalities.py. The
+# abnormality document is the source: write the doc, rebuild, done.
+#
+# It lands here rather than staying inline in 04_abno_gen.galaxy because it is
+# the largest body of player-facing text in the map -- every name and all four
+# encyclopedia sections of every abnormality -- and text a player reads has to
+# be reachable from the Text Editor and handable to a translator.
+#
+# Translating it means writing <locale>.SC2Data/LocalizedData/GameStrings.txt.
+# This file is enUS only and the build owns it.
+"""
+
+
+def strings(entries) -> dict:
+    """The English for everything a player reads off an abnormality."""
+    table = {}
+    for e in entries:
+        table[f'Lob/Abno/Name/{e["id"]}'] = e["name"]
+        for sec in range(4):
+            table[f'Lob/Abno/Lore/{e["id"]}/{sec}'] = e["lore"][sec]
+    return table
+
+
 def generate():
     entries = sorted(
         (finish(parse(p)) for p in DOCS.glob("*.md")), key=lambda e: e["id"]
     ) if DOCS.is_dir() else []
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(build(entries), encoding="utf-8")
+
+    table = strings(entries)
+    STRINGS.write_text(
+        STRINGS_HEADER + "".join(f"{k}={table[k]}\n" for k in sorted(table)),
+        encoding="utf-8")
+
     return OUT, entries, check(entries)
 
 

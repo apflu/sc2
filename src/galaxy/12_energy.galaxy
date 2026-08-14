@@ -108,7 +108,7 @@ void Energy_Submit (int player) {
     }
 
     UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle,
-                     StringToText("energy delivered -- the ship makes it out"));
+                     Msg("Lob/Msg/EnergyDelivered"));
 
     other = 1;
     while (other <= 15) {

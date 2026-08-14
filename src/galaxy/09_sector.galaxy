@@ -212,7 +212,7 @@ bool Sector_CoreFatal_Func (bool testConds, bool runActions) {
     UIDisplayMessage(
         PlayerGroupAll(),
         c_messageAreaSubtitle,
-        StringToText("inner layer lost -- repair the core to get it back")
+        Msg("Lob/Msg/InnerLayerLost")
     );
     return true;
 }

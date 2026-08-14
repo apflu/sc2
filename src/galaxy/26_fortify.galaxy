@@ -415,7 +415,9 @@ bool Fort_Upgrade (int player, int loc) {
 
     UIDisplayMessage(
         PlayerGroupAll(), c_messageAreaSubtitle,
-        StringToText(gvg_locName[loc] + " defence level " + IntToString(gvg_locLevel[loc])));
+        Msg2("Lob/Msg/FortLevel",
+             "%PLACE%", StringToText(gvg_locName[loc]),
+             "%LEVEL%", MsgInt(gvg_locLevel[loc])));
     return true;
 }
 

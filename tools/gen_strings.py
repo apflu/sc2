@@ -25,7 +25,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SRC = ROOT / "src" / "strings" / "enUS.txt"
+SRC_DIR = ROOT / "src" / "strings"
 GALAXY = ROOT / "src" / "galaxy"
 OUT = ROOT / "LobotomyShiphold.SC2Map" / "enUS.SC2Data" / "LocalizedData" / "GameStrings.txt"
 
@@ -66,13 +66,25 @@ def referenced_keys() -> dict:
     return found
 
 
+def read_all() -> tuple:
+    """Every *.enUS.txt under src/strings/, merged, with the file each key came
+    from so an error can name it."""
+    table, origin = {}, {}
+    for p in sorted(SRC_DIR.glob("*.enUS.txt")) + sorted(SRC_DIR.glob("enUS.txt")):
+        for k, v in read_table(p).items():
+            if k in table:
+                raise SystemExit(f"{p.name}: {k!r} is already defined in {origin[k]}")
+            table[k], origin[k] = v, p.name
+    return table, origin
+
+
 def main() -> int:
-    ours = read_table(SRC)
+    ours, origin = read_all()
 
     bad = [k for k in ours if not k.startswith(NAMESPACE)]
     if bad:
         raise SystemExit(
-            f"{SRC.relative_to(ROOT)} may only define {NAMESPACE}* keys; the rest of "
+            f"src/strings/ may only define {NAMESPACE}* keys; the rest of "
             "GameStrings.txt belongs to the editor:\n"
             + "\n".join(f"  {k}" for k in sorted(bad)))
 
@@ -88,7 +100,7 @@ def main() -> int:
     if missing:
         raise SystemExit(
             "Galaxy references strings that are not defined -- these render as\n"
-            f"nothing at all in game. Add them to {SRC.relative_to(ROOT)}:\n"
+            f"nothing at all in game. Add them to src/strings/enUS.txt:\n"
             + "\n".join(f"  {k}   ({refs[k]})" for k in missing))
 
     # Everything in the map file that is not ours, kept exactly as it was.

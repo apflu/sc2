@@ -1,0 +1,22 @@
+# GENERATED FILE -- DO NOT EDIT.
+#
+# Built from docs/usr/abnormality/*.md by tools/gen_abnormalities.py. The
+# abnormality document is the source: write the doc, rebuild, done.
+#
+# It lands here rather than staying inline in 04_abno_gen.galaxy because it is
+# the largest body of player-facing text in the map -- every name and all four
+# encyclopedia sections of every abnormality -- and text a player reads has to
+# be reachable from the Text Editor and handable to a translator.
+#
+# Translating it means writing <locale>.SC2Data/LocalizedData/GameStrings.txt.
+# This file is enUS only and the build owns it.
+Lob/Abno/Lore/0_00_00/0=Its special ability activates when its  Qliphoth Counter reaches 0. It will decrease by 1 when Repression.png Repression is used on it.<n/>When the counter is depleted, the Abnormality will breach but will remain immobile outside the Containment Unit's door. It possesses low  HP at 100 and doesn't have any other special abilities. It is easy to suppress and will flip upside down when defeated.
+Lob/Abno/Lore/0_00_00/1=No preference data.
+Lob/Abno/Lore/0_00_00/2=
+Lob/Abno/Lore/0_00_00/3=
+Lob/Abno/Lore/O_03_03/0=Its special ability restores 4 points of SP of the agent who was working on it if the Work Result is Good. If the employee collects all the 10 E-Boxes, One Sin will heal 4 points of SP to all Agents belonging to the department.
+Lob/Abno/Lore/O_03_03/1=Success per box, by the matching stat's level:<n/>        I   II  III IV  V<n/>Instinct   50  40  30  30  30 <n/>Insight    70  70  50  50  50 <n/>Attachment 70  70  70  70  70 <n/>Repression 50  40  30  30  30 
+Lob/Abno/Lore/O_03_03/2=1  One Sin and Hundreds of Good Deeds will restore the employee’s mental state when the work result is Good. &lt;name&gt;, who received this benediction, commented that it felt refreshing.<n/>2  After the maximum number of PE-Boxes was produced with One Sin and Hundreds of Good Deeds, it restored the mental health of every employee in the department.
+Lob/Abno/Lore/O_03_03/3=Qliphoth counter X<n/>Non-Escaping Entity
+Lob/Abno/Name/0_00_00=Standard Training-Dummy Rabbit
+Lob/Abno/Name/O_03_03=One Sin and Hundreds of Good Deeds

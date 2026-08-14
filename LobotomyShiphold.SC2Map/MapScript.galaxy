@@ -89,6 +89,46 @@ bool Slot_IsTablePlayer (int player) {
 const string c_questProgressStyle = "ObjectivePanelProgress_Terran";
 
 //--------------------------------------------------------------------------------------------------
+// Assembling a message out of a translated string and some numbers.
+//
+// NOT by concatenation. "%RISK% containment breach" is one sentence in the
+// strings file and stays one sentence in every language; glued together from
+// three fragments it is three fragments that only line up in English, and the
+// translator who needs the number in front has nowhere to put it.
+//
+// So the string owns the whole sentence including its placeholders, and the
+// code substitutes. That is Blizzard's own shape -- their campaign strings are
+// full of "Do Not Let %NumberDead% Colonists Die" driven through exactly this
+// native.
+//
+// Tokens are written %LIKE_THIS% so that a translator can see at a glance which
+// pieces they must keep and must not translate.
+//--------------------------------------------------------------------------------------------------
+text Msg (string key) {
+    return StringExternal(key);
+}
+
+text Msg1 (string key, string token, text value) {
+    return TextReplaceWord(StringExternal(key), StringToText(token), value,
+                           c_stringReplaceAll, c_stringCase);
+}
+
+text Msg2 (string key, string t1, text v1, string t2, text v2) {
+    return TextReplaceWord(Msg1(key, t1, v1), StringToText(t2), v2,
+                           c_stringReplaceAll, c_stringCase);
+}
+
+text Msg3 (string key, string t1, text v1, string t2, text v2, string t3, text v3) {
+    return TextReplaceWord(Msg2(key, t1, v1, t2, v2), StringToText(t3), v3,
+                           c_stringReplaceAll, c_stringCase);
+}
+
+// The commonest substitution by a distance: a plain number.
+text MsgInt (int value) {
+    return IntToText(value);
+}
+
+//--------------------------------------------------------------------------------------------------
 // src/galaxy/01_difficulty.galaxy
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
@@ -352,6 +392,21 @@ void Difficulty_Init () {
         }
         player = player + 1;
     }
+}
+
+//--------------------------------------------------------------------------------------------------
+// The four names for a PLAYER to read. Diff_Name stays a Galaxy string for the
+// debug console, which is not translated.
+//--------------------------------------------------------------------------------------------------
+text Diff_NameText (int level) {
+    if (level == c_diffCasual) { return Msg("Lob/Diff/Casual"); }
+    if (level == c_diffHard) { return Msg("Lob/Diff/Hard"); }
+    if (level == c_diffBrutal) { return Msg("Lob/Diff/Brutal"); }
+    return Msg("Lob/Diff/Normal");
+}
+
+text Diff_NameTextOf (int player) {
+    return Diff_NameText(Diff_Of(player));
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -625,7 +680,10 @@ string Codec_SelfTest () {
 
 const int c_abnoCount = 2;
 string[2] gvg_abnoType;
-string[2] gvg_abnoName;
+// The KEY of the display name, not the name. Everything a player reads
+// lives in src/strings/ and arrives through StringExternal; this file
+// writes the English into src/strings/abnormality.enUS.txt beside it.
+string[2] gvg_abnoNameKey;
 int[2] gvg_abnoRisk;
 // -1 means the abnormality has no counter at all, which is not
 // the same as a counter that has run out.
@@ -666,11 +724,11 @@ int[8] gvg_abnoObsCost;
 // Pushed onto the panel's buttons with UnitSetInfoButtonTooltip, which
 // is per unit INSTANCE -- so four generic abilities serve every
 // abnormality and nothing has to be generated into the catalogs.
-string[8] gvg_abnoLore;
+string[8] gvg_abnoLoreKey;
 
 void AbnoGen_Init () {
     gvg_abnoType[0] = "0_00_00";
-    gvg_abnoName[0] = "Standard Training-Dummy Rabbit";
+    gvg_abnoNameKey[0] = "Lob/Abno/Name/0_00_00";
     gvg_abnoRisk[0] = 1;
     gvg_abnoCounter[0] = -1;
     gvg_abnoMaxBox[0] = 10;
@@ -692,13 +750,13 @@ void AbnoGen_Init () {
     gvg_abnoObsSpeed[4] = 0;
     gvg_abnoObsSuccess[4] = 0;
     gvg_abnoObsCost[0] = 0;
-    gvg_abnoLore[0] = "Its special ability activates when its  Qliphoth Counter reaches 0. It will decrease by 1 when Repression.png Repression is used on it.<n/>When the counter is depleted, the Abnormality will breach but will remain immobile outside the Containment Unit's door. It possesses low  HP at 100 and doesn't have any other special abilities. It is easy to suppress and will flip upside down when defeated.";
+    gvg_abnoLoreKey[0] = "Lob/Abno/Lore/0_00_00/0";
     gvg_abnoObsCost[1] = 0;
-    gvg_abnoLore[1] = "No preference data.";
+    gvg_abnoLoreKey[1] = "Lob/Abno/Lore/0_00_00/1";
     gvg_abnoObsCost[2] = 0;
-    gvg_abnoLore[2] = "";
+    gvg_abnoLoreKey[2] = "Lob/Abno/Lore/0_00_00/2";
     gvg_abnoObsCost[3] = 0;
-    gvg_abnoLore[3] = "";
+    gvg_abnoLoreKey[3] = "Lob/Abno/Lore/0_00_00/3";
     gvg_abnoPref[0] = 50;
     gvg_abnoPref[1] = 50;
     gvg_abnoPref[2] = 50;
@@ -720,7 +778,7 @@ void AbnoGen_Init () {
     gvg_abnoPref[18] = 50;
     gvg_abnoPref[19] = 50;
     gvg_abnoType[1] = "O_03_03";
-    gvg_abnoName[1] = "One Sin and Hundreds of Good Deeds";
+    gvg_abnoNameKey[1] = "Lob/Abno/Name/O_03_03";
     gvg_abnoRisk[1] = 0;
     gvg_abnoCounter[1] = -1;
     gvg_abnoMaxBox[1] = 10;
@@ -742,13 +800,13 @@ void AbnoGen_Init () {
     gvg_abnoObsSpeed[9] = 10;
     gvg_abnoObsSuccess[9] = 10;
     gvg_abnoObsCost[4] = 8;
-    gvg_abnoLore[4] = "Its special ability restores 4 points of SP of the agent who was working on it if the Work Result is Good. If the employee collects all the 10 E-Boxes, One Sin will heal 4 points of SP to all Agents belonging to the department.";
+    gvg_abnoLoreKey[4] = "Lob/Abno/Lore/O_03_03/0";
     gvg_abnoObsCost[5] = 8;
-    gvg_abnoLore[5] = "Success per box, by the matching stat's level:<n/>        I   II  III IV  V<n/>Instinct   50  40  30  30  30 <n/>Insight    70  70  50  50  50 <n/>Attachment 70  70  70  70  70 <n/>Repression 50  40  30  30  30 ";
+    gvg_abnoLoreKey[5] = "Lob/Abno/Lore/O_03_03/1";
     gvg_abnoObsCost[6] = 8;
-    gvg_abnoLore[6] = "1  One Sin and Hundreds of Good Deeds will restore the employee’s mental state when the work result is Good. &lt;name&gt;, who received this benediction, commented that it felt refreshing.<n/>2  After the maximum number of PE-Boxes was produced with One Sin and Hundreds of Good Deeds, it restored the mental health of every employee in the department.";
+    gvg_abnoLoreKey[6] = "Lob/Abno/Lore/O_03_03/2";
     gvg_abnoObsCost[7] = 8;
-    gvg_abnoLore[7] = "Qliphoth counter X<n/>Non-Escaping Entity";
+    gvg_abnoLoreKey[7] = "Lob/Abno/Lore/O_03_03/3";
     gvg_abnoPref[20] = 50;
     gvg_abnoPref[21] = 40;
     gvg_abnoPref[22] = 30;
@@ -874,13 +932,24 @@ int AbnoGen_ObsCost (int index, int obs) {
 }
 
 //--------------------------------------------------------------------------------------------------
-// What section `sec` of this abnormality says.
+// What this abnormality is CALLED, for a player to read.
 //--------------------------------------------------------------------------------------------------
-string AbnoGen_Lore (int index, int sec) {
-    if (index < 0 || index >= c_abnoCount || sec < 0 || sec >= 4) {
-        return "";
+text AbnoGen_NameText (int index) {
+    if (index < 0 || index >= c_abnoCount) {
+        return StringToText("");
     }
-    return gvg_abnoLore[index * 4 + sec];
+    return StringExternal(gvg_abnoNameKey[index]);
+}
+
+//--------------------------------------------------------------------------------------------------
+// What section `sec` of this abnormality says -- one of the four
+// encyclopedia entries, pushed onto a control panel button.
+//--------------------------------------------------------------------------------------------------
+text AbnoGen_LoreText (int index, int sec) {
+    if (index < 0 || index >= c_abnoCount || sec < 0 || sec >= 4) {
+        return StringToText("");
+    }
+    return StringExternal(gvg_abnoLoreKey[index * 4 + sec]);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -2396,6 +2465,23 @@ string Risk_Name (int level) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// The same five for a PLAYER to read.
+//
+// Keyed rather than returned as English even though the five are transliterated
+// Hebrew letters and most translations keep them: the grade also appears as a
+// renamed unit attribute in the text editor, and a message that spelt it out
+// itself could drift from the panel that shows it. One name, one place.
+//--------------------------------------------------------------------------------------------------
+text Risk_NameText (int level) {
+    if (level == c_riskZayin) { return Msg("Lob/Risk/Zayin"); }
+    if (level == c_riskTeth) { return Msg("Lob/Risk/Teth"); }
+    if (level == c_riskHE) { return Msg("Lob/Risk/HE"); }
+    if (level == c_riskWAW) { return Msg("Lob/Risk/WAW"); }
+    if (level == c_riskAleph) { return Msg("Lob/Risk/Aleph"); }
+    return StringToText("");
+}
+
+//--------------------------------------------------------------------------------------------------
 // A unit type's grade, or c_riskNone.
 //
 // Searched downwards so that a unit mistakenly carrying two grades reads as the
@@ -2806,7 +2892,7 @@ bool Sector_CoreFatal_Func (bool testConds, bool runActions) {
     UIDisplayMessage(
         PlayerGroupAll(),
         c_messageAreaSubtitle,
-        StringToText("inner layer lost -- repair the core to get it back")
+        Msg("Lob/Msg/InnerLayerLost")
     );
     return true;
 }
@@ -2936,7 +3022,11 @@ string Registry_ScanLine () {
 }
 
 void Registry_Init () {
-    UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle,
+    // The debug area, not the subtitle. This is developer text and it was
+    // landing on every player's screen at map start; the answer to developer
+    // text a player can see is to take it off their screen, not to translate
+    // it. -scan prints the same line on demand.
+    UIDisplayMessage(PlayerGroupAll(), c_messageAreaDebug,
                      StringToText(Registry_ScanLine()));
 }
 
@@ -3081,6 +3171,18 @@ string Emp_StatName (int stat) {
 //--------------------------------------------------------------------------------------------------
 // One stat's value, 0 to the cap.
 //--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// The stat's name for a PLAYER to read.
+//
+// Not a Lob/ key of its own: it reuses Behavior/Name/Lob_Attr_Fortitude, which
+// the data editor already wrote and the unit panel already shows. A message
+// that spelt the name out itself would be a second copy free to drift from the
+// panel it is describing.
+//--------------------------------------------------------------------------------------------------
+text Emp_StatNameText (int stat) {
+    return StringExternal("Behavior/Name/" + Emp_StatBehavior(stat));
+}
+
 int Emp_Stat (unit who, int stat) {
     if (who == null || stat < 0 || stat >= c_statCount) {
         return 0;
@@ -4076,7 +4178,7 @@ void Energy_Submit (int player) {
     }
 
     UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle,
-                     StringToText("energy delivered -- the ship makes it out"));
+                     Msg("Lob/Msg/EnergyDelivered"));
 
     other = 1;
     while (other <= 15) {
@@ -4539,16 +4641,16 @@ void Cont_SyncPanel (int slot) {
         if (sec < level) {
             UnitAbilityEnable(panel, gvg_obsAbil[sec], false);
             UnitSetInfoButtonTooltip(panel, gvg_obsAbil[sec],
-                                     StringToText(AbnoGen_Lore(index, sec)));
+                                     AbnoGen_LoreText(index, sec));
         }
         else {
             UnitAbilityEnable(panel, gvg_obsAbil[sec], sec == level);
             cost = AbnoGen_ObsCost(index, sec);
             UnitSetInfoButtonTooltip(
                 panel, gvg_obsAbil[sec],
-                StringToText("Unobserved. " + IntToString(cost) + " PE-Boxes."
-                             + "<n/>You have " + IntToString(
-                                 Cont_BoxesOf(UnitGetOwner(panel), index)) + "."));
+                Msg2("Lob/Abno/Unobserved",
+                     "%COST%", MsgInt(cost),
+                     "%HELD%", MsgInt(Cont_BoxesOf(UnitGetOwner(panel), index))));
         }
         sec = sec + 1;
     }
@@ -4664,7 +4766,7 @@ void Cont_GoLoose (unit abno) {
 
     UIDisplayMessage(
         PlayerGroupAll(), c_messageAreaSubtitle,
-        StringToText(Risk_Name(Risk_Of(abno)) + " containment breach"));
+        Msg1("Lob/Msg/Breach", "%RISK%", Risk_NameText(Risk_Of(abno))));
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -4701,7 +4803,7 @@ void Cont_BeginEscape (unit abno) {
                        c_orderQueueReplace);
         UIDisplayMessage(
             PlayerGroupAll(), c_messageAreaSubtitle,
-            StringToText(Risk_Name(Risk_Of(abno)) + " is working on its door"));
+            Msg1("Lob/Msg/DoorStrain", "%RISK%", Risk_NameText(Risk_Of(abno))));
         return;
     }
 
@@ -4831,7 +4933,7 @@ void Cont_Suppress (unit abno) {
 
     UIDisplayMessage(
         PlayerGroupAll(), c_messageAreaSubtitle,
-        StringToText(Risk_Name(Risk_Of(abno)) + " suppressed"));
+        Msg1("Lob/Msg/Suppressed", "%RISK%", Risk_NameText(Risk_Of(abno))));
 }
 
 void Cont_Return (int slot) {
@@ -5293,9 +5395,9 @@ void Melt_Miss (int slot) {
 
     UIDisplayMessage(
         PlayerGroupAll(), c_messageAreaSubtitle,
-        StringToText(gvg_abnoName[AbnoGen_IndexOf(abno)]
-                     + " went unattended -- Qliphoth 0, "
-                     + IntToString(lost) + " energy lost"));
+        Msg2("Lob/Msg/MeltMissed",
+             "%ABNORMALITY%", AbnoGen_NameText(AbnoGen_IndexOf(abno)),
+             "%AMOUNT%", MsgInt(lost)));
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -5353,17 +5455,17 @@ void Melt_NameFor (int player) {
                 gvg_meltHeld[slot] = true;
                 UIDisplayMessage(
                     PlayerGroupSingle(player), c_messageAreaSubtitle,
-                    StringToText("MELTDOWN: " + gvg_abnoName[AbnoGen_IndexOf(abno)]
-                                 + " -- held until the work in progress ends"));
+                    Msg1("Lob/Msg/MeltHeld", "%ABNORMALITY%",
+                         AbnoGen_NameText(AbnoGen_IndexOf(abno))));
             }
             else {
                 gvg_meltHeld[slot] = false;
                 gvg_meltDeadline[slot] = GameGetMissionTime() + c_meltWindow;
                 UIDisplayMessage(
                     PlayerGroupSingle(player), c_messageAreaSubtitle,
-                    StringToText("MELTDOWN: " + gvg_abnoName[AbnoGen_IndexOf(abno)]
-                                 + " -- send somebody within "
-                                 + IntToString(FixedToInt(c_meltWindow)) + "s"));
+                    Msg2("Lob/Msg/MeltNamed",
+                         "%ABNORMALITY%", AbnoGen_NameText(AbnoGen_IndexOf(abno)),
+                         "%SECONDS%", MsgInt(FixedToInt(c_meltWindow))));
             }
         }
         step = step + 1;
@@ -5386,7 +5488,7 @@ void Melt_Advance () {
     gv_meltNextAt = GameGetMissionTime() + c_meltPeriod;
 
     UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle,
-                     StringToText("meltdown level " + IntToString(gv_meltLevel)));
+                     Msg1("Lob/Msg/MeltLevel", "%LEVEL%", MsgInt(gv_meltLevel)));
 
     player = 1;
     while (player <= 15) {
@@ -5418,10 +5520,10 @@ bool Melt_Tick_Func (bool testConds, bool runActions) {
                     gvg_meltDeadline[slot] = now + c_meltWindow;
                     UIDisplayMessage(
                         PlayerGroupSingle(Cont_OwnerOf(slot)), c_messageAreaSubtitle,
-                        StringToText(gvg_abnoName[AbnoGen_IndexOf(gvg_cellAbno[slot])]
-                                     + " is free -- "
-                                     + IntToString(FixedToInt(c_meltWindow))
-                                     + "s to send somebody"));
+                        Msg2("Lob/Msg/MeltFreed",
+                             "%ABNORMALITY%",
+                             AbnoGen_NameText(AbnoGen_IndexOf(gvg_cellAbno[slot])),
+                             "%SECONDS%", MsgInt(FixedToInt(c_meltWindow))));
                 }
             }
             else if (now >= gvg_meltDeadline[slot]) {
@@ -5472,7 +5574,8 @@ void Melt_NoteWorkBegin (unit abno) {
         gvg_meltAnswered[owner] = gvg_meltAnswered[owner] + 1;
         UIDisplayMessage(
             PlayerGroupSingle(owner), c_messageAreaSubtitle,
-            StringToText(gvg_abnoName[AbnoGen_IndexOf(abno)] + " -- meltdown answered"));
+            Msg1("Lob/Msg/MeltAnswered", "%ABNORMALITY%",
+                 AbnoGen_NameText(AbnoGen_IndexOf(abno))));
     }
 }
 
@@ -5779,35 +5882,35 @@ string Work_Refusal (unit abno, unit emp) {
     int cell;
 
     if (emp == null || !UnitIsAlive(emp)) {
-        return "no employee";
+        return "Lob/Work/Refusal/NoEmployee";
     }
     if (Work_IsBusy(emp)) {
-        return "already working";
+        return "Lob/Work/Refusal/Busy";
     }
     if (gv_workCount >= c_workMax) {
-        return "too many works at once";
+        return "Lob/Work/Refusal/TooMany";
     }
     if (abno == null) {
-        return "no abnormality at that door";
+        return "Lob/Work/Refusal/NoAbnormality";
     }
     if (AbnoGen_IndexOf(abno) < 0) {
-        return "that unit has no abnormality document";
+        return "Lob/Work/Refusal/NoDocument";
     }
 
     cell = Cont_SlotOf(abno);
     if (cell < 0) {
-        return "that abnormality is not in the cell registry";
+        return "Lob/Work/Refusal/NotRegistered";
     }
     // A dropped door is exactly and only this: you cannot work on it. That is
     // the whole consequence for an abnormality that does not escape.
     if (!Cont_DoorIsUp(abno)) {
-        return "the door is down";
+        return "Lob/Work/Refusal/DoorDown";
     }
     if (Cont_State(abno) != c_cellContained) {
-        return "it is not in its cell";
+        return "Lob/Work/Refusal/NotInCell";
     }
     if (GameGetMissionTime() < gvg_workReadyAt[cell]) {
-        return "still on work cooldown";
+        return "Lob/Work/Refusal/Cooldown";
     }
     return "";
 }
@@ -5860,6 +5963,19 @@ void Work_Drop (int slot) {
     gvg_workDone[slot] = gvg_workDone[last];
     gvg_workNextBox[slot] = gvg_workNextBox[last];
     gv_workCount = last;
+}
+
+text Work_NameText (int work) {
+    if (work == c_workInsight) { return Msg("Lob/Work/Name/Insight"); }
+    if (work == c_workAttachment) { return Msg("Lob/Work/Name/Attachment"); }
+    if (work == c_workRepression) { return Msg("Lob/Work/Name/Repression"); }
+    return Msg("Lob/Work/Name/Instinct");
+}
+
+text Work_ResultText (int result) {
+    if (result == c_resultGood) { return Msg("Lob/Work/Result/Good"); }
+    if (result == c_resultNormal) { return Msg("Lob/Work/Result/Normal"); }
+    return Msg("Lob/Work/Result/Bad");
 }
 
 string Work_ResultName (int result) {
@@ -5931,11 +6047,18 @@ void Work_Finish (int slot) {
 
     UIDisplayMessage(
         PlayerGroupSingle(owner), c_messageAreaSubtitle,
-        StringToText(gvg_abnoName[index] + ": " + Work_Name(gvg_workType[slot])
-                     + " -- " + IntToString(boxes) + " boxes, "
-                     + Work_ResultName(result)
-                     + "  (+" + IntToString(gain) + " " + Emp_StatName(Work_Stat(gvg_workType[slot]))
-                     + ")"));
+        TextReplaceWord(
+            TextReplaceWord(
+                Msg3("Lob/Msg/WorkResult",
+                     "%ABNORMALITY%", AbnoGen_NameText(index),
+                     "%WORK%", Work_NameText(gvg_workType[slot]),
+                     "%BOXES%", MsgInt(boxes)),
+                StringToText("%RESULT%"), Work_ResultText(result),
+                c_stringReplaceAll, c_stringCase),
+            StringToText("%STAT%"),
+            StringToText(IntToString(gain) + " ")
+            + Emp_StatNameText(Work_Stat(gvg_workType[slot])),
+            c_stringReplaceAll, c_stringCase));
 
     Work_Drop(slot);
 }
@@ -6020,8 +6143,8 @@ bool Work_Cast_Func (bool testConds, bool runActions) {
     }
     if (!Cont_IsDoor(door)) {
         UIDisplayMessage(PlayerGroupSingle(owner), c_messageAreaSubtitle,
-                         StringToText("work: not a containment door ("
-                                      + UnitGetType(door) + ")"));
+                         Msg1("Lob/Work/NotADoor", "%UNIT%",
+                              StringToText(UnitGetType(door))));
         return true;
     }
 
@@ -6032,21 +6155,22 @@ bool Work_Cast_Func (bool testConds, bool runActions) {
             why = Work_Refusal(abno, emp);
             if (why != "") {
                 UIDisplayMessage(PlayerGroupSingle(owner), c_messageAreaSubtitle,
-                                 StringToText("work: " + why));
+                                 Msg1("Lob/Work/Refused", "%REASON%", Msg(why)));
                 return true;
             }
             Work_Begin(abno, emp, Work_DefaultOf(owner));
             UIDisplayMessage(
                 PlayerGroupSingle(owner), c_messageAreaSubtitle,
-                StringToText(gvg_abnoName[AbnoGen_IndexOf(abno)] + ": "
-                             + Work_Name(Work_DefaultOf(owner)) + " started"));
+                Msg2("Lob/Msg/WorkBegin",
+                     "%ABNORMALITY%", AbnoGen_NameText(AbnoGen_IndexOf(abno)),
+                     "%WORK%", Work_NameText(Work_DefaultOf(owner))));
             return true;
         }
         slot = slot + 1;
     }
 
     UIDisplayMessage(PlayerGroupSingle(owner), c_messageAreaSubtitle,
-                     StringToText("work: no cell is registered at that door"));
+                     Msg("Lob/Work/NoCell"));
     return true;
 }
 
@@ -6241,8 +6365,8 @@ bool Hero_Died_Func (bool testConds, bool runActions) {
     // that meltdown and containment are both already using.
     UIDisplayMessage(
         PlayerGroupSingle(player), c_messageAreaSubtitle,
-        StringToText("agent down -- back in "
-                     + IntToString(FixedToInt(c_heroRespawnDelay)) + "s"));
+        Msg1("Lob/Msg/AgentDown", "%SECONDS%",
+             MsgInt(FixedToInt(c_heroRespawnDelay))));
     return true;
 }
 
@@ -7248,7 +7372,9 @@ bool Fort_Upgrade (int player, int loc) {
 
     UIDisplayMessage(
         PlayerGroupAll(), c_messageAreaSubtitle,
-        StringToText(gvg_locName[loc] + " defence level " + IntToString(gvg_locLevel[loc])));
+        Msg2("Lob/Msg/FortLevel",
+             "%PLACE%", StringToText(gvg_locName[loc]),
+             "%LEVEL%", MsgInt(gvg_locLevel[loc])));
     return true;
 }
 
@@ -7986,9 +8112,10 @@ bool Waves_Spawn_Func (bool testConds, bool runActions) {
         if (owner >= 1 && owner <= 15) {
             UIDisplayMessage(
                 PlayerGroupSingle(owner), c_messageAreaSubtitle,
-                StringToText("wave " + IntToString(gv_waveNumber) + " -- "
-                             + IntToString(Waves_SizeFor(owner)) + " incoming ("
-                             + Diff_NameOf(owner) + ")"));
+                Msg3("Lob/Msg/Wave",
+                     "%WAVE%", MsgInt(gv_waveNumber),
+                     "%COUNT%", MsgInt(Waves_SizeFor(owner)),
+                     "%DIFFICULTY%", Diff_NameTextOf(owner)));
         }
         i = i + 1;
     }
