@@ -86,6 +86,54 @@ def check_forward_refs(text: str) -> None:
         )
 
 
+# Every type name the Galaxy compiler knows, harvested once from the native
+# declarations in core.sc2mod. The handle types are the dangerous half: `int`
+# and `bool` are obviously keywords and nobody names a variable `int`, but
+# `marker`, `order`, `wave`, `text`, `color`, `bank`, `sound` and `point` all
+# read as perfectly ordinary English nouns.
+TYPE_NAMES = {
+    "abilcmd", "actor", "actorscope", "aifilter", "bank", "bitmask", "bool", "byte",
+    "camerainfo", "color", "datetime", "doodad", "effecthistory", "fixed",
+    "generichandle", "int", "marker", "order", "playergroup", "point", "region",
+    "revealer", "sound", "soundlink", "string", "text", "timer",
+    "transmissionsource", "trigger", "unit", "unitfilter", "unitgroup", "unitref",
+    "wave", "waveinfo", "wavetarget",
+}
+
+DECL_RE = re.compile(
+    r"\b(" + "|".join(sorted(TYPE_NAMES)) + r")\s*(?:\[\s*\d+\s*\])?\s+(\w+)")
+
+
+def check_type_names(text: str) -> None:
+    """Refuse to name a variable, parameter or field after a Galaxy type.
+
+    `unit marker` is not a unit called marker; it is two type keywords in a row,
+    and the compiler says "invalid list of args" -- pointing at the FUNCTION
+    HEADER, which reads exactly like a forward reference and is not one. That
+    cost a full round trip to the Windows machine to find.
+
+    The handle types are what makes this worth a check. Nobody writes `int int`,
+    but `marker`, `order`, `wave`, `text`, `color`, `bank`, `point` and `sound`
+    are ordinary words that describe the thing being stored, so the name that
+    first comes to mind is exactly the one that will not compile.
+    """
+    bad = []
+    for i, line in enumerate(text.splitlines(), 1):
+        s = re.sub(r"//.*", "", line)
+        s = re.sub(r'"(\\.|[^"\\])*"', '""', s)
+        for m in DECL_RE.finditer(s):
+            if m.group(2) in TYPE_NAMES:
+                bad.append((i, m.group(2), line.strip()))
+
+    if bad:
+        raise SystemExit(
+            "type name used as an identifier -- Galaxy reports this as\n"
+            '"invalid list of args", pointing at the function header:\n'
+            + "\n".join(f"  MapScript.galaxy line {n}: {word!r} in {src}"
+                        for n, word, src in bad)
+        )
+
+
 def main() -> int:
     if not SRC.is_dir():
         print(f"error: no source directory at {SRC}", file=sys.stderr)
@@ -159,6 +207,7 @@ def main() -> int:
     parts.extend(f"    {name}();\n" for name in inits)
     parts.append("}\n")
 
+    check_type_names("".join(parts))
     check_forward_refs("".join(parts))
     OUT.write_text("".join(parts), encoding="utf-8")
 

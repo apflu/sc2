@@ -44,14 +44,14 @@ trigger gt_wave;
 // Whose wave this is. The marker's own owner first, so the editor can override
 // the geometry by simply assigning it; otherwise the sector it stands in.
 //--------------------------------------------------------------------------------------------------
-int Waves_OwnerOf (unit marker) {
-    if (marker == null) {
+int Waves_OwnerOf (unit post) {
+    if (post == null) {
         return 0;
     }
-    if (Slot_IsTablePlayer(UnitGetOwner(marker))) {
-        return UnitGetOwner(marker);
+    if (Slot_IsTablePlayer(UnitGetOwner(post))) {
+        return UnitGetOwner(post);
     }
-    return Sector_OwnerNear(UnitGetPosition(marker));
+    return Sector_OwnerNear(UnitGetPosition(post));
 }
 
 int Waves_SizeFor (int player) {
@@ -89,7 +89,7 @@ point Waves_TargetFrom (point from) {
 bool Waves_Spawn_Func (bool testConds, bool runActions) {
     unitgroup markers;
     unitgroup spawned;
-    unit marker;
+    unit post;
     point where;
     int markerCount;
     int owner;
@@ -109,9 +109,9 @@ bool Waves_Spawn_Func (bool testConds, bool runActions) {
 
     i = 1;
     while (i <= markerCount) {
-        marker = UnitGroupUnit(markers, i);
-        where = UnitGetPosition(marker);
-        owner = Waves_OwnerOf(marker);
+        post = UnitGroupUnit(markers, i);
+        where = UnitGetPosition(post);
+        owner = Waves_OwnerOf(post);
 
         spawned = UnitCreate(
             Waves_SizeFor(owner),

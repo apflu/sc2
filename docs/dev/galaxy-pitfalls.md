@@ -23,6 +23,27 @@ python3 tools/build_galaxy.py
 
 **这条决定了模块编号。**`13_meltdown.galaxy` 排在 13 而不是 15，就是因为 `14_work` 要调它；它靠 `"containment" < "meltdown"` 排在收容之后，这是承重的。
 
+### 变量名撞上类型名，报的还是 "invalid list of args"
+
+```galaxy
+int Waves_OwnerOf (unit marker) {     // 编译不过
+```
+
+`marker` 是 Galaxy 的**内置句柄类型**（`Marker()`、`MarkerGetCastingUnit()`）。所以这不是"一个叫 marker 的 unit"，是**两个类型关键字挨在一起**。
+
+编译器说的是 `invalid list of args`，而且**指在函数头那一行**——和"先声明后使用"那个错长得一模一样，但它不是。这一条花了一次完整的跨机器往返才找到。
+
+危险的是句柄类型，因为它们全是**普通英文名词**：
+
+```
+marker  order  wave  text  color  bank  point  sound  timer  region
+trigger doodad actor byte  string unit  revealer
+```
+
+没人会把变量叫 `int`，但描述"生成点"时第一个想到的词就是 `marker`，描述"命令"时就是 `order`——**最自然的那个名字恰好是编译不过的那个。**
+
+`build_galaxy.py` 的 `check_type_names` 现在会挡住它，并指出是哪一行哪个词。完整类型表是从 `~/SC2GameData/` 的 native 声明里扒出来的，不是手列的。
+
 ### 没有数组初始化语法
 
 所以生成的每张表都是"上面一句声明 + Init 里一串赋值"，两者之间**没有任何东西把它们绑在一起**。
