@@ -359,6 +359,7 @@ void Debug_Fortify (int player, string word) {
 void Debug_Quests (int player, string word, string second) {
     string line;
     string tail;
+    int step;
     int want;
     int dept;
     int quest;
@@ -406,23 +407,35 @@ void Debug_Quests (int player, string word, string second) {
             line = line + "[bonus] ";
         }
 
-        tail = "  ";
-        if (Quest_IsDone(player, quest)) {
-            tail = tail + "DONE";
-        }
-        else if (!Quest_IsCountable(quest)) {
-            tail = tail + "(no channel yet)";
-        }
-        else {
-            tail = tail + IntToString(Quest_Progress(player, quest))
-                   + "/" + IntToString(Quest_Goal(quest));
-            if (!Quest_IsOpen(player, quest)) {
-                tail = tail + " (locked)";
+        // One line per STEP, so a split task reads here the way it reads in
+        // the panel. A task with one step is unchanged by this.
+        step = 0;
+        while (step < Quest_StepCount(quest)) {
+            tail = "  ";
+            if (Quest_IsDone(player, quest)) {
+                tail = tail + "DONE";
             }
-        }
+            else if (!Quest_IsCountable(quest)) {
+                tail = tail + "(no channel yet)";
+            }
+            else {
+                tail = tail + IntToString(Quest_StepProgress(player, quest, step))
+                       + "/" + IntToString(Quest_StepGoal(quest, step));
+                if (!Quest_IsOpen(player, quest)) {
+                    tail = tail + " (locked)";
+                }
+            }
 
-        Debug_SayText(player,
-                      StringToText(line) + Quest_Title(quest) + StringToText(tail));
+            if (step == 0) {
+                Debug_SayText(player, StringToText(line)
+                              + Quest_StepTitle(quest, step) + StringToText(tail));
+            }
+            else {
+                Debug_SayText(player, StringToText("     and ")
+                              + Quest_StepTitle(quest, step) + StringToText(tail));
+            }
+            step = step + 1;
+        }
         quest = quest + 1;
     }
 }

@@ -35,7 +35,7 @@
 // A player only progresses their own department's tasks.
 //
 // Two of the tasks say "本部门" outright, and the rest are written from inside
-// one department's job. Quest_Progress returns 0 for anything outside the
+// one department's job. Quest_StepProgress returns 0 for anything outside the
 // player's department rather than computing something that would be wrong.
 //
 //--------------------------------------------------------------------------------------------------
@@ -82,11 +82,36 @@ const int c_qHod2 = 13;
 const int c_qHod3 = 14;
 const int c_qHod4 = 15;
 
-int[36] gvg_questGoal;
+//--------------------------------------------------------------------------------------------------
+// A task is one or more STEPS.
+//
+// Control 1 is "建立一个正常运转的收容单元 并 升级任意房间或走廊的防御设施" --
+// two unrelated things joined by an "and". Counted as one number it reads
+// "(1/2)", which tells a player how far along they are and nothing whatever
+// about WHICH half they are missing. Two panel lines say it without a word.
+//
+// The two must hold AT THE SAME TIME for the task to complete, which falls out
+// of the steps being derived rather than latched: each is re-read every tick,
+// so a cell that breaks after the fortification was bought un-ticks its own
+// line and the task goes back to unfinished. Only the TASK latches.
+//
+// Two is enough for every task in the source document. A third would be a
+// constant and four array literals.
+//--------------------------------------------------------------------------------------------------
+const int c_questStepMax = 2;
 
+int[36] gvg_questStepCount;
+
+// Per step, flattened quest * 2 + step.
+//
 // String KEYS, not words. Everything a player reads lives in
 // src/strings/enUS.txt and arrives through StringExternal; see the note at the
 // top of that file for why inline English is a translation already lost.
+string[72] gvg_questStepKey;
+int[72] gvg_questStepGoal;
+
+// The task as a whole, for the completion message and the debug summary. A
+// single-step task uses the same key for both, so nothing is written twice.
 string[36] gvg_questTitleKey;
 
 // Whether the map can answer this task at all yet. False is not "hard", it is
@@ -204,8 +229,8 @@ bool[576] gvg_questDone;
 // cannot move. -quest is what a developer reads and lists all thirty-six either
 // way. When a missing system lands, flipping countable is the one change.
 //--------------------------------------------------------------------------------------------------
-int[64] gvg_questObj;
-int[64] gvg_questShown;
+int[128] gvg_questObj;
+int[128] gvg_questShown;
 
 const fixed c_questPeriod = 2.0;
 
@@ -225,18 +250,25 @@ int Quest_NumberOf (int quest) {
     return quest % c_questPerDept + 1;
 }
 
-int Quest_Goal (int quest) {
+int Quest_StepCount (int quest) {
     if (quest < 0 || quest >= c_questCount) {
         return 0;
     }
-    return gvg_questGoal[quest];
+    return gvg_questStepCount[quest];
 }
 
-text Quest_Title (int quest) {
-    if (quest < 0 || quest >= c_questCount) {
+int Quest_StepGoal (int quest, int step) {
+    if (quest < 0 || quest >= c_questCount || step < 0 || step >= c_questStepMax) {
+        return 0;
+    }
+    return gvg_questStepGoal[quest * c_questStepMax + step];
+}
+
+text Quest_StepTitle (int quest, int step) {
+    if (quest < 0 || quest >= c_questCount || step < 0 || step >= c_questStepMax) {
         return StringToText("");
     }
-    return StringExternal(gvg_questTitleKey[quest]);
+    return StringExternal(gvg_questStepKey[quest * c_questStepMax + step]);
 }
 
 bool Quest_IsCountable (int quest) {
@@ -366,12 +398,16 @@ int Quest_BestObservation (int player, int minRisk) {
 }
 
 //--------------------------------------------------------------------------------------------------
-// How far along a player is.
+// How far along a player is on ONE STEP.
 //
 // Never above the goal, so a readout can print progress/goal without clamping
 // and a caller can compare the two without knowing which task it is holding.
+//
+// Single-step tasks ignore the step argument entirely, which is why it is at
+// the end of every branch rather than the top of the function: the shape of a
+// task with one step should not have to know that steps exist.
 //--------------------------------------------------------------------------------------------------
-int Quest_Progress (int player, int quest) {
+int Quest_StepProgress (int player, int quest, int step) {
     int value;
 
     if (!Slot_IsTablePlayer(player) || quest < 0 || quest >= c_questCount) {
@@ -383,14 +419,14 @@ int Quest_Progress (int player, int quest) {
 
     value = 0;
 
-    // Control Team. A cell that works and a place that has been fortified --
-    // two halves of "the facility is running", counted as one each.
+    // Control Team. Two halves of "the facility is running", and two lines in
+    // the panel, because "(1/2)" never said which half was missing.
     if (quest == c_qMalkuth1) {
-        if (Cont_WorkingOf(player) > 0) {
-            value = value + 1;
+        if (step == 0) {
+            value = Cont_WorkingOf(player);
         }
-        if (Fort_LevelSumOf(player) > 0) {
-            value = value + 1;
+        else {
+            value = Fort_LevelSumOf(player);
         }
     }
     else if (quest == c_qMalkuth2) {
@@ -432,23 +468,54 @@ int Quest_Progress (int player, int quest) {
         value = Cont_SuppressedDistinct();
     }
 
-    if (value > gvg_questGoal[quest]) {
-        value = gvg_questGoal[quest];
+    if (value > Quest_StepGoal(quest, step)) {
+        value = Quest_StepGoal(quest, step);
     }
     return value;
 }
 
+bool Quest_StepDone (int player, int quest, int step) {
+    return Quest_StepProgress(player, quest, step) >= Quest_StepGoal(quest, step);
+}
+
 //--------------------------------------------------------------------------------------------------
-// The panel entry belonging to one of a player's four.
+// Every step standing at once, which is what finishing a task means.
+//
+// At once, not ever: the steps are re-read here and now. Control 1 asks for a
+// working cell AND a fortified place, and a player who fortifies a room, loses
+// the cell, and comes back tomorrow has not done it.
 //--------------------------------------------------------------------------------------------------
-int Quest_ObjectiveOf (int player, int quest) {
-    if (player < 1 || player > 15 || quest < 0 || quest >= c_questCount) {
+bool Quest_AllStepsDone (int player, int quest) {
+    int step;
+
+    step = 0;
+    while (step < gvg_questStepCount[quest]) {
+        if (!Quest_StepDone(player, quest, step)) {
+            return false;
+        }
+        step = step + 1;
+    }
+    return true;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Where a step's panel entry is kept: player, then which of the four, then
+// which step of it.
+//--------------------------------------------------------------------------------------------------
+int Quest_Slot (int player, int quest, int step) {
+    return player * c_questPerDept * c_questStepMax
+           + (Quest_NumberOf(quest) - 1) * c_questStepMax + step;
+}
+
+int Quest_ObjectiveOf (int player, int quest, int step) {
+    if (player < 1 || player > 15 || quest < 0 || quest >= c_questCount
+        || step < 0 || step >= c_questStepMax) {
         return c_invalidObjectiveId;
     }
     if (Quest_DeptOf(quest) != Dept_Of(player)) {
         return c_invalidObjectiveId;
     }
-    return gvg_questObj[player * c_questPerDept + Quest_NumberOf(quest) - 1];
+    return gvg_questObj[Quest_Slot(player, quest, step)];
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -456,17 +523,17 @@ int Quest_ObjectiveOf (int player, int quest) {
 // convention for a counted objective and the reason the panel needs no
 // description to be readable at a glance.
 //--------------------------------------------------------------------------------------------------
-text Quest_NameText (int player, int quest) {
-    string line;
-
-    if (!gvg_questCountable[quest]) {
-        return StringExternal(gvg_questTitleKey[quest]);
+text Quest_NameText (int player, int quest, int step) {
+    if (!gvg_questCountable[quest] || Quest_StepGoal(quest, step) <= 1) {
+        // A goal of one is a yes or a no, and "(0/1)" is a worse way of saying
+        // it than the tick box already sitting next to the line.
+        return Quest_StepTitle(quest, step);
     }
     // The count is punctuation and digits in every language, so it is built
     // here rather than being a format string somebody has to translate around.
-    return StringExternal(gvg_questTitleKey[quest])
-           + StringToText("  (" + IntToString(Quest_Progress(player, quest))
-                          + "/" + IntToString(gvg_questGoal[quest]) + ")");
+    return Quest_StepTitle(quest, step)
+           + StringToText("  (" + IntToString(Quest_StepProgress(player, quest, step))
+                          + "/" + IntToString(Quest_StepGoal(quest, step)) + ")");
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -483,11 +550,19 @@ text Quest_NameText (int player, int quest) {
 // see, before spending an evening on something, whether the evening is the
 // point or the thing after it is.
 //--------------------------------------------------------------------------------------------------
-text Quest_DescText (int player, int quest) {
+text Quest_DescText (int player, int quest, int step) {
     text line;
 
     line = StringExternal(gvg_deptNameKey[Quest_DeptOf(quest)])
            + StringToText(" " + IntToString(Quest_NumberOf(quest)));
+
+    // A split task says so on both of its lines, and says which one this is,
+    // because the panel gives them no other reason to look related.
+    if (gvg_questStepCount[quest] > 1) {
+        line = line + StringToText(" (" + IntToString(step + 1) + "/"
+                                   + IntToString(gvg_questStepCount[quest]) + ")");
+    }
+
     if (gvg_questHasNote[quest]) {
         line = line + StringToText(" -- ") + StringExternal(gvg_questNoteKey[quest]);
     }
@@ -503,10 +578,43 @@ text Quest_DescText (int player, int quest) {
         line = line + StringExternal("Lob/Quest/Reward/Bonus");
     }
 
+    if (gvg_questStepCount[quest] > 1) {
+        line = line + StringToText("<n/><n/>") + StringExternal("Lob/Quest/BothParts");
+    }
+
     if (!gvg_questCountable[quest]) {
         line = line + StringToText("<n/><n/>") + StringExternal("Lob/Quest/NoChannel");
     }
     return line;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Pushes one step's line back to the panel.
+//
+// Both the name and the state, because a step is derived and can therefore go
+// BACKWARDS -- lose the cell after buying the fortification and Control 1's
+// first line un-ticks. That is not a glitch to hide, it is the "at the same
+// time" rule making itself visible, and a tick that can come off is the only
+// honest way to draw a condition that can stop being true.
+//--------------------------------------------------------------------------------------------------
+void Quest_ShowStep (int player, int quest, int step) {
+    int obj;
+    int state;
+
+    obj = Quest_ObjectiveOf(player, quest, step);
+    if (obj == c_invalidObjectiveId) {
+        return;
+    }
+
+    state = c_objectiveStateActive;
+    if (Quest_IsDone(player, quest) || Quest_StepDone(player, quest, step)) {
+        state = c_objectiveStateCompleted;
+    }
+
+    ObjectiveSetName(obj, Quest_NameText(player, quest, step));
+    ObjectiveSetState(obj, state);
+    gvg_questShown[Quest_Slot(player, quest, step)] =
+        Quest_StepProgress(player, quest, step);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -518,8 +626,8 @@ text Quest_DescText (int player, int quest) {
 // by being told.
 //--------------------------------------------------------------------------------------------------
 void Quest_Complete (int player, int quest) {
-    int obj;
     int next;
+    int step;
 
     if (player < 1 || player > 15 || quest < 0 || quest >= c_questCount) {
         return;
@@ -529,21 +637,27 @@ void Quest_Complete (int player, int quest) {
     }
     gvg_questDone[player * c_questCount + quest] = true;
 
-    // The panel animates the tick itself; the subtitle is for the player who
-    // was looking at the other end of the map when it happened.
-    obj = Quest_ObjectiveOf(player, quest);
-    if (obj != c_invalidObjectiveId) {
-        ObjectiveSetName(obj, Quest_NameText(player, quest));
-        ObjectiveSetState(obj, c_objectiveStateCompleted);
+    // Every step of it, because the task latching is what freezes them: from
+    // here on none of them may un-tick, whatever the world does.
+    step = 0;
+    while (step < gvg_questStepCount[quest]) {
+        Quest_ShowStep(player, quest, step);
+        step = step + 1;
     }
 
     if (Quest_NumberOf(quest) < c_questPerDept) {
-        next = Quest_ObjectiveOf(player, quest + 1);
-        if (next != c_invalidObjectiveId && gvg_questCountable[quest + 1]) {
-            ObjectiveSetState(next, c_objectiveStateActive);
+        step = 0;
+        while (step < gvg_questStepCount[quest + 1]) {
+            next = Quest_ObjectiveOf(player, quest + 1, step);
+            if (next != c_invalidObjectiveId && gvg_questCountable[quest + 1]) {
+                ObjectiveSetState(next, c_objectiveStateActive);
+            }
+            step = step + 1;
         }
     }
 
+    // The panel animates the tick itself; the subtitle is for the player who
+    // was looking at the other end of the map when it happened.
     UIDisplayMessage(
         PlayerGroupSingle(player), c_messageAreaSubtitle,
         StringExternal("Lob/Quest/Complete") + StringToText(" ")
@@ -562,15 +676,17 @@ void Quest_Publish (int player) {
     int state;
     int main;
     int n;
+    int step;
     bool primary;
 
     n = 0;
-    while (n < c_questPerDept) {
-        if (gvg_questObj[player * c_questPerDept + n] != c_invalidObjectiveId) {
-            ObjectiveDestroy(gvg_questObj[player * c_questPerDept + n]);
+    while (n < c_questPerDept * c_questStepMax) {
+        if (gvg_questObj[player * c_questPerDept * c_questStepMax + n]
+            != c_invalidObjectiveId) {
+            ObjectiveDestroy(gvg_questObj[player * c_questPerDept * c_questStepMax + n]);
         }
-        gvg_questObj[player * c_questPerDept + n] = c_invalidObjectiveId;
-        gvg_questShown[player * c_questPerDept + n] = -1;
+        gvg_questObj[player * c_questPerDept * c_questStepMax + n] = c_invalidObjectiveId;
+        gvg_questShown[player * c_questPerDept * c_questStepMax + n] = -1;
         n = n + 1;
     }
 
@@ -588,33 +704,40 @@ void Quest_Publish (int player) {
         // Main is the record: everything already in it, plus the one task this
         // game can add to it. Everything past that is bonus -- finishable
         // tonight, gone tomorrow -- which is exactly what the engine's second
-        // section means.
+        // section means. Both halves of a split task sit on the same side of
+        // that line, because they are one task.
         primary = Quest_IsSaved(player, quest) || quest == main;
 
-        state = c_objectiveStateActive;
-        if (Quest_IsDone(player, quest)) {
-            state = c_objectiveStateCompleted;
-        }
-        else if (!Quest_IsOpen(player, quest)) {
-            // Not yet reachable. Shown the moment the one before it is done, by
-            // Quest_Complete, so the chain reveals itself.
-            state = c_objectiveStateHidden;
-        }
-        else if (!gvg_questCountable[quest] && !primary) {
-            // A bonus task the map cannot observe is noise. The MAIN one is
-            // shown even when it cannot be finished, because hiding it would
-            // make a stalled department look like a finished one -- which is
-            // the worse lie of the two, and the tooltip says why.
-            state = c_objectiveStateHidden;
-        }
+        step = 0;
+        while (step < gvg_questStepCount[quest]) {
+            state = c_objectiveStateActive;
+            if (Quest_IsDone(player, quest) || Quest_StepDone(player, quest, step)) {
+                state = c_objectiveStateCompleted;
+            }
+            else if (!Quest_IsOpen(player, quest)) {
+                // Not yet reachable. Shown the moment the one before it is done,
+                // by Quest_Complete, so the chain reveals itself.
+                state = c_objectiveStateHidden;
+            }
+            else if (!gvg_questCountable[quest] && !primary) {
+                // A bonus task the map cannot observe is noise. The MAIN one is
+                // shown even when it cannot be finished, because hiding it would
+                // make a stalled department look like a finished one -- which is
+                // the worse lie of the two, and the tooltip says why.
+                state = c_objectiveStateHidden;
+            }
 
-        gvg_questObj[player * c_questPerDept + n] = ObjectiveCreateForPlayers(
-            Quest_NameText(player, quest),
-            Quest_DescText(player, quest),
-            state,
-            primary,
-            PlayerGroupSingle(player));
-        gvg_questShown[player * c_questPerDept + n] = Quest_Progress(player, quest);
+            gvg_questObj[Quest_Slot(player, quest, step)] = ObjectiveCreateForPlayers(
+                Quest_NameText(player, quest, step),
+                Quest_DescText(player, quest, step),
+                state,
+                primary,
+                PlayerGroupSingle(player));
+            gvg_questShown[Quest_Slot(player, quest, step)] =
+                Quest_StepProgress(player, quest, step);
+
+            step = step + 1;
+        }
 
         n = n + 1;
     }
@@ -642,7 +765,7 @@ bool Quest_Tick_Func (bool testConds, bool runActions) {
     int player;
     int quest;
     int dept;
-    int slot;
+    int step;
     int now;
 
     if (!runActions) {
@@ -657,21 +780,22 @@ bool Quest_Tick_Func (bool testConds, bool runActions) {
                 quest = dept * c_questPerDept;
                 while (quest < dept * c_questPerDept + c_questPerDept) {
                     if (gvg_questCountable[quest] && !Quest_IsDone(player, quest)) {
-                        now = Quest_Progress(player, quest);
                         // The chain: a task cannot finish before the one in
-                        // front of it, even when its counter is already full.
-                        // The counter still shows, so a player can see what
+                        // front of it, even with every step already standing.
+                        // The counters still show, so a player can see what
                         // they have banked up against a task not yet open.
-                        if (now >= gvg_questGoal[quest] && Quest_IsOpen(player, quest)) {
+                        if (Quest_IsOpen(player, quest)
+                            && Quest_AllStepsDone(player, quest)) {
                             Quest_Complete(player, quest);
                         }
                         else {
-                            slot = player * c_questPerDept + Quest_NumberOf(quest) - 1;
-                            if (now != gvg_questShown[slot]
-                                && gvg_questObj[slot] != c_invalidObjectiveId) {
-                                ObjectiveSetName(gvg_questObj[slot],
-                                                 Quest_NameText(player, quest));
-                                gvg_questShown[slot] = now;
+                            step = 0;
+                            while (step < gvg_questStepCount[quest]) {
+                                now = Quest_StepProgress(player, quest, step);
+                                if (now != gvg_questShown[Quest_Slot(player, quest, step)]) {
+                                    Quest_ShowStep(player, quest, step);
+                                }
+                                step = step + 1;
                             }
                         }
                     }
@@ -693,11 +817,30 @@ bool Quest_Tick_Func (bool testConds, bool runActions) {
 // the unlock chain can be written against a shape that will not move.
 //--------------------------------------------------------------------------------------------------
 void Quest_Declare (int quest, int goal, bool countable, string titleKey) {
-    gvg_questGoal[quest] = goal;
     gvg_questCountable[quest] = countable;
     gvg_questTitleKey[quest] = titleKey;
     gvg_questNoteKey[quest] = "";
     gvg_questHasNote[quest] = false;
+
+    // One step, sharing the task's own title. A task that is one thing should
+    // not have to say so twice, in the code or in the strings file.
+    gvg_questStepCount[quest] = 1;
+    gvg_questStepKey[quest * c_questStepMax] = titleKey;
+    gvg_questStepGoal[quest * c_questStepMax] = goal;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Splits a task into two lines that must both be standing at once.
+//
+// For the tasks the document joins with an "and". The task keeps its own title
+// for the completion message and the readout; the panel shows the halves.
+//--------------------------------------------------------------------------------------------------
+void Quest_Halves (int quest, string keyA, int goalA, string keyB, int goalB) {
+    gvg_questStepCount[quest] = 2;
+    gvg_questStepKey[quest * c_questStepMax] = keyA;
+    gvg_questStepGoal[quest * c_questStepMax] = goalA;
+    gvg_questStepKey[quest * c_questStepMax + 1] = keyB;
+    gvg_questStepGoal[quest * c_questStepMax + 1] = goalB;
 }
 
 // The one mechanical thing about a task a player could not work out by reading
@@ -726,7 +869,12 @@ void Quests_Init () {
     }
 
     // Control Team.
-    Quest_Declare(c_qMalkuth1, 2, true, "Lob/Quest/Title/Malkuth1");
+    // Goal 0 because Quest_Halves replaces it: a split task's numbers are on
+    // its halves, and repeating a total here would be a second place for them
+    // to disagree from.
+    Quest_Declare(c_qMalkuth1, 0, true, "Lob/Quest/Title/Malkuth1");
+    Quest_Halves(c_qMalkuth1, "Lob/Quest/Step/Malkuth1a", 1,
+                              "Lob/Quest/Step/Malkuth1b", 1);
     Quest_Declare(c_qMalkuth2, 4, true, "Lob/Quest/Title/Malkuth2");
     Quest_Declare(c_qMalkuth3, 3, true, "Lob/Quest/Title/Malkuth3");
     Quest_Declare(c_qMalkuth4, 1, false, "Lob/Quest/Title/Malkuth4");
@@ -772,18 +920,23 @@ void Quests_Init () {
     // Disciplinary Team. Unlocks at ten tasks, so nothing here is reachable
     // yet, but the goals are the document's and only the channels are missing.
     Quest_Declare(c_deptGeburah * c_questPerDept + 0, 1, false, "Lob/Quest/Title/Geburah1");
-    Quest_Declare(c_deptGeburah * c_questPerDept + 1, 5, false, "Lob/Quest/Title/Geburah2");
+    Quest_Declare(c_deptGeburah * c_questPerDept + 1, 0, false, "Lob/Quest/Title/Geburah2");
+    Quest_Halves(c_deptGeburah * c_questPerDept + 1,
+                 "Lob/Quest/Step/Geburah2a", 3,
+                 "Lob/Quest/Step/Geburah2b", 2);
     Quest_Declare(c_deptGeburah * c_questPerDept + 2, 3, false, "Lob/Quest/Title/Geburah3");
     Quest_Declare(c_deptGeburah * c_questPerDept + 3, 1, false, "Lob/Quest/Title/Geburah4");
 
     // After the table, because publishing reads it. Departments are dealt in
     // Departments_Init, which the build orders before this one.
+    i = 0;
+    while (i < 16 * c_questPerDept * c_questStepMax) {
+        gvg_questObj[i] = c_invalidObjectiveId;
+        i = i + 1;
+    }
+
     i = 1;
     while (i <= 15) {
-        gvg_questObj[i * c_questPerDept + 0] = c_invalidObjectiveId;
-        gvg_questObj[i * c_questPerDept + 1] = c_invalidObjectiveId;
-        gvg_questObj[i * c_questPerDept + 2] = c_invalidObjectiveId;
-        gvg_questObj[i * c_questPerDept + 3] = c_invalidObjectiveId;
         if (Slot_IsTablePlayer(i)) {
             Quest_Publish(i);
         }

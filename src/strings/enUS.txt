@@ -70,6 +70,15 @@ Lob/Quest/Title/Binah2=(not written yet)
 Lob/Quest/Title/Binah3=(not written yet)
 Lob/Quest/Title/Binah4=(not written yet)
 
+# --- Task steps --------------------------------------------------------------
+# Tasks the source document joins with an "and". Both halves have to be standing
+# at the same time, so they get a panel line each instead of one counter whose
+# "(1/2)" never says which half is missing.
+Lob/Quest/Step/Malkuth1a=Keep one containment cell running
+Lob/Quest/Step/Malkuth1b=Fortify a room or corridor
+Lob/Quest/Step/Geburah2a=Suppress 3 HE or above
+Lob/Quest/Step/Geburah2b=Suppress 2 WAW or above
+
 # --- Task notes --------------------------------------------------------------
 # The one mechanical thing about a task that its title cannot say.
 Lob/Quest/Note/Hod3=your teammates' suppressions count too
@@ -78,6 +87,7 @@ Lob/Quest/Note/Hod3=your teammates' suppressions count too
 Lob/Quest/Reward/Main=RECORDED. Finishing this adds a tier to your department's passive, from your next game onward -- and it is the only task this game can record.
 Lob/Quest/Reward/Record=Already in your record from an earlier game.
 Lob/Quest/Reward/Bonus=TONIGHT ONLY. Its reward lasts until the ship leaves. The record advances one task per game, and this game's is above.
+Lob/Quest/BothParts=Both halves must be standing at the same time. Lose one and the task is unfinished again.
 Lob/Quest/NoChannel=Not yet possible -- the system this task needs does not exist in the map.
 Lob/Quest/Complete=Task complete:
 
