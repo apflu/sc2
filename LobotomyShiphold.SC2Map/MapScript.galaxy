@@ -63,6 +63,32 @@ bool Slot_IsTablePlayer (int player) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// The style the objectives panel puts a progress counter in.
+//
+// The count goes in an objective NAME, in a style of its own, which is Blizzard's own
+// format for a counted objective. LotV and the Nova pack both keep it in a
+// string called [Default]_FormatText and it reads:
+//
+//     ~NAME~ <s val="ObjectivePanelProgress_Terran">(~CURRENT~/~GOAL~)</s>
+//
+// So the counter is a different colour from the task -- 52e787 for Terran,
+// ff7900 for Zerg, 84adff for Protoss -- and the eye can find "how far along
+// am I" down a column of six lines without reading any of them.
+//
+// The named style rather than a raw <c val="52e787">, because it also carries
+// ObjectivePanelActive's height and shadow, so the counter matches the line it
+// sits on rather than merely being green. It is defined unconditionally in
+// core.sc2mod: requiredtoload appears twice in that whole file and both are
+// DEBUG-gated, so there is no availability question.
+//
+// A task with a goal of one gets no counter at all. "(0/1)" is a worse way of
+// saying yes-or-no than the tick box already sitting next to the line, and
+// Blizzard has a separate _FormatTextSingle that leaves the block empty for
+// exactly this case.
+//--------------------------------------------------------------------------------------------------
+const string c_questProgressStyle = "ObjectivePanelProgress_Terran";
+
+//--------------------------------------------------------------------------------------------------
 // src/galaxy/01_difficulty.galaxy
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
@@ -3998,8 +4024,9 @@ void Energy_Refresh () {
     }
     ObjectiveSetName(gv_energyObj,
                      StringExternal("Lob/Objective/Energy/Name")
-                     + StringToText("  (" + IntToString(gv_energy) + "/"
-                                    + IntToString(gv_energyGoal) + ")"));
+                     + StringToText(" <s val=\"" + c_questProgressStyle + "\">("
+                                    + IntToString(gv_energy) + "/"
+                                    + IntToString(gv_energyGoal) + ")</s>"));
 }
 
 void Energy_Add (int amount) {
@@ -8499,9 +8526,8 @@ int Quest_ObjectiveOf (int player, int quest, int step) {
 }
 
 //--------------------------------------------------------------------------------------------------
-// What the panel says. The count goes in the NAME, which is Blizzard's own
-// convention for a counted objective and the reason the panel needs no
-// description to be readable at a glance.
+// What the panel says. The counter format is Blizzard's own; see
+// c_questProgressStyle in 00_config.galaxy for where it came from.
 //--------------------------------------------------------------------------------------------------
 text Quest_NameText (int player, int quest, int step) {
     if (!gvg_questCountable[quest] || Quest_StepGoal(quest, step) <= 1) {
@@ -8512,8 +8538,9 @@ text Quest_NameText (int player, int quest, int step) {
     // The count is punctuation and digits in every language, so it is built
     // here rather than being a format string somebody has to translate around.
     return Quest_StepTitle(quest, step)
-           + StringToText("  (" + IntToString(Quest_StepProgress(player, quest, step))
-                          + "/" + IntToString(Quest_StepGoal(quest, step)) + ")");
+           + StringToText(" <s val=\"" + c_questProgressStyle + "\">("
+                          + IntToString(Quest_StepProgress(player, quest, step))
+                          + "/" + IntToString(Quest_StepGoal(quest, step)) + ")</s>");
 }
 
 //--------------------------------------------------------------------------------------------------

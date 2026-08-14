@@ -519,9 +519,8 @@ int Quest_ObjectiveOf (int player, int quest, int step) {
 }
 
 //--------------------------------------------------------------------------------------------------
-// What the panel says. The count goes in the NAME, which is Blizzard's own
-// convention for a counted objective and the reason the panel needs no
-// description to be readable at a glance.
+// What the panel says. The counter format is Blizzard's own; see
+// c_questProgressStyle in 00_config.galaxy for where it came from.
 //--------------------------------------------------------------------------------------------------
 text Quest_NameText (int player, int quest, int step) {
     if (!gvg_questCountable[quest] || Quest_StepGoal(quest, step) <= 1) {
@@ -532,8 +531,9 @@ text Quest_NameText (int player, int quest, int step) {
     // The count is punctuation and digits in every language, so it is built
     // here rather than being a format string somebody has to translate around.
     return Quest_StepTitle(quest, step)
-           + StringToText("  (" + IntToString(Quest_StepProgress(player, quest, step))
-                          + "/" + IntToString(Quest_StepGoal(quest, step)) + ")");
+           + StringToText(" <s val=\"" + c_questProgressStyle + "\">("
+                          + IntToString(Quest_StepProgress(player, quest, step))
+                          + "/" + IntToString(Quest_StepGoal(quest, step)) + ")</s>");
 }
 
 //--------------------------------------------------------------------------------------------------

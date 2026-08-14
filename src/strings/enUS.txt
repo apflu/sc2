@@ -33,51 +33,61 @@ Lob/Dept/Name/Tiphereth=Central Command
 Lob/Dept/Name/Yesod=Information Team
 
 # --- Task titles -------------------------------------------------------------
-Lob/Quest/Title/Malkuth1=Run one containment cell and fortify one place
-Lob/Quest/Title/Malkuth2=Finish 4 works with a Good result
-Lob/Quest/Title/Malkuth3=Handle 3 meltdown rounds without losing one
-Lob/Quest/Title/Malkuth4=Survive a Dusk ordeal
-Lob/Quest/Title/Yesod1=Complete 3 works
-Lob/Quest/Title/Yesod2=Reach observation 3 on any abnormality
-Lob/Quest/Title/Yesod3=Raise every line of your department to 2
-Lob/Quest/Title/Yesod4=Reach observation 4 on a WAW or above
-Lob/Quest/Title/Netzach1=Buy 4 levels of fortification
-Lob/Quest/Title/Netzach2=(not written yet)
-Lob/Quest/Title/Netzach3=(not written yet)
-Lob/Quest/Title/Netzach4=Finish a game with no death in your department
-Lob/Quest/Title/Hod1=Promote 2 employees
-Lob/Quest/Title/Hod2=Raise an employee to rank IV
-Lob/Quest/Title/Hod3=Suppress 4 different abnormalities
-Lob/Quest/Title/Hod4=Finish a game with every employee at rank V
-Lob/Quest/Title/Tiphereth1=(not written yet)
-Lob/Quest/Title/Tiphereth2=(not written yet)
-Lob/Quest/Title/Tiphereth3=(not written yet)
-Lob/Quest/Title/Tiphereth4=(not written yet)
-Lob/Quest/Title/Chesed1=(not written yet)
-Lob/Quest/Title/Chesed2=(not written yet)
-Lob/Quest/Title/Chesed3=(not written yet)
-Lob/Quest/Title/Chesed4=(not written yet)
-Lob/Quest/Title/Geburah1=Kill a zerg queen
-Lob/Quest/Title/Geburah2=Suppress 3 HE or above and 2 WAW or above
-Lob/Quest/Title/Geburah3=Suppress 3 different Aleph
-Lob/Quest/Title/Geburah4=Survive a Midnight ordeal
-Lob/Quest/Title/Hokma1=(not written yet)
-Lob/Quest/Title/Hokma2=(not written yet)
-Lob/Quest/Title/Hokma3=(not written yet)
-Lob/Quest/Title/Hokma4=(not written yet)
-Lob/Quest/Title/Binah1=(not written yet)
-Lob/Quest/Title/Binah2=(not written yet)
-Lob/Quest/Title/Binah3=(not written yet)
-Lob/Quest/Title/Binah4=(not written yet)
+# Title Case, imperative, short. That is Blizzard's own convention for an
+# objective -- "Destroy the Protoss Structures", "Gather 5000 Minerals",
+# "The Laser Drill Must Survive" -- and it is what makes a column of them read
+# as a list of orders rather than a paragraph. A condition that has to hold
+# rather than be done is phrased as a statement, the way theirs are.
+#
+# The progress counter is appended by the code in its own colour, so leave it
+# out of the title. Blizzard adds a unit word inside the parens ("(2/3 Rounds)")
+# when the title does not name the thing being counted; ours all do, so it would
+# be redundancy dressed as polish.
+Lob/Quest/Title/Malkuth1=Run a Cell and Fortify a Place
+Lob/Quest/Title/Malkuth2=Finish 4 Works Rated Good
+Lob/Quest/Title/Malkuth3=Answer 3 Meltdown Rounds Cleanly
+Lob/Quest/Title/Malkuth4=Survive a Dusk Ordeal
+Lob/Quest/Title/Yesod1=Complete 3 Works
+Lob/Quest/Title/Yesod2=Observe an Abnormality to Level 3
+Lob/Quest/Title/Yesod3=Raise Every Department Line to 2
+Lob/Quest/Title/Yesod4=Observe a WAW or Above to Level 4
+Lob/Quest/Title/Netzach1=Buy 4 Levels of Fortification
+Lob/Quest/Title/Netzach2=(Not Written Yet)
+Lob/Quest/Title/Netzach3=(Not Written Yet)
+Lob/Quest/Title/Netzach4=Your Department Must Lose No One
+Lob/Quest/Title/Hod1=Promote 2 Employees
+Lob/Quest/Title/Hod2=Raise an Employee to Rank IV
+Lob/Quest/Title/Hod3=Suppress 4 Different Abnormalities
+Lob/Quest/Title/Hod4=Every Employee Must Reach Rank V
+Lob/Quest/Title/Tiphereth1=(Not Written Yet)
+Lob/Quest/Title/Tiphereth2=(Not Written Yet)
+Lob/Quest/Title/Tiphereth3=(Not Written Yet)
+Lob/Quest/Title/Tiphereth4=(Not Written Yet)
+Lob/Quest/Title/Chesed1=(Not Written Yet)
+Lob/Quest/Title/Chesed2=(Not Written Yet)
+Lob/Quest/Title/Chesed3=(Not Written Yet)
+Lob/Quest/Title/Chesed4=(Not Written Yet)
+Lob/Quest/Title/Geburah1=Kill a Zerg Queen
+Lob/Quest/Title/Geburah2=Suppress 3 HE and 2 WAW
+Lob/Quest/Title/Geburah3=Suppress 3 Different Aleph
+Lob/Quest/Title/Geburah4=Survive a Midnight Ordeal
+Lob/Quest/Title/Hokma1=(Not Written Yet)
+Lob/Quest/Title/Hokma2=(Not Written Yet)
+Lob/Quest/Title/Hokma3=(Not Written Yet)
+Lob/Quest/Title/Hokma4=(Not Written Yet)
+Lob/Quest/Title/Binah1=(Not Written Yet)
+Lob/Quest/Title/Binah2=(Not Written Yet)
+Lob/Quest/Title/Binah3=(Not Written Yet)
+Lob/Quest/Title/Binah4=(Not Written Yet)
 
 # --- Task steps --------------------------------------------------------------
 # Tasks the source document joins with an "and". Both halves have to be standing
 # at the same time, so they get a panel line each instead of one counter whose
 # "(1/2)" never says which half is missing.
-Lob/Quest/Step/Malkuth1a=Keep one containment cell running
-Lob/Quest/Step/Malkuth1b=Fortify a room or corridor
-Lob/Quest/Step/Geburah2a=Suppress 3 HE or above
-Lob/Quest/Step/Geburah2b=Suppress 2 WAW or above
+Lob/Quest/Step/Malkuth1a=Keep a Containment Cell Running
+Lob/Quest/Step/Malkuth1b=Fortify a Room or Corridor
+Lob/Quest/Step/Geburah2a=Suppress 3 HE or Above
+Lob/Quest/Step/Geburah2b=Suppress 2 WAW or Above
 
 # --- Task notes --------------------------------------------------------------
 # The one mechanical thing about a task that its title cannot say.
@@ -92,5 +102,5 @@ Lob/Quest/NoChannel=Not yet possible -- the system this task needs does not exis
 Lob/Quest/Complete=Task complete:
 
 # --- The session objective ---------------------------------------------------
-Lob/Objective/Energy/Name=Deliver the energy quota
+Lob/Objective/Energy/Name=Deliver the Energy Quota
 Lob/Objective/Energy/Desc=Every box a work produces pays into this and into that abnormality's encyclopedia, both in full. Studying them and getting out are the same activity.<n/><n/>Spent when the ship leaves, which is why it is a bonus objective and your department's tasks are not.

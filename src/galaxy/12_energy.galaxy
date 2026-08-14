@@ -56,8 +56,9 @@ void Energy_Refresh () {
     }
     ObjectiveSetName(gv_energyObj,
                      StringExternal("Lob/Objective/Energy/Name")
-                     + StringToText("  (" + IntToString(gv_energy) + "/"
-                                    + IntToString(gv_energyGoal) + ")"));
+                     + StringToText(" <s val=\"" + c_questProgressStyle + "\">("
+                                    + IntToString(gv_energy) + "/"
+                                    + IntToString(gv_energyGoal) + ")</s>"));
 }
 
 void Energy_Add (int amount) {

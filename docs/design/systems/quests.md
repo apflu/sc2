@@ -35,11 +35,34 @@
 | | |
 |---|---|
 | `ObjectiveCreateForPlayers` | **逐玩家**，所以六个人六个部门各看各的 |
-| `ObjectiveSetName` | 进度写在**名字**里，`(2/4)`——这是 Blizzard 战役自己的写法 |
+| `ObjectiveSetName` | 进度写在**名字**里，见下 |
 
 索引是 `player * 4 * 2 + n * 2 + step` 而不是按任务 id，因为**一个玩家永远只有自己部门的四条**（每条最多两行，见下）。所以是 128 项不是 576 项，换部门就是拆掉重建，不用搜。
 
 **只在数字真的动了才重写名字。**否则每 2 秒对每个人的每一行都重建一次字符串，而绝大多数时候结果和面板上已有的一模一样。
+
+### 计数器的格式抄的是 Blizzard 自己的
+
+LotV 和 Nova 战役把目标名的格式存成一个字符串，长这样：
+
+```
+UserData/MissionObjective/[Default]_FormatText=
+    ~NAME~ <s val="ObjectivePanelProgress_Terran">(~CURRENT~/~GOAL~)</s>
+```
+
+**计数器和任务名不是一个颜色**——Terran `52e787` 绿、Zerg `ff7900` 橙、Protoss `84adff` 蓝。一列六行里找"我走到哪了"，眼睛不用读任何一行字。
+
+用具名 style 而不是 `<c val="52e787">`，是因为它还带着 `ObjectivePanelActive` 的字号和阴影，所以计数器**和它所在的那行长在一起**，而不只是绿了。它在 `core.sc2mod` 里无条件加载：整个 `FontStyles.SC2Style` 里 `requiredtoload` 只出现两次，都是 DEBUG 门控的，所以不存在可用性问题。
+
+**目标为 1 的任务不给计数器。**`(0/1)` 是比它旁边那个勾选框更差的"是或否"说法，而 Blizzard 有一个专门的 `_FormatTextSingle` 把那段留空，就是为这种情况。
+
+### 任务名照 Blizzard 的写法
+
+**Title Case、祈使句、短。**"Destroy the Protoss Structures"、"Gather 5000 Minerals"。需要**保持**而不是**做到**的条件写成陈述句——"The Laser Drill Must Survive"——所以安保部 4 是 "Your Department Must Lose No One"。
+
+这是让一列目标读起来**像一串命令而不是一段话**的原因。
+
+Blizzard 会在括号里加量词（`(2/3 Rounds)`），但那是在标题没点名被数的东西时。我们的标题都点了，所以加了就是把冗余当打磨。
 
 ### main / bonus 的分界是"记录 / 今晚"
 
