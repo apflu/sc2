@@ -160,6 +160,28 @@ int[128] gvg_slotLevel;
 int[128] gvg_slotOwner;
 bool[128] gvg_slotGuard;
 
+// What is standing in this position right now, if anything.
+//
+// A HANDLE, not a type and not a flag. The occupancy test used to be spatial --
+// "is a unit of gvg_slotType standing on this spot" -- and that was wrong twice
+// over, because a unit type is not a stable identity and a slot's occupant does
+// not have to stay on its spot:
+//
+//   a turret that BURROWS changes type. PerditionTurret morphs to
+//   PerditionTurretUnderground when idle, the search stopped finding it, the
+//   slot read empty, and workers stacked turret after turret on the same tile.
+//
+//   a guard that has been ROUSED walks away. Fort_Rouse could not find it to
+//   give it a second order, and the post-drift check could not send it home,
+//   because both looked at the spot rather than at the unit.
+//
+// This is not the bookkeeping the module avoids elsewhere. A tally of what is
+// built could disagree with the world; a unit handle IS the world, and
+// UnitIsAlive answers for it. What was replaced was not a ledger, it was a
+// DESCRIPTION being used as an identity -- and the description turned out to
+// fit more than one thing and fewer than all of them.
+unit[128] gvg_slotUnit;
+
 trigger gt_fortTick;
 trigger gt_fortEnter;
 
@@ -263,10 +285,13 @@ int Fort_SlotOwner (int slot) {
 // Positions, and whether they are occupied.
 //--------------------------------------------------------------------------------------------------
 unit Fort_OccupantOfSlot (int slot) {
-    return UnitGroupClosestToPoint(
-        UnitGroup(gvg_slotType[slot], c_playerAny,
-                  RegionCircle(gvg_slotAt[slot], c_fortSlotRadius), null, 0),
-        gvg_slotAt[slot]);
+    if (slot < 0 || slot >= gv_slotCount) {
+        return null;
+    }
+    if (gvg_slotUnit[slot] == null || !UnitIsAlive(gvg_slotUnit[slot])) {
+        return null;
+    }
+    return gvg_slotUnit[slot];
 }
 
 bool Fort_SlotFilled (int slot) {
@@ -333,6 +358,7 @@ unit Fort_Raise (int slot, fixed lifePct) {
     if (made != null && lifePct > 0.0 && lifePct < 100.0) {
         UnitSetPropertyFixed(made, c_unitPropLifePercent, lifePct);
     }
+    gvg_slotUnit[slot] = made;
     return made;
 }
 
@@ -471,6 +497,8 @@ point Fort_SlotPoint (int slot) {
 // does the rest, which is what makes worker count the build speed.
 //--------------------------------------------------------------------------------------------------
 void Fort_RaiseIfArrived (unit worker, int slot) {
+    unit made;
+
     if (slot < 0 || slot >= gv_slotCount || Fort_SlotFilled(slot)) {
         return;
     }
@@ -478,31 +506,56 @@ void Fort_RaiseIfArrived (unit worker, int slot) {
         > c_fortBuildRange) {
         return;
     }
-    Fort_Raise(slot, c_fortStartLifePct);
+
+    made = Fort_Raise(slot, c_fortStartLifePct);
+    if (made == null) {
+        return;
+    }
+
+    // And then it BUILDS it. Putting the shell up used to be the whole of
+    // arriving, which left a worker standing next to a building at 8% life with
+    // no order, and the dispatcher sent it back to its debris a tick later.
+    //
+    // The repair order IS the construction here. Ordering it now rather than
+    // leaving it to the dispatcher also settles who does it: the worker that
+    // walked over, not whichever one happens to be nearest next second.
+    UnitIssueOrder(worker, OrderTargetingUnit(AbilityCommand("Repair", 0), made),
+                   c_orderQueueReplace);
 }
 
 //--------------------------------------------------------------------------------------------------
 // Damaged fortification buildings, so 30_workers can repair them alongside
 // devices.
 //--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// Emplacements that want a worker.
+//
+// Walks the SLOTS rather than scanning for Lob_Turret_*, which is what it used
+// to do. Two reasons, and the second is the one that bit: a slot knows what is
+// standing in it whatever that thing is called, so a stock PerditionTurret
+// dropped in for a test is repaired exactly like an authored one -- where the
+// type scan quietly returned nothing and left the building at 8% life with a
+// worker walking away from it.
+//
+// Guards are skipped. They are units, they are not built, and a wounded marine
+// is not a job for an SCV.
+//--------------------------------------------------------------------------------------------------
 unitgroup Fort_Damaged () {
     unitgroup found;
-    unitgroup all;
     unit who;
-    int count;
-    int i;
+    int slot;
 
     found = UnitGroupEmpty();
-    all = ObjectsGen_ScanTurret();
-    count = UnitGroupCount(all, c_unitCountAlive);
-    i = 1;
-    while (i <= count) {
-        who = UnitGroupUnit(all, i);
-        if (who != null && UnitIsAlive(who)
-            && UnitGetPropertyFixed(who, c_unitPropLifePercent, true) < 100.0) {
-            UnitGroupAdd(found, who);
+    slot = 0;
+    while (slot < gv_slotCount) {
+        if (!gvg_slotGuard[slot]) {
+            who = Fort_OccupantOfSlot(slot);
+            if (who != null
+                && UnitGetPropertyFixed(who, c_unitPropLifePercent, true) < 100.0) {
+                UnitGroupAdd(found, who);
+            }
         }
-        i = i + 1;
+        slot = slot + 1;
     }
     return found;
 }
