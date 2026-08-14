@@ -6,4 +6,10 @@
             <quad value="37.903,72.6037,54.14,87.78"/>
         </shape>
     </region>
+    <region id="2">
+        <name value="corridor_a"/>
+        <shape type="rect">
+            <quad value="35.9243,92.1076,56.4013,98.1354"/>
+        </shape>
+    </region>
 </Regions>
