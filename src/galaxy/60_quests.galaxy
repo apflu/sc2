@@ -1,0 +1,374 @@
+//--------------------------------------------------------------------------------------------------
+// Quests.
+//
+// docs/usr/quests_unlocks.md gives every department four tasks. This module
+// counts them.
+//
+// Numbered 60 because it reads from nearly everything -- employees, cells, the
+// meltdown, work, the departments and the fortifications -- and Galaxy needs
+// every one of those declared first. Nothing calls INTO here, which is what
+// makes that possible: quests observe, they do not participate.
+//
+//--------------------------------------------------------------------------------------------------
+// Derive where you can, count only what erases itself.
+//
+// Most tasks are questions about the present, and the present is already
+// stored somewhere: how many employees are at rank II, what a location's level
+// is, how far an encyclopedia has been read. Those are asked fresh every tick
+// and nothing is kept here, so there is no counter to drift out of step with
+// the thing it was counting.
+//
+// Three are not, because they ask about EVENTS whose evidence is gone by the
+// time anybody could look:
+//
+//   works finished, and works finished Good   14_work    gvg_workFinished/Good
+//   meltdown rounds handled cleanly           13_meltdown gvg_meltClean
+//   distinct abnormalities suppressed         13_containment gvg_contSuppressed
+//
+// Each of those lives in the module where the event happens rather than here,
+// because that module is the only place that sees it. A counter kept anywhere
+// else would need the event forwarded to it, and a forwarded event is one more
+// thing that can be forgotten when somebody adds a second way for the event to
+// happen.
+//
+//--------------------------------------------------------------------------------------------------
+// A player only progresses their own department's tasks.
+//
+// Two of the tasks say "本部门" outright, and the rest are written from inside
+// one department's job. Quest_Progress returns 0 for anything outside the
+// player's department rather than computing something that would be wrong.
+//
+//--------------------------------------------------------------------------------------------------
+// Completion latches.
+//
+// Progress can fall -- employees die, buildings are flattened, a rank drops
+// when the Training Team core suppression bites. A task that has been done has
+// been done. So completion is a one-way flag, and progress is only ever read to
+// decide whether to set it.
+//
+//--------------------------------------------------------------------------------------------------
+// What this does NOT do yet:
+//
+//   Persist. "永久奖励仅在完成任务后的下一局游戏起生效" means completion has to
+//   reach 16_bank, and that needs a section format the bank does not have. The
+//   flags are in memory only, so a quest completed today is forgotten tonight.
+//
+//   Reward. Nothing is granted on completion. The department passives and the
+//   unlock chain ("解锁：完成4个任务") both read Quest_DoneCount when they exist.
+//
+//   Count the eleven tasks that are not countable. Four need Ordeals, four need
+//   an end-of-game evaluation, one needs a zerg queen, and two are blank in the
+//   source document. They are declared with their goals and marked uncountable,
+//   so the readout says "not yet" instead of "0" -- a task that is impossible
+//   and a task nobody has started look identical otherwise.
+//--------------------------------------------------------------------------------------------------
+
+const int c_questPerDept = 4;
+const int c_questCount = 36;
+
+// dept * 4 + (n - 1), so a quest index carries its department.
+const int c_qMalkuth1 = 0;
+const int c_qMalkuth2 = 1;
+const int c_qMalkuth3 = 2;
+const int c_qMalkuth4 = 3;
+const int c_qYesod1 = 4;
+const int c_qYesod2 = 5;
+const int c_qYesod3 = 6;
+const int c_qYesod4 = 7;
+const int c_qNetzach1 = 8;
+const int c_qNetzach4 = 11;
+const int c_qHod1 = 12;
+const int c_qHod2 = 13;
+const int c_qHod3 = 14;
+const int c_qHod4 = 15;
+
+int[36] gvg_questGoal;
+string[36] gvg_questTitle;
+
+// Whether the map can answer this task at all yet. False is not "hard", it is
+// "there is no channel": no Ordeals, no end-of-game hook, no zerg queen, or the
+// source document leaves the line blank.
+bool[36] gvg_questCountable;
+
+// Flattened player * 36 + quest, sized for 16 players.
+bool[576] gvg_questDone;
+
+const fixed c_questPeriod = 2.0;
+
+trigger gt_questTick;
+
+int Quest_DeptOf (int quest) {
+    if (quest < 0 || quest >= c_questCount) {
+        return c_deptNone;
+    }
+    return quest / c_questPerDept;
+}
+
+int Quest_NumberOf (int quest) {
+    if (quest < 0 || quest >= c_questCount) {
+        return 0;
+    }
+    return quest % c_questPerDept + 1;
+}
+
+int Quest_Goal (int quest) {
+    if (quest < 0 || quest >= c_questCount) {
+        return 0;
+    }
+    return gvg_questGoal[quest];
+}
+
+string Quest_Title (int quest) {
+    if (quest < 0 || quest >= c_questCount) {
+        return "";
+    }
+    return gvg_questTitle[quest];
+}
+
+bool Quest_IsCountable (int quest) {
+    if (quest < 0 || quest >= c_questCount) {
+        return false;
+    }
+    return gvg_questCountable[quest];
+}
+
+bool Quest_IsDone (int player, int quest) {
+    if (player < 1 || player > 15 || quest < 0 || quest >= c_questCount) {
+        return false;
+    }
+    return gvg_questDone[player * c_questCount + quest];
+}
+
+int Quest_DoneCount (int player) {
+    int total;
+    int quest;
+
+    total = 0;
+    quest = 0;
+    while (quest < c_questCount) {
+        if (Quest_IsDone(player, quest)) {
+            total = total + 1;
+        }
+        quest = quest + 1;
+    }
+    return total;
+}
+
+//--------------------------------------------------------------------------------------------------
+// The furthest a player has read any abnormality at or above a grade.
+//
+// Information Team 2 and its challenge are the same question at two grades and
+// two depths, so they are one function. The grade floor is what separates them:
+// "至少Zayin" is every abnormality, because Zayin is the bottom of the scale,
+// and "至少WAW" is only the two grades that can actually hurt somebody.
+//--------------------------------------------------------------------------------------------------
+int Quest_BestObservation (int player, int minRisk) {
+    int best;
+    int obs;
+    int i;
+
+    best = 0;
+    i = 0;
+    while (i < c_abnoCount) {
+        if (gvg_abnoRisk[i] >= minRisk) {
+            obs = Cont_ObservationOfPlayer(player, i);
+            if (obs > best) {
+                best = obs;
+            }
+        }
+        i = i + 1;
+    }
+    return best;
+}
+
+//--------------------------------------------------------------------------------------------------
+// How far along a player is.
+//
+// Never above the goal, so a readout can print progress/goal without clamping
+// and a caller can compare the two without knowing which task it is holding.
+//--------------------------------------------------------------------------------------------------
+int Quest_Progress (int player, int quest) {
+    int value;
+
+    if (!Slot_IsTablePlayer(player) || quest < 0 || quest >= c_questCount) {
+        return 0;
+    }
+    if (Quest_DeptOf(quest) != Dept_Of(player) || !gvg_questCountable[quest]) {
+        return 0;
+    }
+
+    value = 0;
+
+    // Control Team. A cell that works and a place that has been fortified --
+    // two halves of "the facility is running", counted as one each.
+    if (quest == c_qMalkuth1) {
+        if (Cont_WorkingOf(player) > 0) {
+            value = value + 1;
+        }
+        if (Fort_LevelSumOf(player) > 0) {
+            value = value + 1;
+        }
+    }
+    else if (quest == c_qMalkuth2) {
+        value = Work_GoodBy(player);
+    }
+    else if (quest == c_qMalkuth3) {
+        value = Melt_CleanRoundsBy(player);
+    }
+
+    // Information Team.
+    else if (quest == c_qYesod1) {
+        value = Work_FinishedBy(player);
+    }
+    else if (quest == c_qYesod2) {
+        value = Quest_BestObservation(player, c_riskZayin);
+    }
+    else if (quest == c_qYesod3) {
+        value = Dept_LowestLineLevel(player);
+    }
+    else if (quest == c_qYesod4) {
+        value = Quest_BestObservation(player, c_riskWAW);
+    }
+
+    // Safety Team.
+    else if (quest == c_qNetzach1) {
+        value = Fort_LevelSumOf(player);
+    }
+
+    // Training Team. Rank II is one promotion from the floor, so "提升2名员工的
+    // 等级" is two employees standing above where they started.
+    else if (quest == c_qHod1) {
+        value = Emp_CountAtRank(player, 2);
+    }
+    else if (quest == c_qHod2) {
+        value = Emp_CountAtRank(player, 4);
+    }
+    else if (quest == c_qHod3) {
+        // Table-wide on purpose: the document says 队友的进度也计算在内.
+        value = Cont_SuppressedDistinct();
+    }
+
+    if (value > gvg_questGoal[quest]) {
+        value = gvg_questGoal[quest];
+    }
+    return value;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Marks one done, once.
+//--------------------------------------------------------------------------------------------------
+void Quest_Complete (int player, int quest) {
+    if (player < 1 || player > 15 || quest < 0 || quest >= c_questCount) {
+        return;
+    }
+    if (Quest_IsDone(player, quest)) {
+        return;
+    }
+    gvg_questDone[player * c_questCount + quest] = true;
+
+    UIDisplayMessage(
+        PlayerGroupSingle(player), c_messageAreaSubtitle,
+        StringToText("task complete -- " + gvg_deptName[Quest_DeptOf(quest)] + " "
+                     + IntToString(Quest_NumberOf(quest)) + ": "
+                     + gvg_questTitle[quest]));
+}
+
+//--------------------------------------------------------------------------------------------------
+// Polled rather than driven by events.
+//
+// Most of what a task reads is derived, so there is no event to hang it on --
+// "four levels of fortification" changes when a location is upgraded, but also
+// when a sector's owner changes hands, and "two employees at rank II" changes
+// on a work result, a department upgrade and the Training Team core
+// suppression. One place that reconciles beats six places that each remember
+// to, and the same argument already put Emp_SyncRank on a tick.
+//
+// Every two seconds against a handful of integer comparisons is nothing, and
+// completion is a latch, so the only cost of being a moment late is being a
+// moment late.
+//--------------------------------------------------------------------------------------------------
+bool Quest_Tick_Func (bool testConds, bool runActions) {
+    int player;
+    int quest;
+    int dept;
+
+    if (!runActions) {
+        return true;
+    }
+
+    player = 1;
+    while (player <= 15) {
+        if (Slot_IsTablePlayer(player)) {
+            dept = Dept_Of(player);
+            if (dept >= 0 && dept < c_deptCount) {
+                quest = dept * c_questPerDept;
+                while (quest < dept * c_questPerDept + c_questPerDept) {
+                    if (gvg_questCountable[quest]
+                        && !Quest_IsDone(player, quest)
+                        && Quest_Progress(player, quest) >= gvg_questGoal[quest]) {
+                        Quest_Complete(player, quest);
+                    }
+                    quest = quest + 1;
+                }
+            }
+        }
+        player = player + 1;
+    }
+    return true;
+}
+
+//--------------------------------------------------------------------------------------------------
+// The table.
+//
+// Goals are the numbers in docs/usr/quests_unlocks.md and nothing else. Where
+// that document is blank the entry is still declared, with goal 0 and
+// uncountable, so the count of tasks per department stays four everywhere and
+// the unlock chain can be written against a shape that will not move.
+//--------------------------------------------------------------------------------------------------
+void Quest_Declare (int quest, int goal, bool countable, string title) {
+    gvg_questGoal[quest] = goal;
+    gvg_questCountable[quest] = countable;
+    gvg_questTitle[quest] = title;
+}
+
+void Quests_Init () {
+    int i;
+
+    i = 0;
+    while (i < c_questCount) {
+        Quest_Declare(i, 0, false, "--");
+        i = i + 1;
+    }
+
+    // Control Team.
+    Quest_Declare(c_qMalkuth1, 2, true, "a cell running and a place fortified");
+    Quest_Declare(c_qMalkuth2, 4, true, "4 works ending Good");
+    Quest_Declare(c_qMalkuth3, 3, true, "3 meltdown rounds handled");
+    Quest_Declare(c_qMalkuth4, 1, false, "[challenge] survive a Dusk ordeal");
+
+    // Information Team.
+    Quest_Declare(c_qYesod1, 3, true, "3 works completed");
+    Quest_Declare(c_qYesod2, 3, true, "observation 3 on any abnormality");
+    Quest_Declare(c_qYesod3, 2, true, "every line of your department at 2");
+    Quest_Declare(c_qYesod4, 4, true, "observation 4 on a WAW or above");
+
+    // Safety Team. 2 and 3 are blank in the source document.
+    Quest_Declare(c_qNetzach1, 4, true, "4 levels of fortification");
+    Quest_Declare(c_qNetzach4, 1, false, "[challenge] finish with no death in your department");
+
+    // Training Team.
+    Quest_Declare(c_qHod1, 2, true, "2 employees promoted");
+    Quest_Declare(c_qHod2, 1, true, "an employee at rank IV");
+    Quest_Declare(c_qHod3, 4, true, "4 distinct abnormalities suppressed (table-wide)");
+    Quest_Declare(c_qHod4, 1, false, "[challenge] finish with every employee at rank V");
+
+    // Disciplinary Team. Unlocks at ten tasks, so nothing here is reachable
+    // yet, but the goals are the document's and only the channels are missing.
+    Quest_Declare(c_deptGeburah * c_questPerDept + 0, 1, false, "kill a zerg queen");
+    Quest_Declare(c_deptGeburah * c_questPerDept + 1, 5, false, "suppress 3 HE+ and 2 WAW+");
+    Quest_Declare(c_deptGeburah * c_questPerDept + 2, 3, false, "suppress 3 distinct Aleph");
+    Quest_Declare(c_deptGeburah * c_questPerDept + 3, 1, false, "[challenge] survive a Midnight ordeal");
+
+    gt_questTick = TriggerCreate("Quest_Tick_Func");
+    TriggerAddEventTimePeriodic(gt_questTick, c_questPeriod, c_timeGame);
+}

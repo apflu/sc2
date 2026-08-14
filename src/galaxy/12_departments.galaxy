@@ -181,6 +181,56 @@ int Dept_LineLevelFromAlly (int player, string line) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// The level of the player's WEAKEST line in their own department.
+//
+// Information Team 3 is "将本部门所有升级提高至2级", and "all of them at 2" is
+// the minimum reading 2. A maximum or a sum would both let three lines at 4 and
+// one at 0 pass, which is the opposite of what the task asks for.
+//
+// Lines are found by prefix, because the upgrade id already carries the
+// department: Malkuth_Upg2_1 has line Malkuth_Upg2. Nothing else has to be
+// authored to make this work, and a department whose upgrades have not been
+// built yet has no lines and reads 0 -- not yet, rather than already done.
+//
+// Ally-granted steps do not count. The task is about this player's own
+// department reaching a level, and a neighbour's generosity is neither.
+//--------------------------------------------------------------------------------------------------
+int Dept_LowestLineLevel (int player) {
+    string prefix;
+    int dept;
+    int level;
+    int lowest;
+    int seen;
+    int i;
+
+    dept = Dept_Of(player);
+    if (dept < 0 || dept >= c_deptCount) {
+        return 0;
+    }
+    prefix = gvg_deptKey[dept] + "_Upg";
+
+    lowest = 0;
+    seen = 0;
+    i = 0;
+    while (i < c_deptUpgradeCount) {
+        if (!gvg_deptUpgradeIsAlly[i]
+            && StringSub(gvg_deptUpgradeLine[i], 1, StringLength(prefix)) == prefix) {
+            level = Dept_LineLevel(player, gvg_deptUpgradeLine[i]);
+            if (seen == 0 || level < lowest) {
+                lowest = level;
+            }
+            seen = seen + 1;
+        }
+        i = i + 1;
+    }
+
+    if (seen == 0) {
+        return 0;
+    }
+    return lowest;
+}
+
+//--------------------------------------------------------------------------------------------------
 // Grants a step, which is how anything other than a research button hands one
 // out. Ally propagation happens off the resulting event, not here, so it works
 // the same whoever did the granting.

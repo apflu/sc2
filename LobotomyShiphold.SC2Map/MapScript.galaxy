@@ -3743,6 +3743,56 @@ int Dept_LineLevelFromAlly (int player, string line) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// The level of the player's WEAKEST line in their own department.
+//
+// Information Team 3 is "将本部门所有升级提高至2级", and "all of them at 2" is
+// the minimum reading 2. A maximum or a sum would both let three lines at 4 and
+// one at 0 pass, which is the opposite of what the task asks for.
+//
+// Lines are found by prefix, because the upgrade id already carries the
+// department: Malkuth_Upg2_1 has line Malkuth_Upg2. Nothing else has to be
+// authored to make this work, and a department whose upgrades have not been
+// built yet has no lines and reads 0 -- not yet, rather than already done.
+//
+// Ally-granted steps do not count. The task is about this player's own
+// department reaching a level, and a neighbour's generosity is neither.
+//--------------------------------------------------------------------------------------------------
+int Dept_LowestLineLevel (int player) {
+    string prefix;
+    int dept;
+    int level;
+    int lowest;
+    int seen;
+    int i;
+
+    dept = Dept_Of(player);
+    if (dept < 0 || dept >= c_deptCount) {
+        return 0;
+    }
+    prefix = gvg_deptKey[dept] + "_Upg";
+
+    lowest = 0;
+    seen = 0;
+    i = 0;
+    while (i < c_deptUpgradeCount) {
+        if (!gvg_deptUpgradeIsAlly[i]
+            && StringSub(gvg_deptUpgradeLine[i], 1, StringLength(prefix)) == prefix) {
+            level = Dept_LineLevel(player, gvg_deptUpgradeLine[i]);
+            if (seen == 0 || level < lowest) {
+                lowest = level;
+            }
+            seen = seen + 1;
+        }
+        i = i + 1;
+    }
+
+    if (seen == 0) {
+        return 0;
+    }
+    return lowest;
+}
+
+//--------------------------------------------------------------------------------------------------
 // Grants a step, which is how anything other than a research button hands one
 // out. Ally propagation happens off the resulting event, not here, so it works
 // the same whoever did the granting.
@@ -4227,6 +4277,38 @@ unit Cont_PanelAt (point home) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// Whose cell this is.
+//
+// The abnormality itself is no help: every abnormality belongs to the
+// abnormality slot, because a loose one has to be hostile to the swarm as well
+// as to everybody else. So ownership is spatial, the way the door and the panel
+// already are -- the control panel standing at that cell belongs to somebody,
+// and this module already treats its owner as the person whose encyclopedia the
+// panel shows.
+//
+// Falls back to Sector_OwnerNear, so a cell whose panel has not been placed yet
+// is still somebody's rather than nobody's. Returns 0 when the map has neither,
+// and a cell owned by nobody is skipped rather than handed to player 1.
+//
+// This lives here rather than in the meltdown, which is where it was written,
+// because the meltdown was only the first thing to ask. Quests ask too, and one
+// fact answered in two places is one fact that can disagree with itself.
+//--------------------------------------------------------------------------------------------------
+int Cont_OwnerOf (int slot) {
+    unit panel;
+
+    if (slot < 0 || slot >= gv_cellCount) {
+        return 0;
+    }
+
+    panel = Cont_PanelAt(gvg_cellHome[slot]);
+    if (panel != null && Slot_IsTablePlayer(UnitGetOwner(panel))) {
+        return UnitGetOwner(panel);
+    }
+    return Sector_OwnerNear(gvg_cellHome[slot]);
+}
+
+//--------------------------------------------------------------------------------------------------
 // The encyclopedia: what a player has extracted from an abnormality, and what
 // they have spent it on.
 //
@@ -4566,6 +4648,63 @@ void Cont_DropDoor (unit door) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// The suppression ledger.
+//
+// One flag per abnormality, for the whole table rather than per player, because
+// Training Team 3 says so in as many words: "队友的进度也计算在内". So there is
+// nothing to attribute and nobody to argue with about who landed the last hit.
+//
+// It is a ledger and not a counter because the quest asks for DISTINCT
+// abnormalities. The same one beaten back four times is one entry, which is the
+// difference between "you have seen four of these things" and "you have farmed
+// one of them", and the quest is asking the first question.
+//
+// Sized to 64 rather than c_abnoCount because array sizes have to be literals
+// and c_abnoCount is generated. Same reasoning as the bank's tables.
+//--------------------------------------------------------------------------------------------------
+bool[64] gvg_contSuppressed;
+
+int Cont_SuppressedDistinct () {
+    int total;
+    int i;
+
+    total = 0;
+    i = 0;
+    while (i < c_abnoCount) {
+        if (gvg_contSuppressed[i]) {
+            total = total + 1;
+        }
+        i = i + 1;
+    }
+    return total;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Cells of this player's that are working right now: contained, with the door
+// standing. Control Team 1 asks for one of these.
+//
+// "Working" is the state a cell is in when it can be worked, not when somebody
+// is working it. A cell nobody has got round to yet still counts; a cell whose
+// occupant is loose or whose gate is down does not.
+//--------------------------------------------------------------------------------------------------
+int Cont_WorkingOf (int player) {
+    int total;
+    int slot;
+
+    total = 0;
+    slot = 0;
+    while (slot < gv_cellCount) {
+        if (gvg_cellState[slot] == c_cellContained
+            && Cont_OwnerOf(slot) == player
+            && Cont_DoorIsUp(gvg_cellAbno[slot])) {
+            total = total + 1;
+        }
+        slot = slot + 1;
+    }
+    return total;
+}
+
+//--------------------------------------------------------------------------------------------------
 // Suppression: defeated, not killed.
 //
 // The fatal blow is intercepted the way a device's is, and what follows is the
@@ -4576,10 +4715,19 @@ void Cont_DropDoor (unit door) {
 //--------------------------------------------------------------------------------------------------
 void Cont_Suppress (unit abno) {
     int slot;
+    int index;
 
     slot = Cont_SlotOf(abno);
     if (slot < 0 || gvg_cellState[slot] == c_cellReturning) {
         return;
+    }
+
+    // Marked here rather than on the death event, because the early return
+    // above is what makes a suppression happen once. A breach beaten down by
+    // three people at the same instant is one entry in the ledger.
+    index = AbnoGen_IndexOf(abno);
+    if (index >= 0 && index < c_abnoCount) {
+        gvg_contSuppressed[index] = true;
     }
 
     gvg_cellState[slot] = c_cellReturning;
@@ -4895,13 +5043,18 @@ int[32] gvg_meltBusy;
 // Named cells this player answered, and named cells this player let expire.
 //
 // Cells, not rounds. Control Team's quest 3 is "妥善处理3轮融毁" and reads
-// rounds, but a held cell can outlive several rounds, so "which round did this
-// belong to" is a question with a real answer and no cheap one. It is left to
-// the quest system, which does not exist; counting cells is the honest thing to
-// expose in the meantime and is not a stand-in that will silently be mistaken
-// for the other.
+// rounds, and a held cell can outlive several rounds, so the two do not follow
+// from each other. Both are kept: cells are the readout, rounds are the quest.
 int[16] gvg_meltAnswered;
 int[16] gvg_meltMissed;
+
+// Rounds this player got completely right, and the values the two counters
+// above held when the last round was scored. A snapshot rather than a
+// per-round tally, because what makes a round clean is the DELTA across it,
+// and every cell that resolves does so by moving exactly one of these.
+int[16] gvg_meltClean;
+int[16] gvg_meltAnsweredAt;
+int[16] gvg_meltMissedAt;
 
 trigger gt_meltTick;
 
@@ -4971,27 +5124,40 @@ int Melt_Targets () {
 }
 
 //--------------------------------------------------------------------------------------------------
-// Whose cell this is.
+// Rounds this player got completely right.
 //
-// The abnormality itself is no help: every abnormality belongs to the
-// abnormality slot, because a loose one has to be hostile to the swarm as well
-// as to everybody else. So ownership is spatial, the way the door and the panel
-// already are -- the control panel standing at that cell belongs to somebody,
-// and 13_containment already treats its owner as the person whose encyclopedia
-// the panel shows.
+// Control Team 3 counts ROUNDS, not cells, and answering four cells in one
+// round is not the same achievement as answering one in each of four. So the
+// counter cannot be derived from gvg_meltAnswered, and it is kept here.
 //
-// Falls back to Sector_OwnerNear, so a cell whose panel has not been placed yet
-// is still somebody's rather than nobody's. Returns 0 when the map has neither,
-// and a cell owned by nobody is skipped rather than handed to player 1.
+// A round counts when the player was named at least one cell and let none of
+// them lapse. Being named nothing is not an achievement, and neither is a round
+// where three went well and the fourth went to zero.
+//
+// Evaluated at the top of the next round by comparing against a snapshot, which
+// is what makes a cell held over the boundary land on the round it was actually
+// answered in rather than the round it was named in.
 //--------------------------------------------------------------------------------------------------
-int Melt_OwnerOf (int slot) {
-    unit panel;
-
-    panel = Cont_PanelAt(gvg_cellHome[slot]);
-    if (panel != null && Slot_IsTablePlayer(UnitGetOwner(panel))) {
-        return UnitGetOwner(panel);
+int Melt_CleanRoundsBy (int player) {
+    if (player < 1 || player > 15) {
+        return 0;
     }
-    return Sector_OwnerNear(gvg_cellHome[slot]);
+    return gvg_meltClean[player];
+}
+
+void Melt_ScoreRound () {
+    int player;
+
+    player = 1;
+    while (player <= 15) {
+        if (gvg_meltAnswered[player] > gvg_meltAnsweredAt[player]
+            && gvg_meltMissed[player] == gvg_meltMissedAt[player]) {
+            gvg_meltClean[player] = gvg_meltClean[player] + 1;
+        }
+        gvg_meltAnsweredAt[player] = gvg_meltAnswered[player];
+        gvg_meltMissedAt[player] = gvg_meltMissed[player];
+        player = player + 1;
+    }
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -5018,7 +5184,7 @@ void Melt_Miss (int slot) {
     int lost;
 
     abno = gvg_cellAbno[slot];
-    owner = Melt_OwnerOf(slot);
+    owner = Cont_OwnerOf(slot);
 
     gvg_meltFlag[slot] = false;
     gvg_meltHeld[slot] = false;
@@ -5071,7 +5237,7 @@ void Melt_NameFor (int player) {
     have = 0;
     slot = 0;
     while (slot < gv_cellCount) {
-        if (gvg_meltFlag[slot] && Melt_OwnerOf(slot) == player) {
+        if (gvg_meltFlag[slot] && Cont_OwnerOf(slot) == player) {
             have = have + 1;
         }
         slot = slot + 1;
@@ -5083,7 +5249,7 @@ void Melt_NameFor (int player) {
         slot = (start + step) % gv_cellCount;
         abno = gvg_cellAbno[slot];
         if (!gvg_meltFlag[slot]
-            && Melt_OwnerOf(slot) == player
+            && Cont_OwnerOf(slot) == player
             && Melt_CanBeNamed(AbnoGen_IndexOf(abno))
             && gvg_cellState[slot] == c_cellContained
             && Cont_DoorIsUp(abno)) {
@@ -5120,6 +5286,12 @@ void Melt_NameFor (int player) {
 void Melt_Advance () {
     int player;
 
+    // The round that is ending is scored before the next one names anything,
+    // so a cell named now cannot land in the tally of the round before it.
+    // Level 0 is scored too and always comes out empty, which is correct: no
+    // cells were named, so nobody handled a round.
+    Melt_ScoreRound();
+
     gv_meltLevel = gv_meltLevel + 1;
     gv_meltNextAt = GameGetMissionTime() + c_meltPeriod;
 
@@ -5155,7 +5327,7 @@ bool Melt_Tick_Func (bool testConds, bool runActions) {
                     gvg_meltHeld[slot] = false;
                     gvg_meltDeadline[slot] = now + c_meltWindow;
                     UIDisplayMessage(
-                        PlayerGroupSingle(Melt_OwnerOf(slot)), c_messageAreaSubtitle,
+                        PlayerGroupSingle(Cont_OwnerOf(slot)), c_messageAreaSubtitle,
                         StringToText(gvg_abnoName[AbnoGen_IndexOf(gvg_cellAbno[slot])]
                                      + " is free -- "
                                      + IntToString(FixedToInt(c_meltWindow))
@@ -5205,7 +5377,7 @@ void Melt_NoteWorkBegin (unit abno) {
     gvg_meltFlag[slot] = false;
     gvg_meltHeld[slot] = false;
 
-    owner = Melt_OwnerOf(slot);
+    owner = Cont_OwnerOf(slot);
     if (owner >= 1 && owner <= 15) {
         gvg_meltAnswered[owner] = gvg_meltAnswered[owner] + 1;
         UIDisplayMessage(
@@ -5253,6 +5425,9 @@ void Meltdown_Init () {
     while (i <= 15) {
         gvg_meltAnswered[i] = 0;
         gvg_meltMissed[i] = 0;
+        gvg_meltClean[i] = 0;
+        gvg_meltAnsweredAt[i] = 0;
+        gvg_meltMissedAt[i] = 0;
         i = i + 1;
     }
 
@@ -5368,10 +5543,40 @@ int[16] gvg_workDefault;
 // Cooldown per cell, keyed the same way 13_containment keys its cells.
 fixed[32] gvg_workReadyAt;
 
+// Works this player has seen through to a result, and how many of those came
+// out Good. Information Team 1 counts the first, Control Team 2 the second.
+//
+// Counted here rather than derived by the quest layer because a finished work
+// leaves nothing behind to derive from -- the row is dropped and the boxes go
+// into two pools that other things also pay into. An event that erases its own
+// evidence has to be counted where it happens.
+//
+// Credited to the employee's owner, not to the cell's, because the quest is
+// about work the player did. Covering a neighbour's cell counts for the
+// neighbour in the meltdown, which is about the cell being handled, and for you
+// here, which is about you having handled it. Both readings are the right one
+// for their own question.
+int[16] gvg_workFinished;
+int[16] gvg_workGood;
+
 const string c_workAbil = "Interact";
 
 trigger gt_workTick;
 trigger gt_workCast;
+
+int Work_FinishedBy (int player) {
+    if (player < 1 || player > 15) {
+        return 0;
+    }
+    return gvg_workFinished[player];
+}
+
+int Work_GoodBy (int player) {
+    if (player < 1 || player > 15) {
+        return 0;
+    }
+    return gvg_workGood[player];
+}
 
 string Work_Name (int work) {
     if (work < 0 || work >= c_workCount) {
@@ -5618,6 +5823,13 @@ void Work_Finish (int slot) {
     }
     Emp_StatAdd(emp, Work_Stat(gvg_workType[slot]), gain);
 
+    if (owner >= 1 && owner <= 15) {
+        gvg_workFinished[owner] = gvg_workFinished[owner] + 1;
+        if (result == c_resultGood) {
+            gvg_workGood[owner] = gvg_workGood[owner] + 1;
+        }
+    }
+
     // Boxes pay twice, into two things that never mix: this player's stock for
     // this abnormality's encyclopedia, and the table's shared energy.
     Cont_AddBoxes(owner, index, boxes);
@@ -5807,6 +6019,8 @@ void Work_Init () {
     player = 1;
     while (player <= 15) {
         gvg_workDefault[player] = c_workInstinct;
+        gvg_workFinished[player] = 0;
+        gvg_workGood[player] = 0;
         player = player + 1;
     }
 
@@ -6744,6 +6958,37 @@ int Fort_OwnerOf (int loc) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// Levels bought across everything this player owns, added up.
+//
+// Safety Team 1 is "升级4个（累积等级）房间或走廊" -- four levels wherever they
+// sit, so one corridor at 3 and one room at 1 is the same as four rooms at 1.
+// The parenthesis in the doc is doing the work: it says accumulated LEVELS, not
+// four separate places.
+//
+// Reads the level rather than counting standing buildings, because the level is
+// what was paid for. A location whose emplacements have just been flattened has
+// not un-bought them, and the design already says the level never falls.
+//--------------------------------------------------------------------------------------------------
+int Fort_LevelSumOf (int player) {
+    int total;
+    int loc;
+
+    if (!Slot_IsTablePlayer(player)) {
+        return 0;
+    }
+
+    total = 0;
+    loc = 0;
+    while (loc < gv_locCount) {
+        if (Fort_OwnerOf(loc) == player) {
+            total = total + gvg_locLevel[loc];
+        }
+        loc = loc + 1;
+    }
+    return total;
+}
+
+//--------------------------------------------------------------------------------------------------
 // Whose a position's occupant should be. The editor's own answer first, so
 // placing an emplacement under a specific player overrides the geometry.
 //--------------------------------------------------------------------------------------------------
@@ -7668,6 +7913,384 @@ void Waves_Init () {
 }
 
 //--------------------------------------------------------------------------------------------------
+// src/galaxy/60_quests.galaxy
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// Quests.
+//
+// docs/usr/quests_unlocks.md gives every department four tasks. This module
+// counts them.
+//
+// Numbered 60 because it reads from nearly everything -- employees, cells, the
+// meltdown, work, the departments and the fortifications -- and Galaxy needs
+// every one of those declared first. Nothing calls INTO here, which is what
+// makes that possible: quests observe, they do not participate.
+//
+//--------------------------------------------------------------------------------------------------
+// Derive where you can, count only what erases itself.
+//
+// Most tasks are questions about the present, and the present is already
+// stored somewhere: how many employees are at rank II, what a location's level
+// is, how far an encyclopedia has been read. Those are asked fresh every tick
+// and nothing is kept here, so there is no counter to drift out of step with
+// the thing it was counting.
+//
+// Three are not, because they ask about EVENTS whose evidence is gone by the
+// time anybody could look:
+//
+//   works finished, and works finished Good   14_work    gvg_workFinished/Good
+//   meltdown rounds handled cleanly           13_meltdown gvg_meltClean
+//   distinct abnormalities suppressed         13_containment gvg_contSuppressed
+//
+// Each of those lives in the module where the event happens rather than here,
+// because that module is the only place that sees it. A counter kept anywhere
+// else would need the event forwarded to it, and a forwarded event is one more
+// thing that can be forgotten when somebody adds a second way for the event to
+// happen.
+//
+//--------------------------------------------------------------------------------------------------
+// A player only progresses their own department's tasks.
+//
+// Two of the tasks say "本部门" outright, and the rest are written from inside
+// one department's job. Quest_Progress returns 0 for anything outside the
+// player's department rather than computing something that would be wrong.
+//
+//--------------------------------------------------------------------------------------------------
+// Completion latches.
+//
+// Progress can fall -- employees die, buildings are flattened, a rank drops
+// when the Training Team core suppression bites. A task that has been done has
+// been done. So completion is a one-way flag, and progress is only ever read to
+// decide whether to set it.
+//
+//--------------------------------------------------------------------------------------------------
+// What this does NOT do yet:
+//
+//   Persist. "永久奖励仅在完成任务后的下一局游戏起生效" means completion has to
+//   reach 16_bank, and that needs a section format the bank does not have. The
+//   flags are in memory only, so a quest completed today is forgotten tonight.
+//
+//   Reward. Nothing is granted on completion. The department passives and the
+//   unlock chain ("解锁：完成4个任务") both read Quest_DoneCount when they exist.
+//
+//   Count the eleven tasks that are not countable. Four need Ordeals, four need
+//   an end-of-game evaluation, one needs a zerg queen, and two are blank in the
+//   source document. They are declared with their goals and marked uncountable,
+//   so the readout says "not yet" instead of "0" -- a task that is impossible
+//   and a task nobody has started look identical otherwise.
+//--------------------------------------------------------------------------------------------------
+
+const int c_questPerDept = 4;
+const int c_questCount = 36;
+
+// dept * 4 + (n - 1), so a quest index carries its department.
+const int c_qMalkuth1 = 0;
+const int c_qMalkuth2 = 1;
+const int c_qMalkuth3 = 2;
+const int c_qMalkuth4 = 3;
+const int c_qYesod1 = 4;
+const int c_qYesod2 = 5;
+const int c_qYesod3 = 6;
+const int c_qYesod4 = 7;
+const int c_qNetzach1 = 8;
+const int c_qNetzach4 = 11;
+const int c_qHod1 = 12;
+const int c_qHod2 = 13;
+const int c_qHod3 = 14;
+const int c_qHod4 = 15;
+
+int[36] gvg_questGoal;
+string[36] gvg_questTitle;
+
+// Whether the map can answer this task at all yet. False is not "hard", it is
+// "there is no channel": no Ordeals, no end-of-game hook, no zerg queen, or the
+// source document leaves the line blank.
+bool[36] gvg_questCountable;
+
+// Flattened player * 36 + quest, sized for 16 players.
+bool[576] gvg_questDone;
+
+const fixed c_questPeriod = 2.0;
+
+trigger gt_questTick;
+
+int Quest_DeptOf (int quest) {
+    if (quest < 0 || quest >= c_questCount) {
+        return c_deptNone;
+    }
+    return quest / c_questPerDept;
+}
+
+int Quest_NumberOf (int quest) {
+    if (quest < 0 || quest >= c_questCount) {
+        return 0;
+    }
+    return quest % c_questPerDept + 1;
+}
+
+int Quest_Goal (int quest) {
+    if (quest < 0 || quest >= c_questCount) {
+        return 0;
+    }
+    return gvg_questGoal[quest];
+}
+
+string Quest_Title (int quest) {
+    if (quest < 0 || quest >= c_questCount) {
+        return "";
+    }
+    return gvg_questTitle[quest];
+}
+
+bool Quest_IsCountable (int quest) {
+    if (quest < 0 || quest >= c_questCount) {
+        return false;
+    }
+    return gvg_questCountable[quest];
+}
+
+bool Quest_IsDone (int player, int quest) {
+    if (player < 1 || player > 15 || quest < 0 || quest >= c_questCount) {
+        return false;
+    }
+    return gvg_questDone[player * c_questCount + quest];
+}
+
+int Quest_DoneCount (int player) {
+    int total;
+    int quest;
+
+    total = 0;
+    quest = 0;
+    while (quest < c_questCount) {
+        if (Quest_IsDone(player, quest)) {
+            total = total + 1;
+        }
+        quest = quest + 1;
+    }
+    return total;
+}
+
+//--------------------------------------------------------------------------------------------------
+// The furthest a player has read any abnormality at or above a grade.
+//
+// Information Team 2 and its challenge are the same question at two grades and
+// two depths, so they are one function. The grade floor is what separates them:
+// "至少Zayin" is every abnormality, because Zayin is the bottom of the scale,
+// and "至少WAW" is only the two grades that can actually hurt somebody.
+//--------------------------------------------------------------------------------------------------
+int Quest_BestObservation (int player, int minRisk) {
+    int best;
+    int obs;
+    int i;
+
+    best = 0;
+    i = 0;
+    while (i < c_abnoCount) {
+        if (gvg_abnoRisk[i] >= minRisk) {
+            obs = Cont_ObservationOfPlayer(player, i);
+            if (obs > best) {
+                best = obs;
+            }
+        }
+        i = i + 1;
+    }
+    return best;
+}
+
+//--------------------------------------------------------------------------------------------------
+// How far along a player is.
+//
+// Never above the goal, so a readout can print progress/goal without clamping
+// and a caller can compare the two without knowing which task it is holding.
+//--------------------------------------------------------------------------------------------------
+int Quest_Progress (int player, int quest) {
+    int value;
+
+    if (!Slot_IsTablePlayer(player) || quest < 0 || quest >= c_questCount) {
+        return 0;
+    }
+    if (Quest_DeptOf(quest) != Dept_Of(player) || !gvg_questCountable[quest]) {
+        return 0;
+    }
+
+    value = 0;
+
+    // Control Team. A cell that works and a place that has been fortified --
+    // two halves of "the facility is running", counted as one each.
+    if (quest == c_qMalkuth1) {
+        if (Cont_WorkingOf(player) > 0) {
+            value = value + 1;
+        }
+        if (Fort_LevelSumOf(player) > 0) {
+            value = value + 1;
+        }
+    }
+    else if (quest == c_qMalkuth2) {
+        value = Work_GoodBy(player);
+    }
+    else if (quest == c_qMalkuth3) {
+        value = Melt_CleanRoundsBy(player);
+    }
+
+    // Information Team.
+    else if (quest == c_qYesod1) {
+        value = Work_FinishedBy(player);
+    }
+    else if (quest == c_qYesod2) {
+        value = Quest_BestObservation(player, c_riskZayin);
+    }
+    else if (quest == c_qYesod3) {
+        value = Dept_LowestLineLevel(player);
+    }
+    else if (quest == c_qYesod4) {
+        value = Quest_BestObservation(player, c_riskWAW);
+    }
+
+    // Safety Team.
+    else if (quest == c_qNetzach1) {
+        value = Fort_LevelSumOf(player);
+    }
+
+    // Training Team. Rank II is one promotion from the floor, so "提升2名员工的
+    // 等级" is two employees standing above where they started.
+    else if (quest == c_qHod1) {
+        value = Emp_CountAtRank(player, 2);
+    }
+    else if (quest == c_qHod2) {
+        value = Emp_CountAtRank(player, 4);
+    }
+    else if (quest == c_qHod3) {
+        // Table-wide on purpose: the document says 队友的进度也计算在内.
+        value = Cont_SuppressedDistinct();
+    }
+
+    if (value > gvg_questGoal[quest]) {
+        value = gvg_questGoal[quest];
+    }
+    return value;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Marks one done, once.
+//--------------------------------------------------------------------------------------------------
+void Quest_Complete (int player, int quest) {
+    if (player < 1 || player > 15 || quest < 0 || quest >= c_questCount) {
+        return;
+    }
+    if (Quest_IsDone(player, quest)) {
+        return;
+    }
+    gvg_questDone[player * c_questCount + quest] = true;
+
+    UIDisplayMessage(
+        PlayerGroupSingle(player), c_messageAreaSubtitle,
+        StringToText("task complete -- " + gvg_deptName[Quest_DeptOf(quest)] + " "
+                     + IntToString(Quest_NumberOf(quest)) + ": "
+                     + gvg_questTitle[quest]));
+}
+
+//--------------------------------------------------------------------------------------------------
+// Polled rather than driven by events.
+//
+// Most of what a task reads is derived, so there is no event to hang it on --
+// "four levels of fortification" changes when a location is upgraded, but also
+// when a sector's owner changes hands, and "two employees at rank II" changes
+// on a work result, a department upgrade and the Training Team core
+// suppression. One place that reconciles beats six places that each remember
+// to, and the same argument already put Emp_SyncRank on a tick.
+//
+// Every two seconds against a handful of integer comparisons is nothing, and
+// completion is a latch, so the only cost of being a moment late is being a
+// moment late.
+//--------------------------------------------------------------------------------------------------
+bool Quest_Tick_Func (bool testConds, bool runActions) {
+    int player;
+    int quest;
+    int dept;
+
+    if (!runActions) {
+        return true;
+    }
+
+    player = 1;
+    while (player <= 15) {
+        if (Slot_IsTablePlayer(player)) {
+            dept = Dept_Of(player);
+            if (dept >= 0 && dept < c_deptCount) {
+                quest = dept * c_questPerDept;
+                while (quest < dept * c_questPerDept + c_questPerDept) {
+                    if (gvg_questCountable[quest]
+                        && !Quest_IsDone(player, quest)
+                        && Quest_Progress(player, quest) >= gvg_questGoal[quest]) {
+                        Quest_Complete(player, quest);
+                    }
+                    quest = quest + 1;
+                }
+            }
+        }
+        player = player + 1;
+    }
+    return true;
+}
+
+//--------------------------------------------------------------------------------------------------
+// The table.
+//
+// Goals are the numbers in docs/usr/quests_unlocks.md and nothing else. Where
+// that document is blank the entry is still declared, with goal 0 and
+// uncountable, so the count of tasks per department stays four everywhere and
+// the unlock chain can be written against a shape that will not move.
+//--------------------------------------------------------------------------------------------------
+void Quest_Declare (int quest, int goal, bool countable, string title) {
+    gvg_questGoal[quest] = goal;
+    gvg_questCountable[quest] = countable;
+    gvg_questTitle[quest] = title;
+}
+
+void Quests_Init () {
+    int i;
+
+    i = 0;
+    while (i < c_questCount) {
+        Quest_Declare(i, 0, false, "--");
+        i = i + 1;
+    }
+
+    // Control Team.
+    Quest_Declare(c_qMalkuth1, 2, true, "a cell running and a place fortified");
+    Quest_Declare(c_qMalkuth2, 4, true, "4 works ending Good");
+    Quest_Declare(c_qMalkuth3, 3, true, "3 meltdown rounds handled");
+    Quest_Declare(c_qMalkuth4, 1, false, "[challenge] survive a Dusk ordeal");
+
+    // Information Team.
+    Quest_Declare(c_qYesod1, 3, true, "3 works completed");
+    Quest_Declare(c_qYesod2, 3, true, "observation 3 on any abnormality");
+    Quest_Declare(c_qYesod3, 2, true, "every line of your department at 2");
+    Quest_Declare(c_qYesod4, 4, true, "observation 4 on a WAW or above");
+
+    // Safety Team. 2 and 3 are blank in the source document.
+    Quest_Declare(c_qNetzach1, 4, true, "4 levels of fortification");
+    Quest_Declare(c_qNetzach4, 1, false, "[challenge] finish with no death in your department");
+
+    // Training Team.
+    Quest_Declare(c_qHod1, 2, true, "2 employees promoted");
+    Quest_Declare(c_qHod2, 1, true, "an employee at rank IV");
+    Quest_Declare(c_qHod3, 4, true, "4 distinct abnormalities suppressed (table-wide)");
+    Quest_Declare(c_qHod4, 1, false, "[challenge] finish with every employee at rank V");
+
+    // Disciplinary Team. Unlocks at ten tasks, so nothing here is reachable
+    // yet, but the goals are the document's and only the channels are missing.
+    Quest_Declare(c_deptGeburah * c_questPerDept + 0, 1, false, "kill a zerg queen");
+    Quest_Declare(c_deptGeburah * c_questPerDept + 1, 5, false, "suppress 3 HE+ and 2 WAW+");
+    Quest_Declare(c_deptGeburah * c_questPerDept + 2, 3, false, "suppress 3 distinct Aleph");
+    Quest_Declare(c_deptGeburah * c_questPerDept + 3, 1, false, "[challenge] survive a Midnight ordeal");
+
+    gt_questTick = TriggerCreate("Quest_Tick_Func");
+    TriggerAddEventTimePeriodic(gt_questTick, c_questPeriod, c_timeGame);
+}
+
+//--------------------------------------------------------------------------------------------------
 // src/galaxy/90_debug.galaxy
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
@@ -8002,6 +8625,59 @@ void Debug_Fortify (int player, string word) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// -quest [0-8]
+//
+// The four tasks of the department you are holding: progress against goal, and
+// whether it is done. With a number, moves you to that department first --
+// there is no selection screen, departments are dealt round-robin, and one
+// tester cannot otherwise reach the other three sets.
+//
+// An uncountable task prints WHY it cannot be counted rather than 0/1. A task
+// nobody has started and a task the map has no channel for look identical
+// otherwise, and only one of those is worth working on.
+//--------------------------------------------------------------------------------------------------
+void Debug_Quests (int player, string word) {
+    string line;
+    int want;
+    int dept;
+    int quest;
+    int last;
+
+    want = Debug_Int(word, -1);
+    if (want >= 0 && want < c_deptCount) {
+        Dept_SetOf(player, want);
+        Debug_Say(player, "quest: you are now " + gvg_deptName[want]);
+    }
+
+    dept = Dept_Of(player);
+    if (dept < 0 || dept >= c_deptCount) {
+        Debug_Say(player, "quest: you hold no department");
+        return;
+    }
+
+    Debug_Say(player, "quest: " + gvg_deptName[dept] + " -- "
+                      + IntToString(Quest_DoneCount(player)) + " done");
+
+    quest = dept * c_questPerDept;
+    last = quest + c_questPerDept;
+    while (quest < last) {
+        line = "  " + IntToString(Quest_NumberOf(quest)) + ". " + Quest_Title(quest) + "  ";
+        if (Quest_IsDone(player, quest)) {
+            line = line + "DONE";
+        }
+        else if (!Quest_IsCountable(quest)) {
+            line = line + "(no channel yet)";
+        }
+        else {
+            line = line + IntToString(Quest_Progress(player, quest))
+                   + "/" + IntToString(Quest_Goal(quest));
+        }
+        Debug_Say(player, line);
+        quest = quest + 1;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
 // -bank [save|wipe]
 //
 // What is on disk for this player, next to what is in memory. Printed together
@@ -8125,7 +8801,7 @@ void Debug_Meltdown (int player, string word) {
 
     slot = 0;
     while (slot < gv_cellCount) {
-        owner = Melt_OwnerOf(slot);
+        owner = Cont_OwnerOf(slot);
         line = "  cell " + IntToString(slot) + " "
                + gvg_abnoName[AbnoGen_IndexOf(gvg_cellAbno[slot])] + " owner=";
         if (owner == 0) {
@@ -8581,6 +9257,25 @@ void Debug_BuildHelp () {
         "Assets\\Textures\\btn-ability-terran-scannersweep.dds");
 
     Debug_Tip(
+        "Tasks",
+        "<c val=\"ffff8a\">-quest</c>  your department's four tasks.<n/>"
+        + "<c val=\"ffff8a\">-quest 0-8</c>  move yourself to that department first.<n/><n/>"
+        + "Eleven of the thirty-six are counted. The rest print \"no channel "
+        + "yet\" rather than 0, because a task nobody has started and a task the "
+        + "map cannot observe look identical as a number, and only one of them "
+        + "is worth working on. Four need Ordeals, four need an end-of-game "
+        + "hook, one needs a zerg queen, and two are blank in the source "
+        + "document.<n/><n/>"
+        + "Progress is read fresh every two seconds and kept nowhere, except for "
+        + "four things that erase their own evidence: works finished, works "
+        + "ending Good, meltdown rounds handled, and which abnormalities have "
+        + "been suppressed. Those are counted where they happen.<n/><n/>"
+        + "Completion is a latch -- employees die and buildings fall, but a task "
+        + "that was done stays done. It is NOT saved yet, so it is forgotten "
+        + "when the game ends.",
+        "Assets\\Textures\\btn-ability-terran-scannersweep.dds");
+
+    Debug_Tip(
         "The world",
         "<c val=\"ffff8a\">-status</c>  debris, ore, power, devices, sector, energy.<n/>"
         + "<c val=\"ffff8a\">-scan</c>  what the generated object tables can actually see.<n/><n/>"
@@ -8658,6 +9353,9 @@ bool Debug_Chat_Func (bool testConds, bool runActions) {
     else if (StringEqual(command, "-fort", false)) {
         Debug_Fortify(player, StringWord(message, 2));
     }
+    else if (StringEqual(command, "-quest", false)) {
+        Debug_Quests(player, StringWord(message, 2));
+    }
     else if (StringEqual(command, "-codec", false)) {
         Debug_Say(player, Codec_SelfTest());
     }
@@ -8713,5 +9411,6 @@ void InitMap () {
     Workers_Init();
     Economy_Init();
     Waves_Init();
+    Quests_Init();
     Debug_Init();
 }

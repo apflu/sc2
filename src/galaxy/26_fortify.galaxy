@@ -215,6 +215,37 @@ int Fort_OwnerOf (int loc) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// Levels bought across everything this player owns, added up.
+//
+// Safety Team 1 is "升级4个（累积等级）房间或走廊" -- four levels wherever they
+// sit, so one corridor at 3 and one room at 1 is the same as four rooms at 1.
+// The parenthesis in the doc is doing the work: it says accumulated LEVELS, not
+// four separate places.
+//
+// Reads the level rather than counting standing buildings, because the level is
+// what was paid for. A location whose emplacements have just been flattened has
+// not un-bought them, and the design already says the level never falls.
+//--------------------------------------------------------------------------------------------------
+int Fort_LevelSumOf (int player) {
+    int total;
+    int loc;
+
+    if (!Slot_IsTablePlayer(player)) {
+        return 0;
+    }
+
+    total = 0;
+    loc = 0;
+    while (loc < gv_locCount) {
+        if (Fort_OwnerOf(loc) == player) {
+            total = total + gvg_locLevel[loc];
+        }
+        loc = loc + 1;
+    }
+    return total;
+}
+
+//--------------------------------------------------------------------------------------------------
 // Whose a position's occupant should be. The editor's own answer first, so
 // placing an emplacement under a specific player overrides the geometry.
 //--------------------------------------------------------------------------------------------------

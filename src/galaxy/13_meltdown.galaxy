@@ -138,13 +138,18 @@ int[32] gvg_meltBusy;
 // Named cells this player answered, and named cells this player let expire.
 //
 // Cells, not rounds. Control Team's quest 3 is "妥善处理3轮融毁" and reads
-// rounds, but a held cell can outlive several rounds, so "which round did this
-// belong to" is a question with a real answer and no cheap one. It is left to
-// the quest system, which does not exist; counting cells is the honest thing to
-// expose in the meantime and is not a stand-in that will silently be mistaken
-// for the other.
+// rounds, and a held cell can outlive several rounds, so the two do not follow
+// from each other. Both are kept: cells are the readout, rounds are the quest.
 int[16] gvg_meltAnswered;
 int[16] gvg_meltMissed;
+
+// Rounds this player got completely right, and the values the two counters
+// above held when the last round was scored. A snapshot rather than a
+// per-round tally, because what makes a round clean is the DELTA across it,
+// and every cell that resolves does so by moving exactly one of these.
+int[16] gvg_meltClean;
+int[16] gvg_meltAnsweredAt;
+int[16] gvg_meltMissedAt;
 
 trigger gt_meltTick;
 
@@ -214,27 +219,40 @@ int Melt_Targets () {
 }
 
 //--------------------------------------------------------------------------------------------------
-// Whose cell this is.
+// Rounds this player got completely right.
 //
-// The abnormality itself is no help: every abnormality belongs to the
-// abnormality slot, because a loose one has to be hostile to the swarm as well
-// as to everybody else. So ownership is spatial, the way the door and the panel
-// already are -- the control panel standing at that cell belongs to somebody,
-// and 13_containment already treats its owner as the person whose encyclopedia
-// the panel shows.
+// Control Team 3 counts ROUNDS, not cells, and answering four cells in one
+// round is not the same achievement as answering one in each of four. So the
+// counter cannot be derived from gvg_meltAnswered, and it is kept here.
 //
-// Falls back to Sector_OwnerNear, so a cell whose panel has not been placed yet
-// is still somebody's rather than nobody's. Returns 0 when the map has neither,
-// and a cell owned by nobody is skipped rather than handed to player 1.
+// A round counts when the player was named at least one cell and let none of
+// them lapse. Being named nothing is not an achievement, and neither is a round
+// where three went well and the fourth went to zero.
+//
+// Evaluated at the top of the next round by comparing against a snapshot, which
+// is what makes a cell held over the boundary land on the round it was actually
+// answered in rather than the round it was named in.
 //--------------------------------------------------------------------------------------------------
-int Melt_OwnerOf (int slot) {
-    unit panel;
-
-    panel = Cont_PanelAt(gvg_cellHome[slot]);
-    if (panel != null && Slot_IsTablePlayer(UnitGetOwner(panel))) {
-        return UnitGetOwner(panel);
+int Melt_CleanRoundsBy (int player) {
+    if (player < 1 || player > 15) {
+        return 0;
     }
-    return Sector_OwnerNear(gvg_cellHome[slot]);
+    return gvg_meltClean[player];
+}
+
+void Melt_ScoreRound () {
+    int player;
+
+    player = 1;
+    while (player <= 15) {
+        if (gvg_meltAnswered[player] > gvg_meltAnsweredAt[player]
+            && gvg_meltMissed[player] == gvg_meltMissedAt[player]) {
+            gvg_meltClean[player] = gvg_meltClean[player] + 1;
+        }
+        gvg_meltAnsweredAt[player] = gvg_meltAnswered[player];
+        gvg_meltMissedAt[player] = gvg_meltMissed[player];
+        player = player + 1;
+    }
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -261,7 +279,7 @@ void Melt_Miss (int slot) {
     int lost;
 
     abno = gvg_cellAbno[slot];
-    owner = Melt_OwnerOf(slot);
+    owner = Cont_OwnerOf(slot);
 
     gvg_meltFlag[slot] = false;
     gvg_meltHeld[slot] = false;
@@ -314,7 +332,7 @@ void Melt_NameFor (int player) {
     have = 0;
     slot = 0;
     while (slot < gv_cellCount) {
-        if (gvg_meltFlag[slot] && Melt_OwnerOf(slot) == player) {
+        if (gvg_meltFlag[slot] && Cont_OwnerOf(slot) == player) {
             have = have + 1;
         }
         slot = slot + 1;
@@ -326,7 +344,7 @@ void Melt_NameFor (int player) {
         slot = (start + step) % gv_cellCount;
         abno = gvg_cellAbno[slot];
         if (!gvg_meltFlag[slot]
-            && Melt_OwnerOf(slot) == player
+            && Cont_OwnerOf(slot) == player
             && Melt_CanBeNamed(AbnoGen_IndexOf(abno))
             && gvg_cellState[slot] == c_cellContained
             && Cont_DoorIsUp(abno)) {
@@ -363,6 +381,12 @@ void Melt_NameFor (int player) {
 void Melt_Advance () {
     int player;
 
+    // The round that is ending is scored before the next one names anything,
+    // so a cell named now cannot land in the tally of the round before it.
+    // Level 0 is scored too and always comes out empty, which is correct: no
+    // cells were named, so nobody handled a round.
+    Melt_ScoreRound();
+
     gv_meltLevel = gv_meltLevel + 1;
     gv_meltNextAt = GameGetMissionTime() + c_meltPeriod;
 
@@ -398,7 +422,7 @@ bool Melt_Tick_Func (bool testConds, bool runActions) {
                     gvg_meltHeld[slot] = false;
                     gvg_meltDeadline[slot] = now + c_meltWindow;
                     UIDisplayMessage(
-                        PlayerGroupSingle(Melt_OwnerOf(slot)), c_messageAreaSubtitle,
+                        PlayerGroupSingle(Cont_OwnerOf(slot)), c_messageAreaSubtitle,
                         StringToText(gvg_abnoName[AbnoGen_IndexOf(gvg_cellAbno[slot])]
                                      + " is free -- "
                                      + IntToString(FixedToInt(c_meltWindow))
@@ -448,7 +472,7 @@ void Melt_NoteWorkBegin (unit abno) {
     gvg_meltFlag[slot] = false;
     gvg_meltHeld[slot] = false;
 
-    owner = Melt_OwnerOf(slot);
+    owner = Cont_OwnerOf(slot);
     if (owner >= 1 && owner <= 15) {
         gvg_meltAnswered[owner] = gvg_meltAnswered[owner] + 1;
         UIDisplayMessage(
@@ -496,6 +520,9 @@ void Meltdown_Init () {
     while (i <= 15) {
         gvg_meltAnswered[i] = 0;
         gvg_meltMissed[i] = 0;
+        gvg_meltClean[i] = 0;
+        gvg_meltAnsweredAt[i] = 0;
+        gvg_meltMissedAt[i] = 0;
         i = i + 1;
     }
 

@@ -330,6 +330,59 @@ void Debug_Fortify (int player, string word) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// -quest [0-8]
+//
+// The four tasks of the department you are holding: progress against goal, and
+// whether it is done. With a number, moves you to that department first --
+// there is no selection screen, departments are dealt round-robin, and one
+// tester cannot otherwise reach the other three sets.
+//
+// An uncountable task prints WHY it cannot be counted rather than 0/1. A task
+// nobody has started and a task the map has no channel for look identical
+// otherwise, and only one of those is worth working on.
+//--------------------------------------------------------------------------------------------------
+void Debug_Quests (int player, string word) {
+    string line;
+    int want;
+    int dept;
+    int quest;
+    int last;
+
+    want = Debug_Int(word, -1);
+    if (want >= 0 && want < c_deptCount) {
+        Dept_SetOf(player, want);
+        Debug_Say(player, "quest: you are now " + gvg_deptName[want]);
+    }
+
+    dept = Dept_Of(player);
+    if (dept < 0 || dept >= c_deptCount) {
+        Debug_Say(player, "quest: you hold no department");
+        return;
+    }
+
+    Debug_Say(player, "quest: " + gvg_deptName[dept] + " -- "
+                      + IntToString(Quest_DoneCount(player)) + " done");
+
+    quest = dept * c_questPerDept;
+    last = quest + c_questPerDept;
+    while (quest < last) {
+        line = "  " + IntToString(Quest_NumberOf(quest)) + ". " + Quest_Title(quest) + "  ";
+        if (Quest_IsDone(player, quest)) {
+            line = line + "DONE";
+        }
+        else if (!Quest_IsCountable(quest)) {
+            line = line + "(no channel yet)";
+        }
+        else {
+            line = line + IntToString(Quest_Progress(player, quest))
+                   + "/" + IntToString(Quest_Goal(quest));
+        }
+        Debug_Say(player, line);
+        quest = quest + 1;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
 // -bank [save|wipe]
 //
 // What is on disk for this player, next to what is in memory. Printed together
@@ -453,7 +506,7 @@ void Debug_Meltdown (int player, string word) {
 
     slot = 0;
     while (slot < gv_cellCount) {
-        owner = Melt_OwnerOf(slot);
+        owner = Cont_OwnerOf(slot);
         line = "  cell " + IntToString(slot) + " "
                + gvg_abnoName[AbnoGen_IndexOf(gvg_cellAbno[slot])] + " owner=";
         if (owner == 0) {
@@ -909,6 +962,25 @@ void Debug_BuildHelp () {
         "Assets\\Textures\\btn-ability-terran-scannersweep.dds");
 
     Debug_Tip(
+        "Tasks",
+        "<c val=\"ffff8a\">-quest</c>  your department's four tasks.<n/>"
+        + "<c val=\"ffff8a\">-quest 0-8</c>  move yourself to that department first.<n/><n/>"
+        + "Eleven of the thirty-six are counted. The rest print \"no channel "
+        + "yet\" rather than 0, because a task nobody has started and a task the "
+        + "map cannot observe look identical as a number, and only one of them "
+        + "is worth working on. Four need Ordeals, four need an end-of-game "
+        + "hook, one needs a zerg queen, and two are blank in the source "
+        + "document.<n/><n/>"
+        + "Progress is read fresh every two seconds and kept nowhere, except for "
+        + "four things that erase their own evidence: works finished, works "
+        + "ending Good, meltdown rounds handled, and which abnormalities have "
+        + "been suppressed. Those are counted where they happen.<n/><n/>"
+        + "Completion is a latch -- employees die and buildings fall, but a task "
+        + "that was done stays done. It is NOT saved yet, so it is forgotten "
+        + "when the game ends.",
+        "Assets\\Textures\\btn-ability-terran-scannersweep.dds");
+
+    Debug_Tip(
         "The world",
         "<c val=\"ffff8a\">-status</c>  debris, ore, power, devices, sector, energy.<n/>"
         + "<c val=\"ffff8a\">-scan</c>  what the generated object tables can actually see.<n/><n/>"
@@ -985,6 +1057,9 @@ bool Debug_Chat_Func (bool testConds, bool runActions) {
     }
     else if (StringEqual(command, "-fort", false)) {
         Debug_Fortify(player, StringWord(message, 2));
+    }
+    else if (StringEqual(command, "-quest", false)) {
+        Debug_Quests(player, StringWord(message, 2));
     }
     else if (StringEqual(command, "-codec", false)) {
         Debug_Say(player, Codec_SelfTest());

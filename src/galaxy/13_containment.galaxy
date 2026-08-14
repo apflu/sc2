@@ -235,6 +235,38 @@ unit Cont_PanelAt (point home) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// Whose cell this is.
+//
+// The abnormality itself is no help: every abnormality belongs to the
+// abnormality slot, because a loose one has to be hostile to the swarm as well
+// as to everybody else. So ownership is spatial, the way the door and the panel
+// already are -- the control panel standing at that cell belongs to somebody,
+// and this module already treats its owner as the person whose encyclopedia the
+// panel shows.
+//
+// Falls back to Sector_OwnerNear, so a cell whose panel has not been placed yet
+// is still somebody's rather than nobody's. Returns 0 when the map has neither,
+// and a cell owned by nobody is skipped rather than handed to player 1.
+//
+// This lives here rather than in the meltdown, which is where it was written,
+// because the meltdown was only the first thing to ask. Quests ask too, and one
+// fact answered in two places is one fact that can disagree with itself.
+//--------------------------------------------------------------------------------------------------
+int Cont_OwnerOf (int slot) {
+    unit panel;
+
+    if (slot < 0 || slot >= gv_cellCount) {
+        return 0;
+    }
+
+    panel = Cont_PanelAt(gvg_cellHome[slot]);
+    if (panel != null && Slot_IsTablePlayer(UnitGetOwner(panel))) {
+        return UnitGetOwner(panel);
+    }
+    return Sector_OwnerNear(gvg_cellHome[slot]);
+}
+
+//--------------------------------------------------------------------------------------------------
 // The encyclopedia: what a player has extracted from an abnormality, and what
 // they have spent it on.
 //
@@ -574,6 +606,63 @@ void Cont_DropDoor (unit door) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// The suppression ledger.
+//
+// One flag per abnormality, for the whole table rather than per player, because
+// Training Team 3 says so in as many words: "队友的进度也计算在内". So there is
+// nothing to attribute and nobody to argue with about who landed the last hit.
+//
+// It is a ledger and not a counter because the quest asks for DISTINCT
+// abnormalities. The same one beaten back four times is one entry, which is the
+// difference between "you have seen four of these things" and "you have farmed
+// one of them", and the quest is asking the first question.
+//
+// Sized to 64 rather than c_abnoCount because array sizes have to be literals
+// and c_abnoCount is generated. Same reasoning as the bank's tables.
+//--------------------------------------------------------------------------------------------------
+bool[64] gvg_contSuppressed;
+
+int Cont_SuppressedDistinct () {
+    int total;
+    int i;
+
+    total = 0;
+    i = 0;
+    while (i < c_abnoCount) {
+        if (gvg_contSuppressed[i]) {
+            total = total + 1;
+        }
+        i = i + 1;
+    }
+    return total;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Cells of this player's that are working right now: contained, with the door
+// standing. Control Team 1 asks for one of these.
+//
+// "Working" is the state a cell is in when it can be worked, not when somebody
+// is working it. A cell nobody has got round to yet still counts; a cell whose
+// occupant is loose or whose gate is down does not.
+//--------------------------------------------------------------------------------------------------
+int Cont_WorkingOf (int player) {
+    int total;
+    int slot;
+
+    total = 0;
+    slot = 0;
+    while (slot < gv_cellCount) {
+        if (gvg_cellState[slot] == c_cellContained
+            && Cont_OwnerOf(slot) == player
+            && Cont_DoorIsUp(gvg_cellAbno[slot])) {
+            total = total + 1;
+        }
+        slot = slot + 1;
+    }
+    return total;
+}
+
+//--------------------------------------------------------------------------------------------------
 // Suppression: defeated, not killed.
 //
 // The fatal blow is intercepted the way a device's is, and what follows is the
@@ -584,10 +673,19 @@ void Cont_DropDoor (unit door) {
 //--------------------------------------------------------------------------------------------------
 void Cont_Suppress (unit abno) {
     int slot;
+    int index;
 
     slot = Cont_SlotOf(abno);
     if (slot < 0 || gvg_cellState[slot] == c_cellReturning) {
         return;
+    }
+
+    // Marked here rather than on the death event, because the early return
+    // above is what makes a suppression happen once. A breach beaten down by
+    // three people at the same instant is one entry in the ledger.
+    index = AbnoGen_IndexOf(abno);
+    if (index >= 0 && index < c_abnoCount) {
+        gvg_contSuppressed[index] = true;
     }
 
     gvg_cellState[slot] = c_cellReturning;

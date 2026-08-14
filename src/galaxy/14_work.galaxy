@@ -103,10 +103,40 @@ int[16] gvg_workDefault;
 // Cooldown per cell, keyed the same way 13_containment keys its cells.
 fixed[32] gvg_workReadyAt;
 
+// Works this player has seen through to a result, and how many of those came
+// out Good. Information Team 1 counts the first, Control Team 2 the second.
+//
+// Counted here rather than derived by the quest layer because a finished work
+// leaves nothing behind to derive from -- the row is dropped and the boxes go
+// into two pools that other things also pay into. An event that erases its own
+// evidence has to be counted where it happens.
+//
+// Credited to the employee's owner, not to the cell's, because the quest is
+// about work the player did. Covering a neighbour's cell counts for the
+// neighbour in the meltdown, which is about the cell being handled, and for you
+// here, which is about you having handled it. Both readings are the right one
+// for their own question.
+int[16] gvg_workFinished;
+int[16] gvg_workGood;
+
 const string c_workAbil = "Interact";
 
 trigger gt_workTick;
 trigger gt_workCast;
+
+int Work_FinishedBy (int player) {
+    if (player < 1 || player > 15) {
+        return 0;
+    }
+    return gvg_workFinished[player];
+}
+
+int Work_GoodBy (int player) {
+    if (player < 1 || player > 15) {
+        return 0;
+    }
+    return gvg_workGood[player];
+}
 
 string Work_Name (int work) {
     if (work < 0 || work >= c_workCount) {
@@ -353,6 +383,13 @@ void Work_Finish (int slot) {
     }
     Emp_StatAdd(emp, Work_Stat(gvg_workType[slot]), gain);
 
+    if (owner >= 1 && owner <= 15) {
+        gvg_workFinished[owner] = gvg_workFinished[owner] + 1;
+        if (result == c_resultGood) {
+            gvg_workGood[owner] = gvg_workGood[owner] + 1;
+        }
+    }
+
     // Boxes pay twice, into two things that never mix: this player's stock for
     // this abnormality's encyclopedia, and the table's shared energy.
     Cont_AddBoxes(owner, index, boxes);
@@ -542,6 +579,8 @@ void Work_Init () {
     player = 1;
     while (player <= 15) {
         gvg_workDefault[player] = c_workInstinct;
+        gvg_workFinished[player] = 0;
+        gvg_workGood[player] = 0;
         player = player + 1;
     }
 
