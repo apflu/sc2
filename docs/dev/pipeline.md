@@ -7,6 +7,9 @@
 | 路径 | 性质 | 谁维护 |
 |------|------|--------|
 | `src/galaxy/*.galaxy` | **真相源**，所有游戏逻辑 | 代码侧 |
+| `src/strings/enUS.txt` | **真相源**，所有玩家可见文本 | 代码侧 |
+| `enUS.SC2Data/LocalizedData/GameStrings.txt` | 半生成物：`Lob/` 命名空间由构建覆盖，其余原样保留 | 两边 |
+| `<其他语言>.SC2Data/LocalizedData/GameStrings.txt` | 翻译，**构建永不触碰** | 编辑器 / 译者 |
 | `LobotomyShiphold.SC2Map/MapScript.galaxy` | **生成物**，已提交 | `tools/build_galaxy.py` |
 | `LobotomyShiphold.SC2Map/Triggers` | 保持为空 | 不使用触发器 GUI |
 | `LobotomyShiphold.SC2Map/t3*`, `MapInfo`, doodad/单位摆放 | 地形与空间布局 | 编辑器侧 |
@@ -29,6 +32,34 @@ python3 tools/build_galaxy.py
    冲掉之后不只是"少了我们的代码"：编辑器会按它内存里的状态重建，**包括把已经删掉的 Melee Initialization 塞回来**（于是玩家会拿到对战初始资源和农民）。所以动过触发器或 AI 之后，重新构建是必须的。
 
 地形、doodad、单位摆放、数据编辑器在编辑器里做是安全的，不碰这两个文件。
+
+## 玩家可见文本一律走 key
+
+**任何玩家能看到的字符串都写在 `src/strings/enUS.txt`，代码里只出现 key。**
+
+行内英文是一份已经丢掉的翻译：找不到、交不出去、等到想加第二种语言的那天，它变成在二十六个模块里翻找。
+
+```galaxy
+ObjectiveSetName(obj, StringExternal("Lob/Objective/Energy/Name")
+                      + StringToText("  (37/200)"));
+```
+
+`tools/gen_strings.py` 把这些合并进地图的 enUS `GameStrings.txt`：**只覆盖 `Lob/` 命名空间**，数据编辑器写的那一百多行 `Abil/Name`、`Button/Tooltip` 原样读回写出。别的语言的文件构建从不写——**加一种语言就是往那儿放一个文件，仅此而已**。
+
+两条检查，因为它替掉的失败模式是无声的：Galaxy 引用了一个没定义的 `Lob/` key，游戏里渲染出来是**什么都没有**，看起来像布局 bug 而不是缺字符串。
+
+| | |
+|---|---|
+| 引用了但没定义 | **构建报错** |
+| 定义了但没被引用 | 警告（key 也可能是拼出来的，静态看不见） |
+
+扫描认的是**所有 `"Lob/..."` 字面量**，不只是 `StringExternal(...)` 里那些——一个 key 被交给 `Quest_Declare` 存进表、三个函数之后才取出来用，它一样是 key。只认直接调用的第一版把三十六个活着的任务标题报成了死键。
+
+拼接用的前缀（`"Lob/Dept/Name/" + 部门 id`）两边都不算：它不是 key，也不能证明哪个 key 活着。
+
+**调试输出故意不走这条路。**`-quest`、`-fort`、F12 那些是开发者文本，翻译它们等于让译者去渲染一条只有我会看的消息。
+
+> Galaxy 有 `StringToText` 而**没有 `TextToString`**。本地化字符串是单向的——一旦某个读数需要它，那一整行就得全程按 `text` 拼。`Debug_SayText` 就是为此存在的。
 
 ## 编辑器生成的脚本（AI 模块）
 

@@ -83,23 +83,62 @@ const int c_qHod3 = 14;
 const int c_qHod4 = 15;
 
 int[36] gvg_questGoal;
-string[36] gvg_questTitle;
+
+// String KEYS, not words. Everything a player reads lives in
+// src/strings/enUS.txt and arrives through StringExternal; see the note at the
+// top of that file for why inline English is a translation already lost.
+string[36] gvg_questTitleKey;
 
 // Whether the map can answer this task at all yet. False is not "hard", it is
 // "there is no channel": no Ordeals, no end-of-game hook, no zerg queen, or the
 // source document leaves the line blank.
 bool[36] gvg_questCountable;
 
-// The flavour half of a task's tooltip. Empty everywhere until somebody writes
-// it, because it is authored content and belongs to whoever writes usr/, not
-// to this file inventing lines for nine departments.
-string[36] gvg_questLore;
-
 // The one mechanical thing about a task a player could not work out by reading
-// its name. Empty for most.
-string[36] gvg_questNote;
+// its name. A key again, and a flag beside it because a localised string cannot
+// be tested for emptiness -- there is no TextToString, so "has a note" has to be
+// a fact the code states rather than one it discovers.
+string[36] gvg_questNoteKey;
+bool[36] gvg_questHasNote;
 
-// Flattened player * 36 + quest, sized for 16 players.
+//--------------------------------------------------------------------------------------------------
+// One task per game reaches the record. The rest are worth tonight only.
+//
+// A department's four are SEQUENTIAL: the second cannot be started until the
+// first is done. That plus one rule gives the whole progression:
+//
+//     the first task you have not yet RECORDED is the one this game can record.
+//     everything past it, you can still finish, and it pays only tonight.
+//
+// So a player holding Control Team with nothing recorded can bank Control 1 and
+// no more. Finishing it opens Control 2, which is worth playing for -- it pays
+// out now -- but comes back locked next game. Four games, four tasks, and every
+// one of them a night that was worth playing past the point it stopped counting.
+//
+// This is what decides main versus bonus in the panel, and it is why that split
+// could not be "challenge versus ordinary": the panel is showing the player
+// which half of tonight survives it.
+//
+//--------------------------------------------------------------------------------------------------
+// Recorded is a COUNT, not a set.
+//
+// Because the four are sequential, "which of them are done" is always a prefix,
+// and a prefix is one number. gvg_questSaved is that number per player per
+// department -- nine small ints a player, which is the entire persistent
+// footprint of the quest system.
+//
+// It only ever changes BETWEEN games. Within a game the recorded count is
+// fixed, which is what makes "the one bankable task" a constant index rather
+// than something that walks forward as you play, and removes the bug where
+// finishing the main task promotes the next one into being bankable too.
+//
+// Zero everywhere until 16_bank has a section for it; Quest_SetSaved is the
+// hook, and -quest saved N drives it by hand in the meantime.
+//--------------------------------------------------------------------------------------------------
+int[144] gvg_questSaved;
+
+// Completed during THIS game. Flattened player * 36 + quest, sized for 16
+// players. A task already in the record is not repeated here.
 bool[576] gvg_questDone;
 
 //--------------------------------------------------------------------------------------------------
@@ -126,18 +165,19 @@ bool[576] gvg_questDone;
 // identical to the one already there.
 //
 //--------------------------------------------------------------------------------------------------
-// Every department task is a MAIN objective.
+// Main is the record. Bonus is tonight.
 //
 // The engine's two sections are labelled "Main Objectives" and "Bonus
-// Objectives", and the line between them here is PERMANENT versus THIS EVENING
-// -- not challenge versus ordinary. Finishing a department task changes every
-// game after this one, so all four are main, the 挑战 one included. Tonight's
-// energy quota is the bonus objective, in 12_energy, because when the ship
-// leaves it is spent.
+// Objectives", and the line between them is not challenge versus ordinary. It
+// is what survives the game versus what does not:
 //
-// Which reads upside down until you say it out loud: the session is the
-// disposable half. Surviving the night is the price of having a record, not
-// the record.
+//   MAIN    the tasks already in your record, plus the ONE this game can add
+//   BONUS   everything you open past that, worth playing for and gone tomorrow,
+//           and tonight's energy quota (12_energy)
+//
+// So a player sees, before spending an evening on something, whether the
+// evening is the point or the thing after it is. That is a question the split
+// can answer and a "challenge/ordinary" split could not.
 //
 //--------------------------------------------------------------------------------------------------
 // There are two text fields, not three.
@@ -153,11 +193,16 @@ bool[576] gvg_questDone;
 //                        的任务数有关" -- not per task
 //   <lore>               authored, and empty everywhere until it is written
 //
-// An uncountable task is created Hidden. The panel is what a PLAYER reads, and
-// showing somebody a task that cannot be completed is worse than not showing
-// it; -quest is what a developer reads and still lists all thirty-six with
-// their reasons. When a missing system lands, flipping countable makes its
-// tasks appear, in one place.
+// A task that is not open yet is created Hidden and revealed by
+// Quest_Complete the moment the one in front of it ticks over, so the chain
+// shows itself rather than being explained.
+//
+// An uncountable BONUS task stays hidden -- the panel is what a player reads,
+// and a task the map cannot observe is noise there. An uncountable MAIN task is
+// shown anyway, because hiding it would make a stalled department look like a
+// finished one, which is the worse lie of the two; its tooltip says why it
+// cannot move. -quest is what a developer reads and lists all thirty-six either
+// way. When a missing system lands, flipping countable is the one change.
 //--------------------------------------------------------------------------------------------------
 int[64] gvg_questObj;
 int[64] gvg_questShown;
@@ -187,11 +232,11 @@ int Quest_Goal (int quest) {
     return gvg_questGoal[quest];
 }
 
-string Quest_Title (int quest) {
+text Quest_Title (int quest) {
     if (quest < 0 || quest >= c_questCount) {
-        return "";
+        return StringToText("");
     }
-    return gvg_questTitle[quest];
+    return StringExternal(gvg_questTitleKey[quest]);
 }
 
 bool Quest_IsCountable (int quest) {
@@ -201,11 +246,81 @@ bool Quest_IsCountable (int quest) {
     return gvg_questCountable[quest];
 }
 
+//--------------------------------------------------------------------------------------------------
+// How many of a department's four this player has in the record.
+//--------------------------------------------------------------------------------------------------
+int Quest_SavedOf (int player, int dept) {
+    if (player < 1 || player > 15 || dept < 0 || dept >= c_deptCount) {
+        return 0;
+    }
+    return gvg_questSaved[player * c_deptCount + dept];
+}
+
+void Quest_SetSaved (int player, int dept, int count) {
+    if (player < 1 || player > 15 || dept < 0 || dept >= c_deptCount) {
+        return;
+    }
+    if (count < 0) {
+        count = 0;
+    }
+    if (count > c_questPerDept) {
+        count = c_questPerDept;
+    }
+    gvg_questSaved[player * c_deptCount + dept] = count;
+}
+
+bool Quest_IsSaved (int player, int quest) {
+    if (quest < 0 || quest >= c_questCount) {
+        return false;
+    }
+    return Quest_NumberOf(quest) <= Quest_SavedOf(player, Quest_DeptOf(quest));
+}
+
 bool Quest_IsDone (int player, int quest) {
     if (player < 1 || player > 15 || quest < 0 || quest >= c_questCount) {
         return false;
     }
-    return gvg_questDone[player * c_questCount + quest];
+    return Quest_IsSaved(player, quest) || gvg_questDone[player * c_questCount + quest];
+}
+
+//--------------------------------------------------------------------------------------------------
+// The one task this game can put into the record: the first one that is not
+// already in it. -1 once a department is finished.
+//
+// Read off gvg_questSaved, which does not move during a game, so this is a
+// constant for the whole session however many tasks get finished.
+//--------------------------------------------------------------------------------------------------
+int Quest_MainOf (int player) {
+    int dept;
+    int saved;
+
+    dept = Dept_Of(player);
+    if (dept < 0 || dept >= c_deptCount) {
+        return -1;
+    }
+    saved = Quest_SavedOf(player, dept);
+    if (saved >= c_questPerDept) {
+        return -1;
+    }
+    return dept * c_questPerDept + saved;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a task can be worked on at all: the one before it has to be finished.
+//
+// Progress is NOT gated -- a counter that was already at four when the task
+// opened reads four. Only finishing is. Punishing a player for the order they
+// happened to do things is not what sequential means here; what it means is
+// that the record advances one step at a time.
+//--------------------------------------------------------------------------------------------------
+bool Quest_IsOpen (int player, int quest) {
+    if (quest < 0 || quest >= c_questCount) {
+        return false;
+    }
+    if (Quest_NumberOf(quest) == 1) {
+        return true;
+    }
+    return Quest_IsDone(player, quest - 1);
 }
 
 int Quest_DoneCount (int player) {
@@ -344,12 +459,14 @@ int Quest_ObjectiveOf (int player, int quest) {
 text Quest_NameText (int player, int quest) {
     string line;
 
-    line = gvg_questTitle[quest];
-    if (gvg_questCountable[quest]) {
-        line = line + "  (" + IntToString(Quest_Progress(player, quest))
-               + "/" + IntToString(gvg_questGoal[quest]) + ")";
+    if (!gvg_questCountable[quest]) {
+        return StringExternal(gvg_questTitleKey[quest]);
     }
-    return StringToText(line);
+    // The count is punctuation and digits in every language, so it is built
+    // here rather than being a format string somebody has to translate around.
+    return StringExternal(gvg_questTitleKey[quest])
+           + StringToText("  (" + IntToString(Quest_Progress(player, quest))
+                          + "/" + IntToString(gvg_questGoal[quest]) + ")");
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -358,29 +475,51 @@ text Quest_NameText (int player, int quest) {
 // The reward is stated as a COUNT because that is how the source keys it.
 // usr/department.md gives each department a passive whose strength is "与其已
 // 完成的任务数有关" -- four tiers against four tasks -- so which task you finish
-// does not decide what you get, only how many. Writing a per-task reward would
-// be inventing a rule the design does not have, and it is also what keeps this
-// string constant: order-independent, so it never needs refreshing.
+// does not decide what you get, only how many.
+//
+// The half that changes is whether finishing it is KEPT, and that depends on
+// where the task sits relative to the record, not on the task. Saying so
+// plainly is the whole reason the panel is split: a player should be able to
+// see, before spending an evening on something, whether the evening is the
+// point or the thing after it is.
 //--------------------------------------------------------------------------------------------------
-text Quest_DescText (int quest) {
-    string line;
+text Quest_DescText (int player, int quest) {
+    text line;
 
-    line = gvg_deptName[Quest_DeptOf(quest)] + " " + IntToString(Quest_NumberOf(quest))
-           + gvg_questNote[quest] + "<n/><n/>"
-           + "Reward: one more tier of your department's passive, from your "
-           + "NEXT game onward. Which task does not matter; how many do.";
-
-    if (gvg_questLore[quest] != "") {
-        line = line + "<n/><n/>" + gvg_questLore[quest];
+    line = StringExternal(gvg_deptNameKey[Quest_DeptOf(quest)])
+           + StringToText(" " + IntToString(Quest_NumberOf(quest)));
+    if (gvg_questHasNote[quest]) {
+        line = line + StringToText(" -- ") + StringExternal(gvg_questNoteKey[quest]);
     }
-    return StringToText(line);
+    line = line + StringToText("<n/><n/>");
+
+    if (quest == Quest_MainOf(player)) {
+        line = line + StringExternal("Lob/Quest/Reward/Main");
+    }
+    else if (Quest_IsSaved(player, quest)) {
+        line = line + StringExternal("Lob/Quest/Reward/Record");
+    }
+    else {
+        line = line + StringExternal("Lob/Quest/Reward/Bonus");
+    }
+
+    if (!gvg_questCountable[quest]) {
+        line = line + StringToText("<n/><n/>") + StringExternal("Lob/Quest/NoChannel");
+    }
+    return line;
 }
 
 //--------------------------------------------------------------------------------------------------
-// Marks one done, once.
+// Marks one done, once, and opens the one behind it.
+//
+// Revealing the next task here rather than on the tick is what makes the panel
+// read as a chain: the moment one ticks over, the next appears under Bonus
+// Objectives, and the player learns the rule by watching it happen instead of
+// by being told.
 //--------------------------------------------------------------------------------------------------
 void Quest_Complete (int player, int quest) {
     int obj;
+    int next;
 
     if (player < 1 || player > 15 || quest < 0 || quest >= c_questCount) {
         return;
@@ -398,9 +537,17 @@ void Quest_Complete (int player, int quest) {
         ObjectiveSetState(obj, c_objectiveStateCompleted);
     }
 
+    if (Quest_NumberOf(quest) < c_questPerDept) {
+        next = Quest_ObjectiveOf(player, quest + 1);
+        if (next != c_invalidObjectiveId && gvg_questCountable[quest + 1]) {
+            ObjectiveSetState(next, c_objectiveStateActive);
+        }
+    }
+
     UIDisplayMessage(
         PlayerGroupSingle(player), c_messageAreaSubtitle,
-        StringToText("task complete -- " + gvg_questTitle[quest]));
+        StringExternal("Lob/Quest/Complete") + StringToText(" ")
+        + StringExternal(gvg_questTitleKey[quest]));
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -413,7 +560,9 @@ void Quest_Publish (int player) {
     int dept;
     int quest;
     int state;
+    int main;
     int n;
+    bool primary;
 
     n = 0;
     while (n < c_questPerDept) {
@@ -430,26 +579,40 @@ void Quest_Publish (int player) {
         return;
     }
 
+    main = Quest_MainOf(player);
+
     n = 0;
     while (n < c_questPerDept) {
         quest = dept * c_questPerDept + n;
+
+        // Main is the record: everything already in it, plus the one task this
+        // game can add to it. Everything past that is bonus -- finishable
+        // tonight, gone tomorrow -- which is exactly what the engine's second
+        // section means.
+        primary = Quest_IsSaved(player, quest) || quest == main;
 
         state = c_objectiveStateActive;
         if (Quest_IsDone(player, quest)) {
             state = c_objectiveStateCompleted;
         }
-        else if (!gvg_questCountable[quest]) {
+        else if (!Quest_IsOpen(player, quest)) {
+            // Not yet reachable. Shown the moment the one before it is done, by
+            // Quest_Complete, so the chain reveals itself.
+            state = c_objectiveStateHidden;
+        }
+        else if (!gvg_questCountable[quest] && !primary) {
+            // A bonus task the map cannot observe is noise. The MAIN one is
+            // shown even when it cannot be finished, because hiding it would
+            // make a stalled department look like a finished one -- which is
+            // the worse lie of the two, and the tooltip says why.
             state = c_objectiveStateHidden;
         }
 
-        // Primary, all four. What earns that section is that finishing it
-        // survives the game, and the 挑战 one survives exactly as hard as the
-        // other three. The bonus section belongs to tonight's quota.
         gvg_questObj[player * c_questPerDept + n] = ObjectiveCreateForPlayers(
             Quest_NameText(player, quest),
-            Quest_DescText(quest),
+            Quest_DescText(player, quest),
             state,
-            true,
+            primary,
             PlayerGroupSingle(player));
         gvg_questShown[player * c_questPerDept + n] = Quest_Progress(player, quest);
 
@@ -495,7 +658,11 @@ bool Quest_Tick_Func (bool testConds, bool runActions) {
                 while (quest < dept * c_questPerDept + c_questPerDept) {
                     if (gvg_questCountable[quest] && !Quest_IsDone(player, quest)) {
                         now = Quest_Progress(player, quest);
-                        if (now >= gvg_questGoal[quest]) {
+                        // The chain: a task cannot finish before the one in
+                        // front of it, even when its counter is already full.
+                        // The counter still shows, so a player can see what
+                        // they have banked up against a task not yet open.
+                        if (now >= gvg_questGoal[quest] && Quest_IsOpen(player, quest)) {
                             Quest_Complete(player, quest);
                         }
                         else {
@@ -525,25 +692,19 @@ bool Quest_Tick_Func (bool testConds, bool runActions) {
 // uncountable, so the count of tasks per department stays four everywhere and
 // the unlock chain can be written against a shape that will not move.
 //--------------------------------------------------------------------------------------------------
-void Quest_Declare (int quest, int goal, bool countable, string title) {
+void Quest_Declare (int quest, int goal, bool countable, string titleKey) {
     gvg_questGoal[quest] = goal;
     gvg_questCountable[quest] = countable;
-    gvg_questTitle[quest] = title;
-    gvg_questNote[quest] = "";
-    gvg_questLore[quest] = "";
+    gvg_questTitleKey[quest] = titleKey;
+    gvg_questNoteKey[quest] = "";
+    gvg_questHasNote[quest] = false;
 }
 
 // The one mechanical thing about a task a player could not work out by reading
 // its name. Sits on the department line, above the reward.
-void Quest_Note (int quest, string note) {
-    gvg_questNote[quest] = " -- " + note;
-}
-
-// Flavour, last in the tooltip. Nothing calls this yet: the nine departments
-// have no written lore, and inventing it here would be authoring content in the
-// wrong place. The channel is open so that writing it is a one-line change.
-void Quest_Lore (int quest, string lore) {
-    gvg_questLore[quest] = lore;
+void Quest_Note (int quest, string noteKey) {
+    gvg_questNoteKey[quest] = noteKey;
+    gvg_questHasNote[quest] = true;
 }
 
 void Quests_Init () {
@@ -551,39 +712,69 @@ void Quests_Init () {
 
     i = 0;
     while (i < c_questCount) {
-        Quest_Declare(i, 0, false, "--");
+        Quest_Declare(i, 0, false, "");
+        i = i + 1;
+    }
+
+    // Nobody has a record yet. This is where 16_bank reads it in when it has a
+    // section for it -- nine small ints a player, because sequential tasks make
+    // "which are done" a prefix and a prefix is a count.
+    i = 0;
+    while (i < 15 * c_deptCount + c_deptCount) {
+        gvg_questSaved[i] = 0;
         i = i + 1;
     }
 
     // Control Team.
-    Quest_Declare(c_qMalkuth1, 2, true, "a cell running and a place fortified");
-    Quest_Declare(c_qMalkuth2, 4, true, "4 works ending Good");
-    Quest_Declare(c_qMalkuth3, 3, true, "3 meltdown rounds handled");
-    Quest_Declare(c_qMalkuth4, 1, false, "[challenge] survive a Dusk ordeal");
+    Quest_Declare(c_qMalkuth1, 2, true, "Lob/Quest/Title/Malkuth1");
+    Quest_Declare(c_qMalkuth2, 4, true, "Lob/Quest/Title/Malkuth2");
+    Quest_Declare(c_qMalkuth3, 3, true, "Lob/Quest/Title/Malkuth3");
+    Quest_Declare(c_qMalkuth4, 1, false, "Lob/Quest/Title/Malkuth4");
 
     // Information Team.
-    Quest_Declare(c_qYesod1, 3, true, "3 works completed");
-    Quest_Declare(c_qYesod2, 3, true, "observation 3 on any abnormality");
-    Quest_Declare(c_qYesod3, 2, true, "every line of your department at 2");
-    Quest_Declare(c_qYesod4, 4, true, "observation 4 on a WAW or above");
+    Quest_Declare(c_qYesod1, 3, true, "Lob/Quest/Title/Yesod1");
+    Quest_Declare(c_qYesod2, 3, true, "Lob/Quest/Title/Yesod2");
+    Quest_Declare(c_qYesod3, 2, true, "Lob/Quest/Title/Yesod3");
+    Quest_Declare(c_qYesod4, 4, true, "Lob/Quest/Title/Yesod4");
 
     // Safety Team. 2 and 3 are blank in the source document.
-    Quest_Declare(c_qNetzach1, 4, true, "4 levels of fortification");
-    Quest_Declare(c_qNetzach4, 1, false, "[challenge] finish with no death in your department");
+    Quest_Declare(c_qNetzach1, 4, true, "Lob/Quest/Title/Netzach1");
+    Quest_Declare(c_qNetzach1 + 1, 0, false, "Lob/Quest/Title/Netzach2");
+    Quest_Declare(c_qNetzach1 + 2, 0, false, "Lob/Quest/Title/Netzach3");
+    Quest_Declare(c_qNetzach4, 1, false, "Lob/Quest/Title/Netzach4");
 
     // Training Team.
-    Quest_Declare(c_qHod1, 2, true, "2 employees promoted");
-    Quest_Declare(c_qHod2, 1, true, "an employee at rank IV");
-    Quest_Declare(c_qHod3, 4, true, "4 distinct abnormalities suppressed");
-    Quest_Note(c_qHod3, "your teammates' suppressions count too");
-    Quest_Declare(c_qHod4, 1, false, "[challenge] finish with every employee at rank V");
+    Quest_Declare(c_qHod1, 2, true, "Lob/Quest/Title/Hod1");
+    Quest_Declare(c_qHod2, 1, true, "Lob/Quest/Title/Hod2");
+    Quest_Declare(c_qHod3, 4, true, "Lob/Quest/Title/Hod3");
+    Quest_Note(c_qHod3, "Lob/Quest/Note/Hod3");
+    Quest_Declare(c_qHod4, 1, false, "Lob/Quest/Title/Hod4");
+
+    // Central Command, Welfare, Record, Extraction: the source document lists
+    // no tasks at all for these, so they are titles and nothing else.
+    Quest_Declare(c_deptTiphereth * c_questPerDept + 0, 0, false, "Lob/Quest/Title/Tiphereth1");
+    Quest_Declare(c_deptTiphereth * c_questPerDept + 1, 0, false, "Lob/Quest/Title/Tiphereth2");
+    Quest_Declare(c_deptTiphereth * c_questPerDept + 2, 0, false, "Lob/Quest/Title/Tiphereth3");
+    Quest_Declare(c_deptTiphereth * c_questPerDept + 3, 0, false, "Lob/Quest/Title/Tiphereth4");
+    Quest_Declare(c_deptChesed * c_questPerDept + 0, 0, false, "Lob/Quest/Title/Chesed1");
+    Quest_Declare(c_deptChesed * c_questPerDept + 1, 0, false, "Lob/Quest/Title/Chesed2");
+    Quest_Declare(c_deptChesed * c_questPerDept + 2, 0, false, "Lob/Quest/Title/Chesed3");
+    Quest_Declare(c_deptChesed * c_questPerDept + 3, 0, false, "Lob/Quest/Title/Chesed4");
+    Quest_Declare(c_deptHokma * c_questPerDept + 0, 0, false, "Lob/Quest/Title/Hokma1");
+    Quest_Declare(c_deptHokma * c_questPerDept + 1, 0, false, "Lob/Quest/Title/Hokma2");
+    Quest_Declare(c_deptHokma * c_questPerDept + 2, 0, false, "Lob/Quest/Title/Hokma3");
+    Quest_Declare(c_deptHokma * c_questPerDept + 3, 0, false, "Lob/Quest/Title/Hokma4");
+    Quest_Declare(c_deptBinah * c_questPerDept + 0, 0, false, "Lob/Quest/Title/Binah1");
+    Quest_Declare(c_deptBinah * c_questPerDept + 1, 0, false, "Lob/Quest/Title/Binah2");
+    Quest_Declare(c_deptBinah * c_questPerDept + 2, 0, false, "Lob/Quest/Title/Binah3");
+    Quest_Declare(c_deptBinah * c_questPerDept + 3, 0, false, "Lob/Quest/Title/Binah4");
 
     // Disciplinary Team. Unlocks at ten tasks, so nothing here is reachable
     // yet, but the goals are the document's and only the channels are missing.
-    Quest_Declare(c_deptGeburah * c_questPerDept + 0, 1, false, "kill a zerg queen");
-    Quest_Declare(c_deptGeburah * c_questPerDept + 1, 5, false, "suppress 3 HE+ and 2 WAW+");
-    Quest_Declare(c_deptGeburah * c_questPerDept + 2, 3, false, "suppress 3 distinct Aleph");
-    Quest_Declare(c_deptGeburah * c_questPerDept + 3, 1, false, "[challenge] survive a Midnight ordeal");
+    Quest_Declare(c_deptGeburah * c_questPerDept + 0, 1, false, "Lob/Quest/Title/Geburah1");
+    Quest_Declare(c_deptGeburah * c_questPerDept + 1, 5, false, "Lob/Quest/Title/Geburah2");
+    Quest_Declare(c_deptGeburah * c_questPerDept + 2, 3, false, "Lob/Quest/Title/Geburah3");
+    Quest_Declare(c_deptGeburah * c_questPerDept + 3, 1, false, "Lob/Quest/Title/Geburah4");
 
     // After the table, because publishing reads it. Departments are dealt in
     // Departments_Init, which the build orders before this one.

@@ -1,0 +1,86 @@
+# Player-facing text.
+#
+# Every string a PLAYER can see lives here and is referenced from Galaxy by key,
+# never written inline. Inline English is a translation that has already been
+# lost: it cannot be found, cannot be handed to anybody, and the day a second
+# locale is wanted it turns into a hunt through twenty-six modules.
+#
+# Debug output is deliberately NOT here. -quest, -fort and the F12 tips are
+# developer text; localising them would be work spent so that a translator can
+# render a message only I will ever read.
+#
+# Format is GameStrings.txt's own: Key=Value, one per line, no spaces around the
+# equals sign. <n/> is a line break. tools/gen_strings.py merges these into
+# LobotomyShiphold.SC2Map/enUS.SC2Data/LocalizedData/GameStrings.txt, replacing
+# the whole Lob/ namespace and touching nothing else in that file.
+#
+#   this file        the enUS source, owned by the repo
+#   other locales    <locale>.SC2Data/LocalizedData/GameStrings.txt, owned by
+#                    the editor's Text Editor and never written by the build
+#
+# The build fails if Galaxy references a Lob/ key that is not here, so a typo is
+# a build error instead of a blank line in the objectives panel.
+
+# --- Departments -------------------------------------------------------------
+Lob/Dept/Name/Binah=Extraction Team
+Lob/Dept/Name/Chesed=Welfare Team
+Lob/Dept/Name/Geburah=Disciplinary Team
+Lob/Dept/Name/Hod=Training Team
+Lob/Dept/Name/Hokma=Record Team
+Lob/Dept/Name/Malkuth=Control Team
+Lob/Dept/Name/Netzach=Safety Team
+Lob/Dept/Name/Tiphereth=Central Command
+Lob/Dept/Name/Yesod=Information Team
+
+# --- Task titles -------------------------------------------------------------
+Lob/Quest/Title/Malkuth1=Run one containment cell and fortify one place
+Lob/Quest/Title/Malkuth2=Finish 4 works with a Good result
+Lob/Quest/Title/Malkuth3=Handle 3 meltdown rounds without losing one
+Lob/Quest/Title/Malkuth4=Survive a Dusk ordeal
+Lob/Quest/Title/Yesod1=Complete 3 works
+Lob/Quest/Title/Yesod2=Reach observation 3 on any abnormality
+Lob/Quest/Title/Yesod3=Raise every line of your department to 2
+Lob/Quest/Title/Yesod4=Reach observation 4 on a WAW or above
+Lob/Quest/Title/Netzach1=Buy 4 levels of fortification
+Lob/Quest/Title/Netzach2=(not written yet)
+Lob/Quest/Title/Netzach3=(not written yet)
+Lob/Quest/Title/Netzach4=Finish a game with no death in your department
+Lob/Quest/Title/Hod1=Promote 2 employees
+Lob/Quest/Title/Hod2=Raise an employee to rank IV
+Lob/Quest/Title/Hod3=Suppress 4 different abnormalities
+Lob/Quest/Title/Hod4=Finish a game with every employee at rank V
+Lob/Quest/Title/Tiphereth1=(not written yet)
+Lob/Quest/Title/Tiphereth2=(not written yet)
+Lob/Quest/Title/Tiphereth3=(not written yet)
+Lob/Quest/Title/Tiphereth4=(not written yet)
+Lob/Quest/Title/Chesed1=(not written yet)
+Lob/Quest/Title/Chesed2=(not written yet)
+Lob/Quest/Title/Chesed3=(not written yet)
+Lob/Quest/Title/Chesed4=(not written yet)
+Lob/Quest/Title/Geburah1=Kill a zerg queen
+Lob/Quest/Title/Geburah2=Suppress 3 HE or above and 2 WAW or above
+Lob/Quest/Title/Geburah3=Suppress 3 different Aleph
+Lob/Quest/Title/Geburah4=Survive a Midnight ordeal
+Lob/Quest/Title/Hokma1=(not written yet)
+Lob/Quest/Title/Hokma2=(not written yet)
+Lob/Quest/Title/Hokma3=(not written yet)
+Lob/Quest/Title/Hokma4=(not written yet)
+Lob/Quest/Title/Binah1=(not written yet)
+Lob/Quest/Title/Binah2=(not written yet)
+Lob/Quest/Title/Binah3=(not written yet)
+Lob/Quest/Title/Binah4=(not written yet)
+
+# --- Task notes --------------------------------------------------------------
+# The one mechanical thing about a task that its title cannot say.
+Lob/Quest/Note/Hod3=your teammates' suppressions count too
+
+# --- Task tooltips -----------------------------------------------------------
+Lob/Quest/Reward/Main=RECORDED. Finishing this adds a tier to your department's passive, from your next game onward -- and it is the only task this game can record.
+Lob/Quest/Reward/Record=Already in your record from an earlier game.
+Lob/Quest/Reward/Bonus=TONIGHT ONLY. Its reward lasts until the ship leaves. The record advances one task per game, and this game's is above.
+Lob/Quest/NoChannel=Not yet possible -- the system this task needs does not exist in the map.
+Lob/Quest/Complete=Task complete:
+
+# --- The session objective ---------------------------------------------------
+Lob/Objective/Energy/Name=Deliver the energy quota
+Lob/Objective/Energy/Desc=Every box a work produces pays into this and into that abnormality's encyclopedia, both in full. Studying them and getting out are the same activity.<n/><n/>Spent when the ship leaves, which is why it is a bonus objective and your department's tasks are not.

@@ -18,6 +18,7 @@ from pathlib import Path
 
 import gen_abnormalities
 import gen_objects
+import gen_strings
 
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "src" / "galaxy"
@@ -163,6 +164,10 @@ def main() -> int:
         print(f"  abnormality {e['id']}: {e['name']}")
     for note in notes:
         print(f"  ! {note}")
+
+    # Player-facing text last of the three, because the check it runs is against
+    # the Galaxy sources rather than against the map, so it wants them final.
+    gen_strings.main()
 
     # The editor wires its own generated scripts into MapScript.galaxy (an
     # include plus an init call). This build rewrites that file wholesale, so

@@ -62,8 +62,17 @@ const int c_tierAtziluth = 2;
 
 // Keyed by the Sephirot name, because that is what the upgrade ids are keyed by.
 string[9] gvg_deptKey;
-string[9] gvg_deptName;
 int[9] gvg_deptTier;
+
+// The English name, for DEBUG output only. Anything a player can see goes
+// through gvg_deptNameKey and src/strings/enUS.txt instead; a localised string
+// cannot be turned back into a Galaxy string (there is no TextToString), so the
+// developer-facing readouts keep a plain one rather than every debug line
+// having to be assembled as text.
+string[9] gvg_deptName;
+
+// The string key for the same thing, for anything a player reads.
+string[9] gvg_deptNameKey;
 
 int[16] gvg_deptOf;
 
@@ -314,6 +323,14 @@ void Departments_Init () {
     gvg_deptName[c_deptGeburah] = "Disciplinary";
     gvg_deptName[c_deptHokma] = "Record";
     gvg_deptName[c_deptBinah] = "Extraction";
+
+    // Built from the Sephirot key rather than written out nine more times, so a
+    // department cannot end up with a name key that does not match its id.
+    player = 0;
+    while (player < c_deptCount) {
+        gvg_deptNameKey[player] = "Lob/Dept/Name/" + gvg_deptKey[player];
+        player = player + 1;
+    }
 
     gvg_deptTier[c_deptMalkuth] = c_tierAsiyah;
     gvg_deptTier[c_deptYesod] = c_tierAsiyah;

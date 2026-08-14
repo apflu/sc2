@@ -55,9 +55,9 @@ void Energy_Refresh () {
         return;
     }
     ObjectiveSetName(gv_energyObj,
-                     StringToText("deliver the energy quota  ("
-                                  + IntToString(gv_energy) + "/"
-                                  + IntToString(gv_energyGoal) + ")"));
+                     StringExternal("Lob/Objective/Energy/Name")
+                     + StringToText("  (" + IntToString(gv_energy) + "/"
+                                    + IntToString(gv_energyGoal) + ")"));
 }
 
 void Energy_Add (int amount) {
@@ -150,12 +150,8 @@ void Energy_Init () {
     // to write to. Not per player: the pool is one number for the table, and
     // the panel should say so by being the same line in front of everybody.
     gv_energyObj = ObjectiveCreate(
-        StringToText("deliver the energy quota"),
-        StringToText("Every box a work produces pays into this and into that "
-                     + "abnormality's encyclopedia, both in full. Studying them "
-                     + "and getting out are the same activity.<n/><n/>"
-                     + "Spent when the ship leaves -- which is why it is a bonus "
-                     + "objective and your department's tasks are not."),
+        StringExternal("Lob/Objective/Energy/Name"),
+        StringExternal("Lob/Objective/Energy/Desc"),
         c_objectiveStateActive,
         false);
 

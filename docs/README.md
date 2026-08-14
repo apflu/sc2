@@ -19,6 +19,7 @@
 | 改任务计数、解锁 | [`design/systems/quests.md`](design/systems/quests.md) | |
 | 加一个异想体 | [`dev/authoring-contract.md`](dev/authoring-contract.md) 的「异想体的 per-type 数字」一节 + 抄一份 `usr/abnormality/*.md` | |
 | 改构建流程 | [`dev/pipeline.md`](dev/pipeline.md) | |
+| 写玩家能看到的文本 / 加一种语言 | [`dev/pipeline.md`](dev/pipeline.md) 的「玩家可见文本一律走 key」+ `src/strings/enUS.txt` | |
 
 ## 三份基础文档
 
