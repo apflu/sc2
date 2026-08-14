@@ -39,17 +39,38 @@ SC2 的 Repair 按单位自身 `Cost` 的一部分收费。所以"SCV 免费重�
 
 这和这个模块别处避免的"记账"不是一回事。**一本"哪些建好了"的账可以和世界不一致；一个单位句柄就是世界**，`UnitIsAlive` 替它回答。被换掉的不是账本，是**一个被当成身份用的描述**——而那个描述最后既配上了不止一个东西，又配不上全部。
 
-## 建筑是工人焊起来的，不是凭空出现的
+## 建筑走引擎的建造计时器
 
-`Fort_RaiseIfArrived` 立起壳子之后**立刻给那个工人下维修命令**。
+`Fort_Raise` 给建筑加 `c_unitCreateConstruct`（守军不加，守军是折跃进来的完成品）。之后是引擎在盖，工人立刻走向下一个点位。
 
-以前"到达"就只等于立壳子，于是工人站在一座 8% 血的建筑旁边、身上没有命令，一个 tick 之后调度器就把它送回去啃残骸了。而 Terran 建筑在 1/3 血以下会**自燃**——所以那座建筑是会自己烧掉的。
+第一版是"8% 血立起来，让工人修上去"。错在两处，第二处不是观点问题：
 
-**这里的维修命令就是建造。**当场下而不是交给调度器，也顺便定下了谁来干：**走过去的那个工人**，而不是下一秒恰好最近的那个。
+- **Repair 根本碰不到它。**`Repair` 的 `TargetFilters` 是 `Mechanical,Visible;Self,Enemy,Missile,UnderConstruction,Dead,Hidden`，分号后面是**排除项**——SCV 不被允许修一座没盖完的建筑。那条命令是被直接拒掉的。
+- **"更多 scv 让修建更快"从来不是指一座建筑。**它指的是**同时有好几个点位可以开工**：工人立起一座就走向下一座，于是**整批**更早完成。一座建筑就是一个计时器。
 
-（没有用 `c_unitCreateConstruct`：那是一个固定时长的自建计时器，工人加不了速，"更多的 scv 让修建更快"就没了。）
+顺带解决了一件事：**半成品不再自燃了。**Terran 建筑在 1/3 血以下会持续掉血，8% 在那条线以下，所以以前每一座工事一立起来就在慢慢烧死自己。
 
-`Fort_Damaged()` 现在遍历**槽位**而不是扫 `Lob_Turret_*`。所以塞一个 stock 单位进去测也照样会被修——类型扫描对它静默地返回空。
+### 在建 ≠ 建好
+
+`Fort_BuildingsComplete` 现在要求它**不在施工中**。否则守军会折跃进一个炮塔还是地基的房间，而且下一级会在这一级实际存在之前就可买。
+
+`Fort_Damaged()` 同理排除在建的——SCV 修不了它们，把它们列进维修队列只会让工人跑过去被拒。
+
+### 一座建筑多个 scv：那是安保部的升级
+
+liberty 战役的 `AdvancedConstruction` 就是这件事，而且它的形状对我们特别有利——**纯 EffectArray，一行脚本都不用**：
+
+```xml
+<CUpgrade id="AdvancedConstruction">
+    <EffectArray Operation="Set" Reference="Abil,BuildInProgress,MaxBuilders" Value="10"/>
+    <EffectArray Operation="Set" Reference="Abil,BuildInProgress,PowerBuildBonusRate" Value="0.6"/>
+    <EffectArray Operation="Set" Reference="Abil,BuildInProgress,PowerBuildCostFactor" Value="0.0"/>
+</CUpgrade>
+```
+
+`MaxBuilders` 1→10、每个额外工人加 60% 速度、额外工人不额外收费。这正是 `12_departments.galaxy` 那套升级机制预设的形状：**大多数效果是数据里的 EffectArray 行，不需要脚本**。做成 `Netzach_UpgN_L` 抄这三行就行。
+
+而且升级是逐玩家的，所以它天然不违反"不惩罚未犯错的玩家"。
 
 ## 编辑器侧：摆真的单位，被读一次然后删掉
 

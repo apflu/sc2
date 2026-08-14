@@ -7089,10 +7089,6 @@ const fixed c_fortBuildRange = 2.5;
 // worker cancel and go do something else, which a command queue then covers.
 const fixed c_fortEnemyRadius = 4.0;
 
-// What a building starts at, as a percent of its maximum. The rest is the
-// workers' job.
-const fixed c_fortStartLifePct = 8.0;
-
 // How far a garrison unit may drift from its post before being sent back.
 const fixed c_fortPostSlack = 2.0;
 
@@ -7261,6 +7257,16 @@ bool Fort_SlotFilled (int slot) {
     return Fort_OccupantOfSlot(slot) != null;
 }
 
+//--------------------------------------------------------------------------------------------------
+// Whether what is standing there is still going up.
+//--------------------------------------------------------------------------------------------------
+bool Fort_SlotBuilding (int slot) {
+    unit who;
+
+    who = Fort_OccupantOfSlot(slot);
+    return who != null && UnitTestState(who, c_unitStateUnderConstruction);
+}
+
 bool Fort_IsEnemyOf (unit who, int owner) {
     unitgroup one;
 
@@ -7294,8 +7300,12 @@ bool Fort_BuildingsComplete (int loc, int level) {
 
     slot = 0;
     while (slot < gv_slotCount) {
+        // Under construction is NOT complete. Counting it would warp the
+        // garrison into a room whose turrets are still holes in the ground, and
+        // make the next level buyable before this one exists.
         if (gvg_slotLoc[slot] == loc && !gvg_slotGuard[slot]
-            && gvg_slotLevel[slot] <= level && !Fort_SlotFilled(slot)) {
+            && gvg_slotLevel[slot] <= level
+            && (!Fort_SlotFilled(slot) || Fort_SlotBuilding(slot))) {
             return false;
         }
         slot = slot + 1;
@@ -7306,24 +7316,51 @@ bool Fort_BuildingsComplete (int loc, int level) {
 //--------------------------------------------------------------------------------------------------
 // Puts one position's occupant back on the map, facing the way it was placed.
 //--------------------------------------------------------------------------------------------------
-unit Fort_Raise (int slot, fixed lifePct) {
+//--------------------------------------------------------------------------------------------------
+// Puts the thing in the position.
+//
+// A BUILDING goes up under construction, on the engine's own build timer. A
+// GUARD warps in finished, because it is not built.
+//
+// Under construction rather than "at a sliver of life for a worker to repair",
+// which is what this did first. Two reasons, and the second is not an opinion:
+//
+//   Repair cannot touch it anyway. Repair's TargetFilters are
+//   "Mechanical,Visible;Self,Enemy,Missile,UnderConstruction,Dead,Hidden" and
+//   everything after the semicolon is excluded -- an SCV is not allowed to
+//   repair a building that is not finished. The order was being rejected.
+//
+//   "More SCVs build faster" was never about one building. It is about there
+//   being several positions to start at once: a worker puts one up, walks to
+//   the next, and the SET finishes sooner. One building has one timer, and
+//   liberty's AdvancedConstruction is what changes that -- see below.
+//
+// It also means a half-built emplacement no longer burns down. A Terran
+// structure under a third life takes fire damage, and 8% was under it, so
+// every emplacement started by quietly dying.
+//--------------------------------------------------------------------------------------------------
+unit Fort_Raise (int slot) {
     unit made;
     int owner;
+    int flags;
 
     owner = Fort_SlotOwner(slot);
     if (owner < 1 || owner > 15) {
         return null;
     }
 
-    UnitCreate(1, gvg_slotType[slot], c_unitCreateIgnorePlacement, owner,
+    flags = c_unitCreateIgnorePlacement;
+    if (!gvg_slotGuard[slot]) {
+        flags = flags | c_unitCreateConstruct;
+    }
+
+    UnitCreate(1, gvg_slotType[slot], flags, owner,
                gvg_slotAt[slot], gvg_slotFacing[slot]);
     made = UnitLastCreated();
-    if (made != null && lifePct > 0.0 && lifePct < 100.0) {
-        UnitSetPropertyFixed(made, c_unitPropLifePercent, lifePct);
-    }
     gvg_slotUnit[slot] = made;
     return made;
 }
+
 
 //--------------------------------------------------------------------------------------------------
 // Garrison arrival.
@@ -7342,7 +7379,7 @@ void Fort_SeedGarrison (int loc, int upTo, bool replaceOnly) {
         if (gvg_slotLoc[slot] == loc && gvg_slotGuard[slot] && lvl <= upTo
             && (!replaceOnly || gvg_locSeeded[loc * 4 + lvl])
             && !Fort_SlotFilled(slot)) {
-            Fort_Raise(slot, 100.0);
+            Fort_Raise(slot);
         }
         slot = slot + 1;
     }
@@ -7470,20 +7507,10 @@ void Fort_RaiseIfArrived (unit worker, int slot) {
         return;
     }
 
-    made = Fort_Raise(slot, c_fortStartLifePct);
-    if (made == null) {
-        return;
-    }
-
-    // And then it BUILDS it. Putting the shell up used to be the whole of
-    // arriving, which left a worker standing next to a building at 8% life with
-    // no order, and the dispatcher sent it back to its debris a tick later.
-    //
-    // The repair order IS the construction here. Ordering it now rather than
-    // leaving it to the dispatcher also settles who does it: the worker that
-    // walked over, not whichever one happens to be nearest next second.
-    UnitIssueOrder(worker, OrderTargetingUnit(AbilityCommand("Repair", 0), made),
-                   c_orderQueueReplace);
+    // And then the worker is free. It started this one; the engine finishes it,
+    // and the worker walks to the next position -- which is the whole of "more
+    // SCVs build faster" and the reason it is not a per-building speed.
+    Fort_Raise(slot);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -7513,7 +7540,7 @@ unitgroup Fort_Damaged () {
     while (slot < gv_slotCount) {
         if (!gvg_slotGuard[slot]) {
             who = Fort_OccupantOfSlot(slot);
-            if (who != null
+            if (who != null && !Fort_SlotBuilding(slot)
                 && UnitGetPropertyFixed(who, c_unitPropLifePercent, true) < 100.0) {
                 UnitGroupAdd(found, who);
             }
