@@ -8939,9 +8939,10 @@ int gv_ordealNextLevel;
 int gv_ordealNextTier;
 string gv_ordealNextType;
 
-// The meltdown level this module has already reacted to, so a level is not
-// answered twice.
-int gv_ordealSeenLevel;
+// The meltdown level each tier arrives at, drawn once at init from that tier's
+// range, and whether it has already happened. One Ordeal per tier per game.
+int[4] gvg_ordealAtLevel;
+bool[4] gvg_ordealSpent;
 
 int gv_ordealObj;
 
@@ -8976,33 +8977,34 @@ int Ordeal_BeatenAtLeast (int tier) {
 }
 
 //--------------------------------------------------------------------------------------------------
-// Which tier a meltdown level calls for, before the difficulty ceiling.
-// -1 for a level that calls for none.
+// The meltdown levels a tier is allowed to arrive at.
+//
+//   Dawn      2
+//   Noon      3, 4, 5
+//   Dusk      6, 7
+//   Midnight  8
+//
+// A RANGE, not a set of separate occasions. Each tier happens exactly once in a
+// game and the level inside its range is drawn at init, which is why the whole
+// schedule can be announced before it starts. Reading the ranges as "every level
+// in them" gave three Noons and then a Midnight at every level from 8 upward,
+// and an Ordeal that keeps coming back is not an escalation, it is a wave timer
+// wearing an Ordeal's name.
 //--------------------------------------------------------------------------------------------------
-int Ordeal_TierForLevel (int level) {
-    if (level < 2) {
-        return -1;
-    }
-    if (level == 2) {
-        return c_ordealDawn;
-    }
-    if (level <= 5) {
-        return c_ordealNoon;
-    }
-    if (level <= 7) {
-        return c_ordealDusk;
-    }
-    return c_ordealMidnight;
+int Ordeal_LevelMin (int tier) {
+    if (tier == c_ordealDawn) { return 2; }
+    if (tier == c_ordealNoon) { return 3; }
+    if (tier == c_ordealDusk) { return 6; }
+    if (tier == c_ordealMidnight) { return 8; }
+    return 0;
 }
 
-int Ordeal_TierAtLevel (int level) {
-    int tier;
-
-    tier = Ordeal_TierForLevel(level);
-    if (tier > Diff_OrdealCap()) {
-        return Diff_OrdealCap();
-    }
-    return tier;
+int Ordeal_LevelMax (int tier) {
+    if (tier == c_ordealDawn) { return 2; }
+    if (tier == c_ordealNoon) { return 5; }
+    if (tier == c_ordealDusk) { return 7; }
+    if (tier == c_ordealMidnight) { return 8; }
+    return 0;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -9103,23 +9105,35 @@ void Ordeal_Refresh () {
 }
 
 //--------------------------------------------------------------------------------------------------
-// Rolls the one after this, and tells everybody.
+// Picks the next tier that has not happened yet, and tells everybody.
 //
 // Called after each Ordeal is dispatched rather than when it is defeated, so
-// the warning is as early as it can possibly be. An Ordeal that is announced
-// while it is already walking down the corridor is not a warning.
+// the warning is as early as it can possibly be. An Ordeal announced while it
+// is already walking down the corridor is not a warning.
+//
+// Difficulty SKIPS rather than clamps. On Casual the night has one Ordeal in it
+// and then no more -- clamping instead would have meant a Dawn at every level
+// forever, which is not a gentler night, it is a longer one.
 //--------------------------------------------------------------------------------------------------
-void Ordeal_ScheduleAfter (int level) {
-    int at;
+void Ordeal_ScheduleNext () {
+    int tier;
 
-    at = level + 1;
-    if (at < 2) {
-        at = 2;
+    gv_ordealNextTier = -1;
+    gv_ordealNextType = "";
+    gv_ordealNextLevel = 0;
+
+    tier = 0;
+    while (tier < c_diffCount) {
+        if (!gvg_ordealSpent[tier] && tier <= Diff_OrdealCap()) {
+            gv_ordealNextTier = tier;
+            gv_ordealNextLevel = gvg_ordealAtLevel[tier];
+            gv_ordealNextType = Ordeal_Draw(tier);
+            tier = c_diffCount;
+        }
+        else {
+            tier = tier + 1;
+        }
     }
-
-    gv_ordealNextLevel = at;
-    gv_ordealNextTier = Ordeal_TierAtLevel(at);
-    gv_ordealNextType = Ordeal_Draw(gv_ordealNextTier);
 
     Ordeal_Refresh();
 
@@ -9292,18 +9306,22 @@ bool Ordeal_Tick_Func (bool testConds, bool runActions) {
         return true;
     }
 
+    // Not "the level changed" but "the level has reached it". A tier whose
+    // level went by while an earlier Ordeal was still being fought is late
+    // rather than cancelled, and arrives the moment the corridor is clear.
     level = Melt_Level();
-    if (level > gv_ordealSeenLevel) {
-        gv_ordealSeenLevel = level;
-        if (level >= gv_ordealNextLevel && Ordeal_TierForLevel(level) >= 0) {
-            Ordeal_Begin(Ordeal_TierAtLevel(level), gv_ordealNextType);
-            Ordeal_ScheduleAfter(level);
-        }
+    if (gv_ordealNextTier >= 0 && gv_ordealNextType != ""
+        && level >= gv_ordealNextLevel) {
+        gvg_ordealSpent[gv_ordealNextTier] = true;
+        Ordeal_Begin(gv_ordealNextTier, gv_ordealNextType);
+        Ordeal_ScheduleNext();
     }
     return true;
 }
 
 void Ordeals_Init () {
+    int tier;
+
     // TUNING is not the word: these four are from the design directly, 10 / 15 /
     // 20 / 25 percent of the energy target by tier.
     gvg_ordealRewardPct[c_ordealDawn] = 10;
@@ -9315,7 +9333,15 @@ void Ordeals_Init () {
     gv_ordealCount = 0;
     gv_ordealKilled = 0;
     gv_ordealType = "";
-    gv_ordealSeenLevel = Melt_Level();
+
+    // Where in its range each tier lands, drawn once so the whole night's
+    // schedule exists before the first minute of it does.
+    tier = 0;
+    while (tier < c_diffCount) {
+        gvg_ordealAtLevel[tier] = RandomInt(Ordeal_LevelMin(tier), Ordeal_LevelMax(tier));
+        gvg_ordealSpent[tier] = false;
+        tier = tier + 1;
+    }
 
     gvg_ordealBeaten[c_ordealDawn] = 0;
     gvg_ordealBeaten[c_ordealNoon] = 0;
@@ -9331,7 +9357,7 @@ void Ordeals_Init () {
     // The first warning goes out before anything has happened, which is the
     // point: the players should walk into meltdown 1 already knowing what
     // meltdown 2 brings.
-    Ordeal_ScheduleAfter(1);
+    Ordeal_ScheduleNext();
 
     gt_ordealTick = TriggerCreate("Ordeal_Tick_Func");
     TriggerAddEventTimePeriodic(gt_ordealTick, c_ordealTick, c_timeGame);
@@ -11077,30 +11103,57 @@ void Debug_ReportCells (int player) {
 }
 
 //--------------------------------------------------------------------------------------------------
-// -ordeal | -ordeal now
+// -ordeal | -ordeal now | -ordeal dawn|noon|dusk|midnight
 //
-// The pool per tier, what is coming, and what is standing. Waiting for meltdown
-// level 8 to find out whether a Midnight spawns is not a test, so "now" starts
-// the scheduled one where it stands.
+// The pool per tier, what is coming, and what is standing.
+//
+// "now" runs the SCHEDULED one early and consumes it, which is the real path
+// through the system. A tier name runs one of that tier out of band and does
+// NOT consume the schedule -- it is how a Midnight gets looked at without a
+// game that has reached meltdown 8, and how a tier the difficulty has skipped
+// gets tested at all.
 //--------------------------------------------------------------------------------------------------
 string Debug_OrdealTier (int tier) {
     return Diff_OrdealName(tier) + " " + IntToString(Ordeal_PoolSize(tier)) + " type(s)";
+}
+
+int Debug_OrdealTierFromWord (string word) {
+    if (StringEqual(word, "dawn", false)) { return c_ordealDawn; }
+    if (StringEqual(word, "noon", false)) { return c_ordealNoon; }
+    if (StringEqual(word, "dusk", false)) { return c_ordealDusk; }
+    if (StringEqual(word, "midnight", false) || StringEqual(word, "mid", false)) {
+        return c_ordealMidnight;
+    }
+    return -1;
 }
 
 void Debug_Ordeal (int player, string word) {
     string line;
     int tier;
 
-    if (StringEqual(word, "now", false)) {
-        if (gv_ordealActive) {
-            Debug_Say(player, "ordeal: one is already running");
-        }
-        else if (gv_ordealNextType == "") {
-            Debug_Say(player, "ordeal: nothing scheduled -- that tier has no units yet");
+    tier = Debug_OrdealTierFromWord(word);
+
+    if (gv_ordealActive && (tier >= 0 || StringEqual(word, "now", false))) {
+        Debug_Say(player, "ordeal: one is already running");
+    }
+    else if (tier >= 0) {
+        if (Ordeal_PoolSize(tier) == 0) {
+            Debug_Say(player, "ordeal: no " + Diff_OrdealName(tier) + " units authored");
         }
         else {
-            Ordeal_Begin(Ordeal_TierAtLevel(gv_ordealNextLevel), gv_ordealNextType);
-            Ordeal_ScheduleAfter(gv_ordealNextLevel);
+            // Out of band on purpose: the schedule is untouched, so the real
+            // one still arrives at its own level afterwards.
+            Ordeal_Begin(tier, Ordeal_Draw(tier));
+        }
+    }
+    else if (StringEqual(word, "now", false)) {
+        if (gv_ordealNextType == "") {
+            Debug_Say(player, "ordeal: nothing scheduled -- no tier left within the cap");
+        }
+        else {
+            gvg_ordealSpent[gv_ordealNextTier] = true;
+            Ordeal_Begin(gv_ordealNextTier, gv_ordealNextType);
+            Ordeal_ScheduleNext();
         }
     }
 
@@ -11108,6 +11161,22 @@ void Debug_Ordeal (int player, string word) {
     tier = 0;
     while (tier < c_diffCount) {
         line = line + "  " + Debug_OrdealTier(tier);
+        tier = tier + 1;
+    }
+    Debug_Say(player, line);
+
+    // The whole night's schedule, drawn at init. A spent tier will not come
+    // back and a tier above the cap will never come at all.
+    line = "ordeal schedule:";
+    tier = 0;
+    while (tier < c_diffCount) {
+        line = line + "  " + Diff_OrdealName(tier) + "@" + IntToString(gvg_ordealAtLevel[tier]);
+        if (tier > Diff_OrdealCap()) {
+            line = line + "(capped)";
+        }
+        else if (gvg_ordealSpent[tier]) {
+            line = line + "(done)";
+        }
         tier = tier + 1;
     }
     Debug_Say(player, line);
@@ -11122,15 +11191,20 @@ void Debug_Ordeal (int player, string word) {
         return;
     }
 
-    line = "ordeal next at melt " + IntToString(gv_ordealNextLevel)
-           + " (" + Diff_OrdealName(gv_ordealNextTier) + "): ";
-    if (gv_ordealNextType == "") {
-        line = line + "NOTHING -- no units authored for that tier";
+    if (gv_ordealNextTier < 0) {
+        Debug_Say(player, "ordeal next: NONE -- every tier within the cap has happened");
     }
     else {
-        line = line + gv_ordealNextType;
+        line = "ordeal next at melt " + IntToString(gv_ordealNextLevel)
+               + " (" + Diff_OrdealName(gv_ordealNextTier) + "): ";
+        if (gv_ordealNextType == "") {
+            line = line + "NOTHING -- no units authored for that tier";
+        }
+        else {
+            line = line + gv_ordealNextType;
+        }
+        Debug_Say(player, line);
     }
-    Debug_Say(player, line);
     Debug_Say(player, "ordeal beaten: dusk+ " + IntToString(Ordeal_BeatenAtLeast(c_ordealDusk))
                       + "  midnight " + IntToString(Ordeal_BeatenAtLeast(c_ordealMidnight)));
 }
@@ -11885,13 +11959,17 @@ void Debug_BuildHelp () {
 
     Debug_Tip(
         "Ordeals",
-        "<c val=\"ffff8a\">-ordeal</c>  what is coming, at which meltdown level, and "
+        "<c val=\"ffff8a\">-ordeal</c>  the whole night's schedule, what is coming, and "
         + "how many types each tier has to draw from.<n/>"
-        + "<c val=\"ffff8a\">-ordeal now</c>  start the scheduled one immediately.<n/><n/>"
-        + "Every meltdown level from the second brings one: 2 is a Dawn, 3 to 5 a "
-        + "Noon, 6 and 7 a Dusk, 8 and beyond a Midnight. Your difficulty is a "
-        + "ceiling on the tier, not a schedule -- on Casual they keep coming and "
-        + "never get worse than a Dawn.<n/><n/>"
+        + "<c val=\"ffff8a\">-ordeal now</c>  run the scheduled one early; it is used up.<n/>"
+        + "<c val=\"ffff8a\">-ordeal dawn|noon|dusk|midnight</c>  run one out of band, "
+        + "leaving the schedule alone.<n/><n/>"
+        + "FOUR in a night, one per tier: a Dawn at meltdown 2, a Noon somewhere "
+        + "in 3 to 5, a Dusk in 6 or 7, a Midnight at 8. Which level inside each "
+        + "range is drawn when the game starts, so the schedule exists before the "
+        + "first minute of it does.<n/><n/>"
+        + "Difficulty SKIPS the tiers above it rather than weakening them. On "
+        + "Casual the night has one Ordeal in it and then none.<n/><n/>"
         + "You are always told which one is next before it lands, because a "
         + "surprise cannot be prepared for and preparing is the whole game.<n/><n/>"
         + "One entity per department. Suppressing all of them pays 10 / 15 / 20 / "
