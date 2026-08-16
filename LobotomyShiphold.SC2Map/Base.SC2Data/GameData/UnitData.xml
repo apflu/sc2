@@ -277,12 +277,14 @@
         <BehaviorArray index="0" Link="Lob_Pile_Ore"/>
         <EditorCategories value="ObjectType:Resource,ObjectFamily:Campaign"/>
     </CUnit>
-    <!-- Where miners take it. Native harvest needs a drop-off or it has nowhere
-         to carry to; this is the recycler in baseline 4.4, and putting it in the
-         inner room is what gives the haul a length worth caring about. -->
+    <!-- Where miners take it. Native harvest needs a drop-off or it has nowhere-->
+    <!--         to carry to; this is the recycler in baseline 4.4, and putting it in the-->
+    <!--         inner room is what gives the haul a length worth caring about. -->
     <CUnit id="Lob_Recycler_Basic" parent="Lob_Device_Basic">
-        <Food value="0"/>
+        <Name value="Unit/Name/Lob_Recycler_Basic"/>
+        <Description value="Button/Tooltip/Lob_Recycler_Basic"/>
         <ResourceDropOff index="Minerals" value="1"/>
+        <Food value="0"/>
         <EditorCategories value="ObjectType:Structure,ObjectFamily:Campaign"/>
     </CUnit>
     <!-- The rest hall core. Baseline 3.2 lists it as inner-layer content, and

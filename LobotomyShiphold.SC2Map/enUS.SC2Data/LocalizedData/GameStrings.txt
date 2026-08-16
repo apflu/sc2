@@ -49,6 +49,7 @@ Button/Tooltip/Lob_Ordeal_Dawn_Crimson=Cheers for the Beginning.<n/><n/>Let us l
 Button/Tooltip/Lob_Ordeal_Dawn_Green=Doubt.<n/><n/>One day, a question crossed through my mind. Where do we come from? We were given life and left in this world against our own volition.
 Button/Tooltip/Lob_Ordeal_Dawn_Violet=The Fruit of Understanding.<n/><n/>To gain an understanding of what is incomprehensible, they dream, staring.
 Button/Tooltip/Lob_Ordeal_Noon_Amber=The Perfect Food.<n/><n/>A perfect meal, an excellent substitute.
+Button/Tooltip/Lob_Recycler_Basic=
 Button/Tooltip/Lob_SCV_Miner=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
 Button/Tooltip/Lob_SCV_Unassigned=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
 Button/Tooltip/Lob_SCV_Unassigned2=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
