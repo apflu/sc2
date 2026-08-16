@@ -1,4 +1,7 @@
 ﻿Abil/Name/Interact=Work
+Abil/Name/Lob_Build=Worker fort build
+Abil/Name/Lob_Fire_Turret_Burrow=Lob_Fire_Turret_Burrow
+Abil/Name/Lob_Fire_Turret_Unburrow=Lob_Fire_Turret_Unburrow
 Abil/Name/Lob_Obs_1=Basic Information
 Abil/Name/Lob_Obs_2=Work Preferences
 Abil/Name/Lob_Obs_3=Management Tips
@@ -36,6 +39,8 @@ Button/Tooltip/Lob_Debug_Haste=Debug only. 10x attack speed, 2x move speed, 10 m
 Button/Tooltip/Lob_DeviceDown_Basic=Offline. Off the power grid until repaired. Cannot be attacked while down.
 Button/Tooltip/Lob_Device_Basic=Contains upgrades for Terran infantry and structures. <n/><n/><c val="ffff8a">Enables:</c><n/>- Missile Turrets from SCVs<n/>- Sensor Towers from SCVs<n/>- Planetary Fortresses from Command Centers
 Button/Tooltip/Lob_Emp_Basic=An employee. Send them to work an abnormality; the four stats grow from the work itself.<n/><n/><c val="ffff8a">They do not come back.</c>
+Button/Tooltip/Lob_Fire_Turret=Automated defensive turret. Burrows when there are no enemies nearby.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
+Button/Tooltip/Lob_Fire_Turret_Underground=Automated defensive turret. Burrows when there are no enemies nearby.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
 Button/Tooltip/Lob_Hero_Agent=Your character. Clears debris, repairs devices, and holds the line -- one pair of hands for all three.
 Button/Tooltip/Lob_Obs_1=Not yet observed.
 Button/Tooltip/Lob_Obs_2=Not yet observed.
@@ -183,6 +188,8 @@ Unit/Name/Lob_Debris_Normal=Lob_Debris_Normal
 Unit/Name/Lob_DeviceDown_Basic=Lob_DeviceDown_Basic (offline)
 Unit/Name/Lob_Device_Basic=Lob_Device_Basic
 Unit/Name/Lob_Emp_Basic=Employee
+Unit/Name/Lob_Fire_Turret=Lob_Fire_Turret
+Unit/Name/Lob_Fire_Turret_Underground=Lob_Fire_Turret_Underground
 Unit/Name/Lob_Hero_Agent=Agent
 Unit/Name/Lob_Marker_Spawn=Lob_Marker_Spawn
 Unit/Name/Lob_Pile_Ore=Salvage Pile

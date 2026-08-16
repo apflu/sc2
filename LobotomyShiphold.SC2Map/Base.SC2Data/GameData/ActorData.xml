@@ -503,4 +503,34 @@
             <Image value="Assets\Textures\Wireframe-critter-utilitybot.dds"/>
         </Wireframe>
     </CActorUnit>
+    <CActorUnit id="Lob_Fire_Turret" parent="TerranBuilding" unitName="Lob_Fire_Turret">
+        <Aliases value="_UnitLarge"/>
+        <On Terms="UnitBirth.PerditionTurretUnderground" Send="Create"/>
+        <On Terms="UnitBirth.PerditionTurretUnderground" Send="AnimGroupApply Burrow Burrow Unburrow ClosingFull,Instant"/>
+        <On Terms="AbilMorph.*.Start; MorphTo PerditionTurretUnderground" Send="AnimGroupApply Burrow Burrow Unburrow ClosingFull"/>
+        <On Terms="AbilMorph.*.Start; MorphTo PerditionTurret" Send="AnimGroupRemove Burrow"/>
+        <On Terms="UnitDeathCustomize; ValidateUnit IsBuried" Send="DeathCustomize Burrowed"/>
+        <Model value="PerditionTurret"/>
+        <BuildModel value="PerditionTurret"/>
+        <DeathArray index="Normal" ModelLink="PerditionTurretDeath" SoundLink="PerditionTurret_Explode"/>
+        <DeathArray index="UnderConstruction" ModelLink="TerranBuildingDeath" SoundLink="PerditionTurret_Explode"/>
+        <DeathCustoms ModelLink="TerranBuildingDeath" SoundLink="Terran_ExplosionMedium" Name="Burrowed"/>
+        <PlacementModel value="PerditionTurretPlacement"/>
+        <PlacementSound value="Terran_BuildingPlacement"/>
+        <PlacementActorModel value="PerditionTurretPlacementModel"/>
+        <PortraitModel value="AdjutantPortrait"/>
+        <BarOffset value="75"/>
+        <BarWidth value="85"/>
+        <GroupIcon>
+            <Image value="Assets\Textures\Wireframe-terran-PerditionTurret.dds"/>
+        </GroupIcon>
+        <HeroIcon value="Assets\Textures\BTN-Unit-Terran-PerditionTurret.dds"/>
+        <LifeArmorIcon value="Assets\Textures\btn-upgrade-terran-buildingarmor.dds"/>
+        <SoundArray index="What" value="PerditionTurret_What"/>
+        <SoundArray index="Construction" value="Terran_ConstructionWhat"/>
+        <UnitIcon value="Assets\Textures\BTN-Unit-Terran-PerditionTurret.dds"/>
+        <Wireframe>
+            <Image value="Assets\Textures\Wireframe-terran-PerditionTurret.dds"/>
+        </Wireframe>
+    </CActorUnit>
 </Catalog>
