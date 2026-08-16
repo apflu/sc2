@@ -39,6 +39,21 @@ include "TriggerLibs/NativeLib"
 """
 
 
+def blanked(text: str) -> str:
+    """The script with comments and string literals replaced by spaces.
+
+    Length-preserving on purpose. Deleting them instead shifts every offset
+    after the first comment, and these guards report line numbers -- one that
+    points at the wrong line is worse than no guard, because it sends you to
+    read a line that is fine.
+    """
+    def spaces(m: re.Match) -> str:
+        return " " * len(m.group(0))
+
+    text = re.sub(r"//[^\n]*", spaces, text)
+    return re.sub(r'"(\\.|[^"\\\n])*"', spaces, text)
+
+
 DEF_RE = re.compile(
     r"^(?:void|bool|int|fixed|string|unit|unitgroup|point|region|text|order|timer|trigger|"
     r"playergroup|abilcmd|actor|bank|color|doodad|sound|wave)\s+(\w+)\s*\(", re.M)
@@ -60,7 +75,7 @@ def check_forward_refs(text: str) -> None:
     that does not exist at all -- which is a different mistake, and one the
     compiler names clearly.
     """
-    stripped = re.sub(r"//[^\n]*", "", text)
+    stripped = blanked(text)
 
     # Where each function's name appears in its own definition. Both passes run
     # over the same stripped text so the offsets are comparable, and the
@@ -153,7 +168,7 @@ def check_globals(text: str) -> None:
     to be here. It only knows the gv_/gvg_ prefixes, which is exactly the
     convention this project uses for globals and never for anything else.
     """
-    stripped = re.sub(r"//[^\n]*", "", text)
+    stripped = blanked(text)
     declared = set(GLOBAL_DECL_RE.findall(stripped))
 
     bad = {}
@@ -168,6 +183,50 @@ def check_globals(text: str) -> None:
             "next used, which is rarely the line you need:\n"
             + "\n".join(f"  MapScript.galaxy line {line}: {name}"
                          for name, line in sorted(bad.items())))
+
+
+KNOWN_CALLS = ROOT / "tools" / "known_calls.txt"
+KEYWORDS = {"if", "while", "for", "return", "else", "do", "switch", "break", "continue"}
+
+
+def check_calls(text: str) -> None:
+    """Refuse to emit a script that calls a function nobody defines.
+
+    This is what deleting a function leaves behind, and it is the one hole
+    check_forward_refs cannot cover: that guard compares a call against a
+    DEFINITION, so a call to something with no definition anywhere looks
+    exactly like a call to a native.
+
+    Fort_JobFor was deleted during a rework while its caller in 30_workers
+    stayed, and Galaxy answered "Syntax error" at the call site -- a fourth
+    unhelpful message for a fourth cause, and one that reads like a typo in
+    the line rather than an absence somewhere else.
+
+    The permitted set is our own definitions plus tools/known_calls.txt, which
+    is harvested from the natives and trigger libraries a map may actually
+    call. The list errs wide on purpose: a false positive stops a build that
+    would have worked, which is worse than missing one exotic call.
+    """
+    if not KNOWN_CALLS.is_file():
+        return
+
+    known = {n for n in KNOWN_CALLS.read_text(encoding="utf-8").split() if n}
+    stripped = blanked(text)
+    known.update(DEF_RE.findall(stripped))
+
+    bad = {}
+    for m in CALL_RE.finditer(stripped):
+        name = m.group(1)
+        if name not in known and name not in KEYWORDS:
+            bad.setdefault(name, text.count("\n", 0, m.start(1)) + 1)
+
+    if bad:
+        raise SystemExit(
+            "call to a function that is defined nowhere -- usually the far side\n"
+            'of a deletion. Galaxy reports this as "Syntax error" at the call\n'
+            "site, which reads like the line itself is malformed:\n"
+            + "\n".join(f"  MapScript.galaxy line {line}: {name}"
+                        for name, line in sorted(bad.items(), key=lambda kv: kv[1])))
 
 
 def main() -> int:
@@ -251,6 +310,7 @@ def main() -> int:
 
     check_type_names("".join(parts))
     check_globals("".join(parts))
+    check_calls("".join(parts))
     check_forward_refs("".join(parts))
     OUT.write_text("".join(parts), encoding="utf-8")
 

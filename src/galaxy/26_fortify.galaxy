@@ -348,9 +348,6 @@ bool Fort_BuildingsComplete (int loc, int level) {
 }
 
 //--------------------------------------------------------------------------------------------------
-// Puts one position's occupant back on the map, facing the way it was placed.
-//--------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------
 // Putting a thing in a position, which is two different jobs.
 //
 // A GUARD is conjured whole. It is not built, it warps in, and UnitCreate is
@@ -527,15 +524,52 @@ bool Fort_Upgrade (int player, int loc) {
 }
 
 //--------------------------------------------------------------------------------------------------
-// What a worker should be doing about fortifications, or -1.
+// Which emplacement a worker should go build, or -1.
 //
 // Asked by 30_workers before it considers devices or debris, which is the
 // ordering docs/usr/Defense.md gives: a worker clears debris when it has nothing
 // else to do.
-
+//
+// Nearest wins, so a worker does not walk past a hole to reach another one.
+//
+// A position is a job only if its level has been PAID FOR. gvg_slotLevel is
+// what the position needs; gvg_locLevel is what the location has bought. An
+// unbought position is not late, it does not exist yet.
 //--------------------------------------------------------------------------------------------------
-// A worker that has arrived puts the building up, at a sliver of life. Repair
-// does the rest, which is what makes worker count the build speed.
+int Fort_JobFor (unit worker) {
+    point where;
+    fixed best;
+    fixed d;
+    int found;
+    int slot;
+
+    if (worker == null) {
+        return -1;
+    }
+
+    where = UnitGetPosition(worker);
+    found = -1;
+    best = 0.0;
+
+    slot = 0;
+    while (slot < gv_slotCount) {
+        if (!gvg_slotGuard[slot]
+            && gvg_slotLevel[slot] <= Fort_LevelOf(gvg_slotLoc[slot])
+            && !Fort_SlotFilled(slot)
+            && Fort_SlotBuildable(slot)
+            && !Fort_SlotBlocked(slot, Fort_SlotOwner(slot))
+            && !Fort_SlotClaimed(slot)) {
+            d = DistanceBetweenPoints(where, gvg_slotAt[slot]);
+            if (found < 0 || d < best) {
+                found = slot;
+                best = d;
+            }
+        }
+        slot = slot + 1;
+    }
+    return found;
+}
+
 //--------------------------------------------------------------------------------------------------
 // Sends a worker to build a position.
 //
@@ -566,9 +600,6 @@ void Fort_OrderBuild (unit worker, int slot) {
 //--------------------------------------------------------------------------------------------------
 // Damaged fortification buildings, so 30_workers can repair them alongside
 // devices.
-//--------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------
-// Emplacements that want a worker.
 //
 // Walks the SLOTS rather than scanning for Lob_Turret_*, which is what it used
 // to do. Two reasons, and the second is the one that bit: a slot knows what is

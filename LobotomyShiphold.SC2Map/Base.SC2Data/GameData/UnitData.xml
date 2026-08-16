@@ -368,7 +368,6 @@
         <AbilArray Link="move"/>
         <AbilArray Link="Repair"/>
         <AbilArray Link="SCVHarvest"/>
-        <AbilArray Link="TerranBuild"/>
         <WeaponArray Link="FusionCutter"/>
         <CardLayouts>
             <LayoutButtons Face="Move" Type="AbilCmd" AbilCmd="move,Move" Row="0" Column="0"/>
@@ -379,28 +378,6 @@
             <LayoutButtons Face="Repair" Type="AbilCmd" AbilCmd="Repair,Execute" Row="2" Column="2"/>
             <LayoutButtons Face="GatherTerr" Type="AbilCmd" AbilCmd="SCVHarvest,Gather" Row="1" Column="0"/>
             <LayoutButtons Face="ReturnCargo" Type="AbilCmd" AbilCmd="SCVHarvest,Return" Row="1" Column="1"/>
-            <LayoutButtons Face="TerranBuild" Type="Submenu" SubmenuCardId="TBl1" Row="2" Column="0"/>
-            <LayoutButtons Face="TerranBuildAdvanced" Type="Submenu" SubmenuCardId="TBl2" Row="2" Column="1"/>
-            <LayoutButtons Face="Halt" Type="AbilCmd" AbilCmd="TerranBuild,Halt" Row="2" Column="4"/>
-        </CardLayouts>
-        <CardLayouts CardId="TBl1">
-            <LayoutButtons Face="CommandCenter" Type="AbilCmd" AbilCmd="TerranBuild,Build1" Row="0" Column="0"/>
-            <LayoutButtons Face="Refinery" Type="AbilCmd" AbilCmd="TerranBuild,Build3" Row="0" Column="1"/>
-            <LayoutButtons Face="SupplyDepot" Type="AbilCmd" AbilCmd="TerranBuild,Build2" Row="0" Column="2"/>
-            <LayoutButtons Face="Barracks" Type="AbilCmd" AbilCmd="TerranBuild,Build4" Row="1" Column="0"/>
-            <LayoutButtons Face="EngineeringBay" Type="AbilCmd" AbilCmd="TerranBuild,Build5" Row="1" Column="1"/>
-            <LayoutButtons Face="Bunker" Type="AbilCmd" AbilCmd="TerranBuild,Build7" Row="2" Column="0"/>
-            <LayoutButtons Face="MissileTurret" Type="AbilCmd" AbilCmd="TerranBuild,Build6" Row="2" Column="1"/>
-            <LayoutButtons Face="SensorTower" Type="AbilCmd" AbilCmd="TerranBuild,Build9" Row="2" Column="2"/>
-            <LayoutButtons Face="Cancel" Type="CancelSubmenu" Row="2" Column="4"/>
-        </CardLayouts>
-        <CardLayouts CardId="TBl2">
-            <LayoutButtons Face="GhostAcademy" Type="AbilCmd" AbilCmd="TerranBuild,Build10" Row="0" Column="0"/>
-            <LayoutButtons Face="Factory" Type="AbilCmd" AbilCmd="TerranBuild,Build11" Row="1" Column="0"/>
-            <LayoutButtons Face="Armory" Type="AbilCmd" AbilCmd="TerranBuild,Build14" Row="1" Column="1"/>
-            <LayoutButtons Face="Starport" Type="AbilCmd" AbilCmd="TerranBuild,Build12" Row="2" Column="0"/>
-            <LayoutButtons Face="FusionCore" Type="AbilCmd" AbilCmd="TerranBuild,Build16" Row="2" Column="1"/>
-            <LayoutButtons Face="Cancel" Type="CancelSubmenu" Row="2" Column="4"/>
         </CardLayouts>
         <Radius value="0.375"/>
         <SeparationRadius value="0.375"/>
@@ -458,7 +435,6 @@
         <AbilArray Link="move"/>
         <AbilArray Link="Repair"/>
         <AbilArray Link="SCVHarvest"/>
-        <AbilArray Link="TerranBuild"/>
         <WeaponArray Link="FusionCutter"/>
         <CardLayouts>
             <LayoutButtons Face="Move" Type="AbilCmd" AbilCmd="move,Move" Row="0" Column="0"/>
@@ -469,28 +445,6 @@
             <LayoutButtons Face="Repair" Type="AbilCmd" AbilCmd="Repair,Execute" Row="2" Column="2"/>
             <LayoutButtons Face="GatherTerr" Type="AbilCmd" AbilCmd="SCVHarvest,Gather" Row="1" Column="0"/>
             <LayoutButtons Face="ReturnCargo" Type="AbilCmd" AbilCmd="SCVHarvest,Return" Row="1" Column="1"/>
-            <LayoutButtons Face="TerranBuild" Type="Submenu" SubmenuCardId="TBl1" Row="2" Column="0"/>
-            <LayoutButtons Face="TerranBuildAdvanced" Type="Submenu" SubmenuCardId="TBl2" Row="2" Column="1"/>
-            <LayoutButtons Face="Halt" Type="AbilCmd" AbilCmd="TerranBuild,Halt" Row="2" Column="4"/>
-        </CardLayouts>
-        <CardLayouts CardId="TBl1">
-            <LayoutButtons Face="CommandCenter" Type="AbilCmd" AbilCmd="TerranBuild,Build1" Row="0" Column="0"/>
-            <LayoutButtons Face="Refinery" Type="AbilCmd" AbilCmd="TerranBuild,Build3" Row="0" Column="1"/>
-            <LayoutButtons Face="SupplyDepot" Type="AbilCmd" AbilCmd="TerranBuild,Build2" Row="0" Column="2"/>
-            <LayoutButtons Face="Barracks" Type="AbilCmd" AbilCmd="TerranBuild,Build4" Row="1" Column="0"/>
-            <LayoutButtons Face="EngineeringBay" Type="AbilCmd" AbilCmd="TerranBuild,Build5" Row="1" Column="1"/>
-            <LayoutButtons Face="Bunker" Type="AbilCmd" AbilCmd="TerranBuild,Build7" Row="2" Column="0"/>
-            <LayoutButtons Face="MissileTurret" Type="AbilCmd" AbilCmd="TerranBuild,Build6" Row="2" Column="1"/>
-            <LayoutButtons Face="SensorTower" Type="AbilCmd" AbilCmd="TerranBuild,Build9" Row="2" Column="2"/>
-            <LayoutButtons Face="Cancel" Type="CancelSubmenu" Row="2" Column="4"/>
-        </CardLayouts>
-        <CardLayouts CardId="TBl2">
-            <LayoutButtons Face="GhostAcademy" Type="AbilCmd" AbilCmd="TerranBuild,Build10" Row="0" Column="0"/>
-            <LayoutButtons Face="Factory" Type="AbilCmd" AbilCmd="TerranBuild,Build11" Row="1" Column="0"/>
-            <LayoutButtons Face="Armory" Type="AbilCmd" AbilCmd="TerranBuild,Build14" Row="1" Column="1"/>
-            <LayoutButtons Face="Starport" Type="AbilCmd" AbilCmd="TerranBuild,Build12" Row="2" Column="0"/>
-            <LayoutButtons Face="FusionCore" Type="AbilCmd" AbilCmd="TerranBuild,Build16" Row="2" Column="1"/>
-            <LayoutButtons Face="Cancel" Type="CancelSubmenu" Row="2" Column="4"/>
         </CardLayouts>
         <Radius value="0.375"/>
         <SeparationRadius value="0.375"/>
@@ -548,7 +502,6 @@
         <AbilArray Link="move"/>
         <AbilArray Link="Repair"/>
         <AbilArray Link="SCVHarvest"/>
-        <AbilArray Link="TerranBuild"/>
         <AbilArray Link="Lob_Build"/>
         <WeaponArray Link="FusionCutter"/>
         <CardLayouts>
@@ -560,28 +513,6 @@
             <LayoutButtons Face="Repair" Type="AbilCmd" AbilCmd="Repair,Execute" Row="2" Column="2"/>
             <LayoutButtons Face="GatherTerr" Type="AbilCmd" AbilCmd="SCVHarvest,Gather" Row="1" Column="0"/>
             <LayoutButtons Face="ReturnCargo" Type="AbilCmd" AbilCmd="SCVHarvest,Return" Row="1" Column="1"/>
-            <LayoutButtons Face="TerranBuild" Type="Submenu" SubmenuCardId="TBl1" Row="2" Column="0"/>
-            <LayoutButtons Face="TerranBuildAdvanced" Type="Submenu" SubmenuCardId="TBl2" Row="2" Column="1"/>
-            <LayoutButtons Face="Halt" Type="AbilCmd" AbilCmd="TerranBuild,Halt" Row="2" Column="4"/>
-        </CardLayouts>
-        <CardLayouts CardId="TBl1">
-            <LayoutButtons Face="CommandCenter" Type="AbilCmd" AbilCmd="TerranBuild,Build1" Row="0" Column="0"/>
-            <LayoutButtons Face="Refinery" Type="AbilCmd" AbilCmd="TerranBuild,Build3" Row="0" Column="1"/>
-            <LayoutButtons Face="SupplyDepot" Type="AbilCmd" AbilCmd="TerranBuild,Build2" Row="0" Column="2"/>
-            <LayoutButtons Face="Barracks" Type="AbilCmd" AbilCmd="TerranBuild,Build4" Row="1" Column="0"/>
-            <LayoutButtons Face="EngineeringBay" Type="AbilCmd" AbilCmd="TerranBuild,Build5" Row="1" Column="1"/>
-            <LayoutButtons Face="Bunker" Type="AbilCmd" AbilCmd="TerranBuild,Build7" Row="2" Column="0"/>
-            <LayoutButtons Face="MissileTurret" Type="AbilCmd" AbilCmd="TerranBuild,Build6" Row="2" Column="1"/>
-            <LayoutButtons Face="SensorTower" Type="AbilCmd" AbilCmd="TerranBuild,Build9" Row="2" Column="2"/>
-            <LayoutButtons Face="Cancel" Type="CancelSubmenu" Row="2" Column="4"/>
-        </CardLayouts>
-        <CardLayouts CardId="TBl2">
-            <LayoutButtons Face="GhostAcademy" Type="AbilCmd" AbilCmd="TerranBuild,Build10" Row="0" Column="0"/>
-            <LayoutButtons Face="Factory" Type="AbilCmd" AbilCmd="TerranBuild,Build11" Row="1" Column="0"/>
-            <LayoutButtons Face="Armory" Type="AbilCmd" AbilCmd="TerranBuild,Build14" Row="1" Column="1"/>
-            <LayoutButtons Face="Starport" Type="AbilCmd" AbilCmd="TerranBuild,Build12" Row="2" Column="0"/>
-            <LayoutButtons Face="FusionCore" Type="AbilCmd" AbilCmd="TerranBuild,Build16" Row="2" Column="1"/>
-            <LayoutButtons Face="Cancel" Type="CancelSubmenu" Row="2" Column="4"/>
         </CardLayouts>
         <Radius value="0.375"/>
         <SeparationRadius value="0.375"/>
