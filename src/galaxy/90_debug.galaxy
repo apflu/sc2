@@ -359,6 +359,39 @@ void Debug_Fortify (int player, string word) {
             line = line + "  next " + IntToString(gvg_fortCost[gvg_locLevel[loc] + 1]) + "m";
         }
         Debug_Say(player, line);
+
+        // One line per position. "standing 0/1" is what a slot whose handle was
+        // never recorded prints, and it is indistinguishable from a worker that
+        // has not got there yet -- which is how that bug stayed hidden. Say
+        // what is actually in the slot instead.
+        slot = 0;
+        while (slot < gv_slotCount) {
+            if (gvg_slotLoc[slot] == loc) {
+                line = "  slot " + IntToString(slot)
+                       + " lv" + IntToString(gvg_slotLevel[slot])
+                       + " " + gvg_slotType[slot] + " ";
+                if (gvg_slotGuard[slot]) {
+                    line = line + "[guard] ";
+                }
+                if (!Fort_SlotFilled(slot)) {
+                    line = line + "empty";
+                    if (!Fort_SlotBuildable(slot)) {
+                        line = line + " (no build command)";
+                    }
+                    else if (Fort_SlotClaimed(slot)) {
+                        line = line + " (a worker is on it)";
+                    }
+                }
+                else if (Fort_SlotBuilding(slot)) {
+                    line = line + "under construction";
+                }
+                else {
+                    line = line + "held by " + UnitGetType(Fort_OccupantOfSlot(slot));
+                }
+                Debug_Say(player, line);
+            }
+            slot = slot + 1;
+        }
         loc = loc + 1;
     }
 }

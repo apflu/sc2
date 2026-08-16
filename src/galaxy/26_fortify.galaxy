@@ -177,6 +177,7 @@ unit[128] gvg_slotUnit;
 
 trigger gt_fortTick;
 trigger gt_fortEnter;
+trigger gt_fortBuilt;
 
 //--------------------------------------------------------------------------------------------------
 // Locations.
@@ -632,6 +633,67 @@ unitgroup Fort_Damaged () {
 }
 
 //--------------------------------------------------------------------------------------------------
+// A building binds to its position the moment it appears.
+//
+// Fort_Warp can record a guard's handle because it created the guard. A BUILDING
+// is created by the engine partway through a build order, so the only moment the
+// code can learn its handle is when it shows up -- hence an event, not a search.
+//
+// Without this gvg_slotUnit is never written for a building at all, the position
+// reads empty forever, and the ONLY thing preventing a second turret is SC2's own
+// placement check. That check stops applying the moment the turret retracts: the
+// underground unit has no Footprint, so its tiles go free and the build order
+// that was being refused every second suddenly succeeds.
+//
+// That is the third stack-of-turrets bug and the first two fixes were both real
+// -- the search really did lose a burrowed turret, and a handle really is a
+// better identity than a description. Neither was this, because nothing was
+// filling the handle in.
+//
+// Matching is by position and type at BIRTH, which is not the identity mistake
+// that was removed: the site is born as exactly what the position asked for, and
+// after this instant the handle answers on its own.
+//--------------------------------------------------------------------------------------------------
+bool Fort_Built_Func (bool testConds, bool runActions) {
+    unit made;
+    point at;
+    fixed best;
+    fixed d;
+    int found;
+    int slot;
+
+    if (!runActions) {
+        return true;
+    }
+
+    made = EventUnitCreatedUnit();
+    if (made == null) {
+        return true;
+    }
+    at = UnitGetPosition(made);
+
+    found = -1;
+    best = 0.0;
+    slot = 0;
+    while (slot < gv_slotCount) {
+        if (!gvg_slotGuard[slot] && !Fort_SlotFilled(slot)
+            && UnitGetType(made) == gvg_slotType[slot]) {
+            d = DistanceBetweenPoints(at, gvg_slotAt[slot]);
+            if (d <= c_fortSlotRadius && (found < 0 || d < best)) {
+                found = slot;
+                best = d;
+            }
+        }
+        slot = slot + 1;
+    }
+
+    if (found >= 0) {
+        gvg_slotUnit[found] = made;
+    }
+    return true;
+}
+
+//--------------------------------------------------------------------------------------------------
 // Something walked into a location.
 //
 // An event rather than a poll: enemy presence changes constantly and is almost
@@ -812,6 +874,13 @@ void Fortify_Init () {
         TriggerAddEventUnitRegion(gt_fortEnter, null, gvg_locRegion[i], true);
         i = i + 1;
     }
+
+    // No ability filter. Filtering on the build ability's name would be tidier,
+    // but there is one such name per building type and the handler already has
+    // to prove the unit is standing on a position that wants exactly it -- so
+    // the filter would buy nothing and could quietly match nothing.
+    gt_fortBuilt = TriggerCreate("Fort_Built_Func");
+    TriggerAddEventUnitCreated(gt_fortBuilt, null, null, null);
 
     gt_fortTick = TriggerCreate("Fort_Tick_Func");
     TriggerAddEventTimePeriodic(gt_fortTick, c_fortTick, c_timeGame);
