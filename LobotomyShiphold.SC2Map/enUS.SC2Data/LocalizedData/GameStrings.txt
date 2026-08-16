@@ -1,4 +1,4 @@
-Abil/Name/Interact=Work
+﻿Abil/Name/Interact=Work
 Abil/Name/Lob_Build=Worker fort build
 Abil/Name/Lob_Obs_1=Basic Information
 Abil/Name/Lob_Obs_2=Work Preferences
@@ -44,11 +44,11 @@ Button/Tooltip/Lob_Obs_1=Not yet observed.
 Button/Tooltip/Lob_Obs_2=Not yet observed.
 Button/Tooltip/Lob_Obs_3=Not yet observed.
 Button/Tooltip/Lob_Obs_4=Not yet observed.
-Button/Tooltip/Lob_Ordeal_Dawn_Amber=Timed life creature. Durable and dangerous.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
-Button/Tooltip/Lob_Ordeal_Dawn_Crimson=Diablo, Lord of Terror. Tremble in his wake.
-Button/Tooltip/Lob_Ordeal_Dawn_Green=Powerful melee warrior.<n/><n/><c val="ffff8a">Can attack ground units.</c>
-Button/Tooltip/Lob_Ordeal_Dawn_Violet=Suicide unit. Does damage over a small area on death. <n/><n/><c val="ffff8a">Can attack ground units.</c>
-Button/Tooltip/Lob_Ordeal_Noon_Amber=Siege unit that attacks while burrowed by spawning Locust minions.<n/><n/><c val="#ColorAttackInfo">Locusts can attack ground units.</c>
+Button/Tooltip/Lob_Ordeal_Dawn_Amber=The Perfect Food.<n/><n/>A perfect meal, an excellent substitute.
+Button/Tooltip/Lob_Ordeal_Dawn_Crimson=Cheers for the Beginning.<n/><n/>Let us light a flame yet more radiant in our lives; for life is a candlelight, destined to snuff out one day.
+Button/Tooltip/Lob_Ordeal_Dawn_Green=Doubt.<n/><n/>One day, a question crossed through my mind. Where do we come from? We were given life and left in this world against our own volition.
+Button/Tooltip/Lob_Ordeal_Dawn_Violet=The Fruit of Understanding.<n/><n/>To gain an understanding of what is incomprehensible, they dream, staring.
+Button/Tooltip/Lob_Ordeal_Noon_Amber=The Perfect Food.<n/><n/>A perfect meal, an excellent substitute.
 Button/Tooltip/Lob_SCV_Miner=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
 Button/Tooltip/Lob_SCV_Unassigned=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
 Button/Tooltip/Lob_SCV_Unassigned2=Basic worker unit. Can gather resources, build Terran structures, and repair.<n/><n/><c val="#ColorAttackInfo">Can attack ground units.</c>
@@ -204,11 +204,11 @@ Unit/Name/Lob_Device_Basic=Lob_Device_Basic
 Unit/Name/Lob_Emp_Basic=Employee
 Unit/Name/Lob_Hero_Agent=Agent
 Unit/Name/Lob_Marker_Spawn=Lob_Marker_Spawn
-Unit/Name/Lob_Ordeal_Dawn_Amber=Lob_Ordeal_Dawn_Amber
-Unit/Name/Lob_Ordeal_Dawn_Crimson=Lob_Ordeal_Dawn_Crimson
-Unit/Name/Lob_Ordeal_Dawn_Green=Lob_Ordeal_Dawn_Green
-Unit/Name/Lob_Ordeal_Dawn_Violet=Lob_Ordeal_Dawn_Violet
-Unit/Name/Lob_Ordeal_Noon_Amber=Lob_Ordeal_Noon_Amber
+Unit/Name/Lob_Ordeal_Dawn_Amber=The Dawn of Amber
+Unit/Name/Lob_Ordeal_Dawn_Crimson=The Dawn of Crimson
+Unit/Name/Lob_Ordeal_Dawn_Green=The Dawn of Green
+Unit/Name/Lob_Ordeal_Dawn_Violet=The Dawn of Violet
+Unit/Name/Lob_Ordeal_Noon_Amber=The Noon of Amber
 Unit/Name/Lob_Pile_Ore=Salvage Pile
 Unit/Name/Lob_Recycler_Basic=Recycler
 Unit/Name/Lob_SCV_Miner=Lob_SCV_Miner

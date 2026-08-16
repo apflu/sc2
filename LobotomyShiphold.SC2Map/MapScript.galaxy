@@ -1452,16 +1452,26 @@ const int c_typesMarkerCount = 1;
 string[1] gvg_typesMarker;
 const int c_typesMarker_SpawnCount = 1;
 string[1] gvg_typesMarker_Spawn;
-const int c_typesOrdealCount = 0;
-string[1] gvg_typesOrdeal;
-const int c_typesOrdeal_DawnCount = 0;
-string[1] gvg_typesOrdeal_Dawn;
+const int c_typesOrdealCount = 5;
+string[5] gvg_typesOrdeal;
+const int c_typesOrdeal_DawnCount = 4;
+string[4] gvg_typesOrdeal_Dawn;
+const int c_typesOrdeal_Dawn_AmberCount = 1;
+string[1] gvg_typesOrdeal_Dawn_Amber;
+const int c_typesOrdeal_Dawn_CrimsonCount = 1;
+string[1] gvg_typesOrdeal_Dawn_Crimson;
+const int c_typesOrdeal_Dawn_GreenCount = 1;
+string[1] gvg_typesOrdeal_Dawn_Green;
+const int c_typesOrdeal_Dawn_VioletCount = 1;
+string[1] gvg_typesOrdeal_Dawn_Violet;
 const int c_typesOrdeal_DuskCount = 0;
 string[1] gvg_typesOrdeal_Dusk;
 const int c_typesOrdeal_MidnightCount = 0;
 string[1] gvg_typesOrdeal_Midnight;
-const int c_typesOrdeal_NoonCount = 0;
+const int c_typesOrdeal_NoonCount = 1;
 string[1] gvg_typesOrdeal_Noon;
+const int c_typesOrdeal_Noon_AmberCount = 1;
+string[1] gvg_typesOrdeal_Noon_Amber;
 const int c_typesPanelCount = 0;
 string[1] gvg_typesPanel;
 const int c_typesPileCount = 1;
@@ -2336,6 +2346,158 @@ bool ObjectsGen_IsOrdeal_Dawn (unit target) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// Every live Ordeal_Dawn_Amber unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanOrdeal_Dawn_Amber () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesOrdeal_Dawn_AmberCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesOrdeal_Dawn_Amber[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Ordeal_Dawn_Amber, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsOrdeal_Dawn_Amber (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesOrdeal_Dawn_AmberCount) {
+        if (UnitGetType(target) == gvg_typesOrdeal_Dawn_Amber[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live Ordeal_Dawn_Crimson unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanOrdeal_Dawn_Crimson () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesOrdeal_Dawn_CrimsonCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesOrdeal_Dawn_Crimson[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Ordeal_Dawn_Crimson, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsOrdeal_Dawn_Crimson (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesOrdeal_Dawn_CrimsonCount) {
+        if (UnitGetType(target) == gvg_typesOrdeal_Dawn_Crimson[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live Ordeal_Dawn_Green unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanOrdeal_Dawn_Green () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesOrdeal_Dawn_GreenCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesOrdeal_Dawn_Green[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Ordeal_Dawn_Green, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsOrdeal_Dawn_Green (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesOrdeal_Dawn_GreenCount) {
+        if (UnitGetType(target) == gvg_typesOrdeal_Dawn_Green[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live Ordeal_Dawn_Violet unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanOrdeal_Dawn_Violet () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesOrdeal_Dawn_VioletCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesOrdeal_Dawn_Violet[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Ordeal_Dawn_Violet, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsOrdeal_Dawn_Violet (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesOrdeal_Dawn_VioletCount) {
+        if (UnitGetType(target) == gvg_typesOrdeal_Dawn_Violet[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
 // Every live Ordeal_Dusk unit on the map, whichever variant and whoever owns it.
 // Works for runtime-spawned units too, unlike anything keyed on placed ids.
 //--------------------------------------------------------------------------------------------------
@@ -2442,6 +2604,44 @@ bool ObjectsGen_IsOrdeal_Noon (unit target) {
     i = 0;
     while (i < c_typesOrdeal_NoonCount) {
         if (UnitGetType(target) == gvg_typesOrdeal_Noon[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live Ordeal_Noon_Amber unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanOrdeal_Noon_Amber () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesOrdeal_Noon_AmberCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesOrdeal_Noon_Amber[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Ordeal_Noon_Amber, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsOrdeal_Noon_Amber (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesOrdeal_Noon_AmberCount) {
+        if (UnitGetType(target) == gvg_typesOrdeal_Noon_Amber[i]) {
             return true;
         }
         i = i + 1;
@@ -3103,6 +3303,21 @@ void ObjectsGen_Init () {
     gvg_typesHero_Agent[0] = "Lob_Hero_Agent";
     gvg_typesMarker[0] = "Lob_Marker_Spawn";
     gvg_typesMarker_Spawn[0] = "Lob_Marker_Spawn";
+    gvg_typesOrdeal[0] = "Lob_Ordeal_Dawn_Amber";
+    gvg_typesOrdeal[1] = "Lob_Ordeal_Dawn_Crimson";
+    gvg_typesOrdeal[2] = "Lob_Ordeal_Dawn_Green";
+    gvg_typesOrdeal[3] = "Lob_Ordeal_Dawn_Violet";
+    gvg_typesOrdeal[4] = "Lob_Ordeal_Noon_Amber";
+    gvg_typesOrdeal_Dawn[0] = "Lob_Ordeal_Dawn_Amber";
+    gvg_typesOrdeal_Dawn[1] = "Lob_Ordeal_Dawn_Crimson";
+    gvg_typesOrdeal_Dawn[2] = "Lob_Ordeal_Dawn_Green";
+    gvg_typesOrdeal_Dawn[3] = "Lob_Ordeal_Dawn_Violet";
+    gvg_typesOrdeal_Dawn_Amber[0] = "Lob_Ordeal_Dawn_Amber";
+    gvg_typesOrdeal_Dawn_Crimson[0] = "Lob_Ordeal_Dawn_Crimson";
+    gvg_typesOrdeal_Dawn_Green[0] = "Lob_Ordeal_Dawn_Green";
+    gvg_typesOrdeal_Dawn_Violet[0] = "Lob_Ordeal_Dawn_Violet";
+    gvg_typesOrdeal_Noon[0] = "Lob_Ordeal_Noon_Amber";
+    gvg_typesOrdeal_Noon_Amber[0] = "Lob_Ordeal_Noon_Amber";
     gvg_typesPile[0] = "Lob_Pile_Ore";
     gvg_typesPile_Ore[0] = "Lob_Pile_Ore";
     gvg_typesRecycler[0] = "Lob_Recycler_Basic";
