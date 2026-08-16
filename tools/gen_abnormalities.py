@@ -54,7 +54,7 @@ WORKS = ["Instinct", "Insight", "Attachment", "Repression"]
 # constants rather than the numbers.
 #
 #   Red    the body                White  the mind
-#   Black  both, in full           Pale   a percentage of maximum life
+#   Black  half to each            Pale   a percentage of maximum life
 #
 # The wiki writes the type twice, once as an icon filename and once as a word,
 # and different pages prefer different colour words for the same two types --
@@ -410,9 +410,11 @@ def build(entries: list[dict]) -> str:
         "// abnormality rather than assumed.\n"
         "//\n"
         "//   Red    the body            White  the mind\n"
-        "//   Black  both, in full       Pale   a percentage of maximum life\n"
+        "//   Black  half to each        Pale   a percentage of maximum life\n"
         "//\n"
         "// Pale's numbers are percentages; the other three are flat amounts.\n"
+        "// A Black number is the TOTAL, split evenly, so it can be halved in\n"
+        "// your head at the door.\n"
     )
     for i, name in enumerate(DAMAGE_TYPES):
         out.append(f"const int c_dmg{name} = {i};\n")

@@ -532,8 +532,16 @@ void Emp_WorkDamage (unit who, int type, int amount) {
         Emp_LifeDamage(who, IntToFixed(amount));
     }
     else if (type == c_dmgBlack) {
-        Emp_LifeDamage(who, IntToFixed(amount));
-        SP_Damage(who, amount);
+        // HALF to each, not the full amount twice. The printed number is what
+        // the hit costs in total, so a player reading "Black 6" can work out
+        // three and three without knowing anything about how it is applied --
+        // and that arithmetic being doable in your head at the door is the
+        // whole reason to state it this way.
+        //
+        // Life takes the exact half because it is a fixed; SP is integral and
+        // rounds down, which errs toward the resource that is harder to get back.
+        Emp_LifeDamage(who, IntToFixed(amount) / 2.0);
+        SP_Damage(who, amount / 2);
     }
     else if (type == c_dmgPale) {
         Emp_LifeDamage(who,

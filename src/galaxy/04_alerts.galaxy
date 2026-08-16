@@ -1,0 +1,64 @@
+//--------------------------------------------------------------------------------------------------
+// Alerts.
+//
+// The stock game has 321 of them in this map's dependency chain, and almost
+// none of them are about anything that happens here. "Your forces are under
+// attack" is a melee sentence; a shift in a containment facility is made of
+// breaches, meltdowns, doors coming down and people breaking, and every one of
+// those wants its own line.
+//
+// So this switches the stock set OFF and leaves the alert channel empty for
+// ours. That is the point: an alert is worth something only because it is rare,
+// and 321 inherited ones spend that budget on nothing.
+//
+// UISetAlertTypeVisible is Blizzard's own tool for this -- zzerus03 uses it to
+// mute "AttackUnit_Zerg" for the stretch of the mission where the player is
+// supposed to be losing units. It is per alert TYPE and per player group, which
+// is exactly the granularity wanted; the alternative was overriding the root
+// <CAlert default="1"> entry in data, which would silence future alerts too and
+// cannot be tested from this machine.
+//
+// The id list is generated (03_alerts_gen.galaxy) from tools/stock_alerts.txt,
+// which is harvested from the game data by tools/gen_alerts.py. Ids from mods
+// this map does not depend on are left out: an alert that cannot fire is not
+// worth naming, and naming it would be asking the engine about something that
+// is not loaded.
+//
+// Numbered 04 so the channel is clear before anything can raise anything.
+//--------------------------------------------------------------------------------------------------
+
+//--------------------------------------------------------------------------------------------------
+// Stock alerts worth keeping.
+//
+// THIS IS THE LIST TO EDIT. Everything else is generated, so the only decision
+// anybody makes about alerts lives in this one function, and it reads as the
+// argument for each survivor rather than as an absence in a table of 321.
+//
+// Empty on purpose right now. Nothing stock has been shown to be worth more
+// than the line it would take up, and adding one back is a single condition.
+//--------------------------------------------------------------------------------------------------
+bool Alerts_Keep (string alert) {
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Ours, so a rebuild does not have to remember which ones it silenced.
+//
+// Nothing in the generated table starts with Lob_ -- gen_alerts drops them --
+// so this is belt and braces against somebody adding an id by hand.
+//--------------------------------------------------------------------------------------------------
+bool Alerts_IsOurs (string alert) {
+    return StringLength(alert) >= 4 && StringSub(alert, 1, 4) == "Lob_";
+}
+
+void Alerts_Init () {
+    int i;
+
+    i = 0;
+    while (i < c_stockAlertCount) {
+        if (!Alerts_Keep(gvg_stockAlert[i]) && !Alerts_IsOurs(gvg_stockAlert[i])) {
+            UISetAlertTypeVisible(PlayerGroupAll(), gvg_stockAlert[i], false);
+        }
+        i = i + 1;
+    }
+}

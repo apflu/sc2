@@ -17,6 +17,7 @@ import sys
 from pathlib import Path
 
 import gen_abnormalities
+import gen_alerts
 import gen_objects
 import gen_strings
 
@@ -249,6 +250,11 @@ def main() -> int:
               + (" (ally)" if u["ally"] else ""))
     for b in builds:
         print(f"  build {b['unit']}: {b['abil']}[{b['index']}]")
+
+    # Alert ids come from a committed list rather than from the game data, so
+    # a machine with no SC2 installed can still build.
+    alerts = gen_alerts.generate()
+    print(f"generated src/galaxy/03_alerts_gen.galaxy: {len(alerts)} stock alerts silenced")
 
     # The abnormality table comes from the design docs rather than the editor,
     # so it is generated here too and its complaints are printed rather than

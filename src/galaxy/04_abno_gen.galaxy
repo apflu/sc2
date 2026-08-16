@@ -27,9 +27,11 @@ int[2] gvg_abnoNormalMin;
 // abnormality rather than assumed.
 //
 //   Red    the body            White  the mind
-//   Black  both, in full       Pale   a percentage of maximum life
+//   Black  half to each        Pale   a percentage of maximum life
 //
 // Pale's numbers are percentages; the other three are flat amounts.
+// A Black number is the TOTAL, split evenly, so it can be halved in
+// your head at the door.
 const int c_dmgRed = 0;
 const int c_dmgWhite = 1;
 const int c_dmgBlack = 2;

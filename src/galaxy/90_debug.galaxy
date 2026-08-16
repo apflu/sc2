@@ -1009,7 +1009,8 @@ void Debug_BuildHelp () {
         + "What a missed box costs is the abnormality's own, printed next to its "
         + "odds. <c val=\"ffff8a\">White</c> is the mind and shows nowhere until "
         + "the person breaks. <c val=\"ffff8a\">Red</c> is the body. "
-        + "<c val=\"ffff8a\">Black</c> is both, in full. "
+        + "<c val=\"ffff8a\">Black</c> splits evenly between the two, so the "
+        + "number printed is the total. "
         + "<c val=\"ffff8a\">Pale</c> is a percentage of maximum life -- and "
         + "since Fortitude IS maximum life, it is the one an employee cannot "
         + "outgrow. Employees do not go down; they die.",
