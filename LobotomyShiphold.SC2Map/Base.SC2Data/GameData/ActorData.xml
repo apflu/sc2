@@ -1,5 +1,70 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Catalog>
+    <CActorUnit id="Baneling2" parent="GenericBurrowerStandard" unitName="Lob_Ordeal_Dawn_Violet">
+        <Aliases value="_UnitSmall"/>
+        <Macros value="UnloadDropAnim"/>
+        <Macros value="ZergBurrowStandardAnimMacro"/>
+        <Macros value="ZergSmallBurrowEffects"/>
+        <Macros value="TerrainSquibAnimations"/>
+        <AcceptedHostedPropTransfers index="Scale" value="0"/>
+        <Remove Terms="UnitDeathCustomize; ValidateUnit NotStructure; IsStatus InAir 1" Send="DeathCustomize AntiGravGeneric"/>
+        <Remove Terms="UnitDeathCustomize; ValidateUnit IsZergUnit; IsStatus InAir 1" Send="DeathCustomize AntiGravZerg"/>
+        <On Terms="AbilMorph.*.Finish; MorphTo Baneling; MorphFrom BanelingCocoon" Send="Create"/>
+        <On Terms="AbilMorph.*.Finish; MorphTo Baneling; MorphFrom BanelingCocoon" Send="$Birth 0 0.000000"/>
+        <On Terms="ActorCreation; ValidateUnit CentrificalHooksResearched" Send="AnimGroupApply Superior"/>
+        <On Terms="ActorCreation; ValidateUnit CentrificalHooksResearched" Send="SetWalkAnimMoveSpeed 3"/>
+        <On Terms="Upgrade.CentrificalHooks.Add" Send="AnimGroupApply Superior"/>
+        <On Terms="Upgrade.CentrificalHooks.Add" Send="SetWalkAnimMoveSpeed 3"/>
+        <On Terms="Upgrade.CentrificalHooks.Remove" Send="AnimGroupRemove Superior"/>
+        <On Terms="Upgrade.CentrificalHooks.Remove" Send="SetWalkAnimMoveSpeed 2"/>
+        <On Terms="AbilMorph.*.Cancel; MorphFrom Baneling; MorphTo BanelingBurrowed" Send="AnimClear Burrow"/>
+        <On Terms="AbilMorph.*.Finish; MorphTo Baneling; MorphFrom BanelingBurrowed" Send="AnimBracketStop Burrow"/>
+        <On Terms="AbilMorph.*.Finish; MorphTo Baneling; MorphFrom BanelingBurrowed" Send="AnimClear Burrow"/>
+        <On Terms="WeaponStart.VolatileBurst.AttackStart" Send="StatusSet DeathSuicide 1"/>
+        <On Terms="Abil.Explode.SourceCastStart" Send="StatusSet DeathSuicide 1"/>
+        <On Terms="UnitDeathCustomize; IsStatus DeathSuicide 0" Send="Create BanelingDeathNormalSound"/>
+        <On Terms="UnitDeathCustomize; IsStatus DeathSuicide 1" Send="Create BanelingDeathSuicideSound"/>
+        <On Terms="UnitMovementUpdate.*.Walk; AnimPlaying Birth" Send="AnimClear Birth"/>
+        <On Terms="UnitBirth.Lob_Ordeal_Dawn_Violet" Send="TerrainSquibActivateGroup RippleStandard"/>
+        <On Terms="AbilMorph.*.Finish; MorphTo Baneling; MorphFrom BanelingBurrowed" Send="TerrainSquibActivateGroup RippleStandard"/>
+        <On Terms="AbilMorph.*.Finish; MorphTo BanelingBurrowed; MorphFrom Baneling" Send="TerrainSquibDeactivate"/>
+        <On Terms="UnitHeightUpdate.*.Land" Send="Create Baneling_Land"/>
+        <Model value="Baneling"/>
+        <ModelFlags index="OutlineEmitter" value="1"/>
+        <BuildModel value="Baneling"/>
+        <DeathArray index="Normal" ModelLink="BanelingDeath" SoundLink=""/>
+        <PlacementModel value="Baneling"/>
+        <PortraitModel value="BanelingPortrait"/>
+        <TerrainSquibs>
+            <GroupName value="RippleStandard"/>
+            <MovementDistance value="0.150000,0.150000"/>
+            <IdlePeriod value="0.100000,0.250000"/>
+            <RangeUp value="1.000000"/>
+            <RangeDown value="1.000000"/>
+            <AttachQuery Methods="AMFilterCenter"/>
+            <Visuals TerrainPhysicsMaterial="Water" ActorModel="TerrainSquibHarnessContinuous" ModelLink="WaterRippleSmall"/>
+        </TerrainSquibs>
+        <WalkAnimMoveSpeed value="2"/>
+        <BarOffset value="35"/>
+        <BarWidth value="36"/>
+        <GroupIcon>
+            <Image value="Assets\Textures\Wireframe-Zerg-Baneling.dds"/>
+        </GroupIcon>
+        <HeroIcon value="Assets\Textures\btn-unit-zerg-baneling.dds"/>
+        <HighlightTooltip value="Unit/Name/Baneling2"/>
+        <LifeArmorIcon value="Assets\Textures\btn-upgrade-zerg-groundcarapace-level0.dds"/>
+        <SoundArray index="Ready" value="Baneling_Ready"/>
+        <SoundArray index="Help" value="Baneling_Help"/>
+        <SoundArray index="What" value="Baneling_What"/>
+        <SoundArray index="Yes" value="Baneling_Yes"/>
+        <SoundArray index="Attack" value="Baneling_Attack"/>
+        <SoundArray index="Pissed" value="Baneling_Pissed"/>
+        <SoundArray index="Movement" value="Baneling_Movement"/>
+        <UnitIcon value="Assets\Textures\btn-unit-zerg-baneling.dds"/>
+        <Wireframe>
+            <Image value="Assets\Textures\Wireframe-Zerg-Baneling.dds"/>
+        </Wireframe>
+    </CActorUnit>
     <CActorUnit id="ContainGateStraightHorizontal" parent="GenericUnitGate" unitName="ContainGateHorizontal" alt="Lowered">
         <Model value="DestructibleGateStraight"/>
         <DeathArray index="Normal" SoundLink="DestructibleGateDeath"/>
@@ -430,6 +495,93 @@
             <Image value="Assets\Textures\Wireframe-Terran-Marine.dds"/>
         </Wireframe>
     </CActorUnit>
+    <CActorUnit id="LocustMP2" parent="GenericBurrowerStandard" unitName="Lob_Ordeal_Dawn_Amber">
+        <Aliases value="_UnitSmall"/>
+        <Macros value="ZergBurrowMobileAnimMacro"/>
+        <Macros value="ZergSmallBurrowEffects"/>
+        <Macros value="PhysicsDeathsSwarmGround"/>
+        <Macros value="TerrainSquibAnimations"/>
+        <Macros value="PhysicsDeathsVoidGround"/>
+        <On Terms="Behavior.LocustMPStun.On" Send="Create SwarmHostMPEgg"/>
+        <On Terms="Behavior.LocustMPStun.On" Send="ModelSwap Invisible"/>
+        <On Terms="Behavior.LocustMPStun.On" Send="AnimClear Birth"/>
+        <On Terms="Behavior.LocustMPStun.Off" Target="SwarmHostMPEgg" Send="$Death"/>
+        <On Terms="Behavior.LocustMPStun.Off" Send="ModelSwap LocustMP"/>
+        <On Terms="Behavior.LocustMPStun.Off" Send="$Birth 0 0.000000"/>
+        <On Terms="AnimDone; AnimName Birth" Send="AnimBaselineStart"/>
+        <On Terms="Abil.attack.ReadyStart" Send="AnimGroupApply Ready"/>
+        <On Terms="WeaponStart.LocustMP.AttackStart; WeaponTargetElevation GE 20.000000" Send="AnimBracketStart AttackSuperior Attack,Superior"/>
+        <On Terms="WeaponStart.LocustMP.AttackStart" Send="AnimBracketStart Attack Attack"/>
+        <On Terms="WeaponStop.LocustMP.AttackStop" Send="AnimBracketStop AttackSuperior"/>
+        <On Terms="WeaponStop.LocustMP.AttackStop" Send="AnimBracketStop Attack"/>
+        <On Terms="Abil.attack.ReadyStop" Send="AnimGroupRemove Ready"/>
+        <On Terms="WeaponStart.LocustMPMelee.AttackStart" Send="AnimBracketStart AttackMelee Spell,A"/>
+        <On Terms="WeaponStop.LocustMPMelee.AttackStop" Send="AnimBracketStop AttackMelee"/>
+        <On Terms="UnitHeightUpdate.*.Land" Send="Create Locust_Land"/>
+        <On Terms="AbilMorph.*.Finish; MorphFrom LocustMPFlying" Send="Create"/>
+        <On Terms="AbilMorph.*.Finish; MorphFrom LocustMPFlying" Target="FlyerHelperSplat" Send="Destroy"/>
+        <On Terms="AbilMorph.*.Start; MorphTo LocustMPFlying" Send="Destroy"/>
+        <Model value="LocustMP"/>
+        <ModelFlags index="OutlineEmitter" value="1"/>
+        <BuildModel value="LocustMP"/>
+        <DeathArray index="Normal" ModelLink="LocustMPDeath" SoundLink="Locust_Death"/>
+        <DeathArray index="Disintegrate" ModelLink="LocustMPDeathAcid" SoundLink="Uni_DeathFXAcid"/>
+        <DeathArray index="Fire" ModelLink="LocustMPDeathFire" SoundLink="Uni_DeathFXFire"/>
+        <DeathCustoms ModelLink="LocustMPDeathRagdoll" Name="RagdollBasic">
+            <BodySquibs Name="FireOnMetal"/>
+            <BodySquibs Name="BloodReduced" IsFallback="1"/>
+        </DeathCustoms>
+        <DeathCustoms Name="RagdollSiegeTank" InheritsFrom="RagdollBasic"/>
+        <DeathCustoms Name="RagdollNuke" InheritsFrom="RagdollBasic">
+            <BodySquibs Name="Fire"/>
+        </DeathCustoms>
+        <DeathCustoms Name="RagdollFire" InheritsFrom="RagdollBasic">
+            <BodySquibs Name="Fire"/>
+        </DeathCustoms>
+        <DeathCustoms Name="RagdollAcid" InheritsFrom="RagdollBasic">
+            <BodySquibs Name="Acid"/>
+        </DeathCustoms>
+        <DeathCustoms Name="RagdollBaneling" InheritsFrom="RagdollBasic">
+            <BodySquibs Name="Acid"/>
+        </DeathCustoms>
+        <DeathCustoms Name="RagdollUltraUnburrow" InheritsFrom="RagdollBasic"/>
+        <DeathCustoms ActorModel="SpineCrawlerHurlDeathRagdoll" ModelLink="LocustMPDeathRagdoll" Name="RagdollSpineCrawlerHurl"/>
+        <DeathCustoms Name="RagdollOverkillDPRH" InheritsFrom="RagdollBasic"/>
+        <DeathCustoms Name="RagdollOverkillDOI" InheritsFrom="RagdollBasic"/>
+        <DeathCustoms Name="RagdollMidair" InheritsFrom="RagdollBasic"/>
+        <DeathCustomData Name="RagdollBasic" SyncPassChance="65"/>
+        <PlacementModel value="LocustMP"/>
+        <PortraitModel value="LocustMPPortrait"/>
+        <TerrainSquibs>
+            <MovementDistance value="0.150000,0.150000"/>
+            <IdlePeriod value="0.100000,0.250000"/>
+            <RangeUp value="0.400000"/>
+            <RangeDown value="0.400000"/>
+            <AttachQuery Methods="AMFilterCenter"/>
+            <Visuals TerrainPhysicsMaterial="Water" ActorModel="TerrainSquibHarnessContinuous" ModelLink="WaterRippleSmall"/>
+        </TerrainSquibs>
+        <WalkAnimMoveSpeed value="2.25"/>
+        <BarOffset value="45"/>
+        <BarWidth value="36"/>
+        <GroupIcon>
+            <Image value="Assets\Textures\Wireframe-Zerg-Locust.dds"/>
+        </GroupIcon>
+        <HighlightTooltip value="Unit/Name/LocustMP2"/>
+        <LifeArmorIcon value="Assets\Textures\btn-upgrade-zerg-groundcarapace-level0.dds"/>
+        <SoundArray index="Birth" value="InfestedSwarm_Birth"/>
+        <SoundArray index="Ready" value="InfestedSwarm_Ready"/>
+        <SoundArray index="Help" value="InfestedSwarm_Help"/>
+        <SoundArray index="What" value="InfestedSwarm_What"/>
+        <SoundArray index="Yes" value="InfestedSwarm_Yes"/>
+        <SoundArray index="Attack" value="InfestedSwarm_Attack"/>
+        <SoundArray index="Pissed" value="InfestedSwarm_Pissed"/>
+        <SoundArray index="Movement" value="zLocust_moveLoop"/>
+        <UnitFlags index="StandAnimBirthVariation" value="0"/>
+        <UnitIcon value="Assets\Textures\btn-unit-zerg-locust.dds"/>
+        <Wireframe>
+            <Image value="Assets\Textures\Wireframe-Zerg-Locust.dds"/>
+        </Wireframe>
+    </CActorUnit>
     <CActorUnit id="O_03_03" parent="GenericUnitStandard" unitName="O_03_03">
         <Aliases value="_UnitMedium"/>
         <Macros value="PhysicsDeathsSwarmAir"/>
@@ -552,4 +704,179 @@
         <On Terms="AbilMorph.*.Start; MorphTo Lob_Turret_Fire" Send="Create"/>
         <On Terms="UnitDeath.Lob_Turret_Fire" Send="Destroy"/>
     </CActorSound>
+    <CActorUnit id="SpaceDiablo2" parent="GenericUnitStandard" unitName="Lob_Ordeal_Dawn_Crimson">
+        <Model value="SpaceDiablo"/>
+        <BuildModel value="SpaceDiablo"/>
+        <DeathArray index="Normal" ModelLink="SpaceDiablo"/>
+        <PlacementModel value="SpaceDiablo"/>
+        <BarOffset value="40"/>
+        <BarWidth value="36"/>
+        <HighlightTooltip value="Unit/Name/SpaceDiablo2"/>
+    </CActorUnit>
+    <CActorUnit id="SwarmHostMP2" parent="GenericUnitStandard" unitName="Lob_Ordeal_Noon_Amber">
+        <Aliases value="_UnitLarge"/>
+        <Macros value="ZergBurrowStandardAnimMacro"/>
+        <Macros value="ZergMediumBurrowEffects"/>
+        <Macros value="TerrainSquibAnimations"/>
+        <Macros value="UnloadDropAnim"/>
+        <Macros value="PhysicsDeathsSwarmGround"/>
+        <Macros value="PhysicsDeathsVoidGround"/>
+        <On Terms="ActorCreation" Send="AnimBracketStart Ready Spell,Alternate,Start Spell,Alternate Spell,Alternate,End"/>
+        <On Terms="Behavior.SwarmHostEggAnimationMP.Create" Send="AnimBracketStop Ready"/>
+        <On Terms="Behavior.SwarmHostEggAnimationMP.Destroy" Send="AnimBracketStart Ready Spell,Alternate,Start Spell,Alternate Spell,Alternate,End"/>
+        <On Terms="UnitBirth.SwarmHostBurrowedMP" Send="Create"/>
+        <On Terms="UnitBirth.SwarmHostBurrowedMP" Send="AnimBracketStart Burrow Burrow IGNORE Unburrow ClosingFull,OpeningPlayForever,Instant"/>
+        <On Terms="UnitBirth.Lob_Ordeal_Noon_Amber" Send="TerrainSquibActivateGroup RippleStandard"/>
+        <On Terms="AbilMorph.*.Finish; MorphTo SwarmHostMP; MorphFrom SwarmHostBurrowedMP" Send="TerrainSquibActivateGroup RippleStandard"/>
+        <On Terms="AbilMorph.*.Finish; MorphTo SwarmHostBurrowedMP; MorphFrom SwarmHostMP" Send="TerrainSquibDeactivate"/>
+        <On Terms="UnitHeightUpdate.*.Land" Send="Create SwarmHost_Land"/>
+        <On Terms="UnitMovementUpdate.*.Walk; AnimPlaying Birth" Send="AnimClear Birth"/>
+        <On Terms="AbilMorph.*.Cancel; MorphFrom SwarmHostMP; MorphTo SwarmHostBurrowedMP" Send="AnimClear Burrow"/>
+        <On Terms="AbilMorph.*.Finish; MorphTo SwarmHostMP; MorphFrom SwarmHostBurrowedMP" Send="AnimBracketStop Burrow"/>
+        <On Terms="AbilMorph.*.Finish; MorphTo SwarmHostMP; MorphFrom SwarmHostBurrowedMP" Send="AnimClear Burrow"/>
+        <Model value="SwarmHostMP"/>
+        <ModelFlags index="OutlineEmitter" value="1"/>
+        <BuildModel value="SwarmHostMP"/>
+        <DeathArray index="Normal" ModelLink="SwarmHostMPDeath" SoundLink="BroodLord_Explode" VoiceLink="SwarmHost_Death"/>
+        <DeathArray index="Disintegrate" ModelLink="SwarmHostMPDeathAcid" SoundLink="Uni_DeathFXAcid" VoiceLink="SwarmHost_Death"/>
+        <DeathArray index="Fire" ModelLink="SwarmHostMPDeathFire" SoundLink="Uni_DeathFXFire" VoiceLink="SwarmHost_Death"/>
+        <DeathCustoms ModelLink="ZergLargeUnitDeathLow" Name="AntiGravZerg"/>
+        <DeathCustoms ActorModel="SwarmHostMPDeathRagdoll" ModelLink="SwarmHostMPDeathRagdoll" Name="RagdollBasic"/>
+        <DeathCustoms Name="RagdollSiegeTank" InheritsFrom="RagdollBasic"/>
+        <DeathCustoms Name="RagdollNuke" InheritsFrom="RagdollBasic">
+            <BodySquibs Name="Fire"/>
+        </DeathCustoms>
+        <DeathCustoms Name="RagdollFire" InheritsFrom="RagdollBasic">
+            <BodySquibs Name="Fire"/>
+        </DeathCustoms>
+        <DeathCustoms Name="RagdollAcid" InheritsFrom="RagdollBasic">
+            <BodySquibs Name="Acid"/>
+        </DeathCustoms>
+        <DeathCustoms Name="RagdollBaneling" InheritsFrom="RagdollBasic">
+            <BodySquibs Name="Acid"/>
+        </DeathCustoms>
+        <DeathCustoms Name="RagdollUltraUnburrow" InheritsFrom="RagdollBasic"/>
+        <DeathCustoms Name="RagdollOverkillDPRH" InheritsFrom="RagdollBasic"/>
+        <DeathCustoms Name="RagdollOverkillDOI" InheritsFrom="RagdollBasic"/>
+        <DeathCustoms Name="RagdollMidair" InheritsFrom="RagdollBasic"/>
+        <PlacementModel value="SwarmHostMP"/>
+        <PlacementSound value="Zerg_BuildingPlacement"/>
+        <PortraitModel value="SwarmHostPortrait"/>
+        <TerrainSquibs>
+            <GroupName value="RippleStandard"/>
+            <MovementDistance value="0.500000,1.000000"/>
+            <IdlePeriod value="0.500000,1.000000"/>
+            <RangeUp value="0.500000"/>
+            <RangeDown value="0.500000"/>
+            <AttachQuery Methods="AMFilterTargetSetB0"/>
+            <Visuals TerrainPhysicsMaterial="Water" ActorModel="TerrainSquibHarnessContinuous" ModelLink="WaterRippleMedium"/>
+        </TerrainSquibs>
+        <TerrainSquibs>
+            <GroupName value="RippleStandard"/>
+            <MovementDistance value="0.500000,1.000000"/>
+            <IdlePeriod value="0.500000,1.000000"/>
+            <RangeUp value="1.000000"/>
+            <RangeDown value="1.000000"/>
+            <AttachQuery Methods="AMFilterCenter"/>
+            <Visuals TerrainPhysicsMaterial="Water" ActorModel="TerrainSquibHarnessContinuous" ModelLink="WaterRippleLargeSilent"/>
+        </TerrainSquibs>
+        <WalkAnimMoveSpeed value="0.707"/>
+        <BarOffset value="80"/>
+        <BarWidth value="80"/>
+        <GroupIcon>
+            <Image value="Assets\Textures\wireframe-zerg-swarmhost.dds"/>
+        </GroupIcon>
+        <HeroIcon value="Assets\Textures\btn-unit-zerg-swarmhost.dds"/>
+        <HighlightTooltip value="Unit/Name/SwarmHostMP2"/>
+        <LifeArmorIcon value="Assets\Textures\btn-upgrade-zerg-groundcarapace-level0.dds"/>
+        <MovementHerdNode value="HerdNode_ZergLarge"/>
+        <NameOffset value="80"/>
+        <SoundArray index="Ready" value="SwarmHost_Ready"/>
+        <SoundArray index="What" value="SwarmHost_What"/>
+        <SoundArray index="Yes" value="SwarmHost_Yes"/>
+        <SoundArray index="Attack" value="SwarmHost_Attack"/>
+        <SoundArray index="Pissed" value="SwarmHost_What"/>
+        <SoundArray index="Movement" value="SwarmHost_moveStart"/>
+        <UnitIcon value="Assets\Textures\btn-unit-zerg-swarmhost.dds"/>
+        <Wireframe>
+            <Image value="Assets\Textures\wireframe-zerg-swarmhost.dds"/>
+        </Wireframe>
+    </CActorUnit>
+    <CActorUnit id="Zealot2" parent="GenericUnitStandard" unitName="Lob_Ordeal_Dawn_Green">
+        <Aliases value="_UnitSmall"/>
+        <Macros value="ChargingAnim"/>
+        <Macros value="TerrainSquibAnimations"/>
+        <Macros value="PhysicsDeathsSwarmGround"/>
+        <On Terms="Behavior.Charging.On" Send="ModelSuddenMotionStart"/>
+        <On Terms="Behavior.Charging.Off" Send="ModelSuddenMotionStop"/>
+        <On Terms="Behavior.Hallucination.On" Send="Create HallucinationBirthSoundSmall"/>
+        <On Terms="UnitDeathCustomize; ValidateUnit IsHallucination" Send="DeathCustomize Hallucination"/>
+        <On Terms="UnitHeightUpdate.*.Land" Send="Create Zealot_Land"/>
+        <On Terms="Upgrade.DarkProtoss.Add" Send="ModelSwap DarkZealot"/>
+        <On Terms="UnitBirth; ValidateUnit NoDarkProtoss" Send="ModelSwap DarkZealot"/>
+        <On Terms="UnitDeathCustomize; ValidateUnit NoDarkProtoss" Send="DeathCustomize DarkProtoss"/>
+        <Model value="Zealot"/>
+        <ModelFlags index="OutlineEmitter" value="1"/>
+        <BuildModel value="ZealotWarpIn"/>
+        <DeathArray index="Normal" ModelLink="ZealotDeath" SoundLink="Zealot_DeathFX"/>
+        <DeathCustoms ModelLink="HallucinationDeath" SoundLink="Sentry_HallucinationDeathSmall" Name="Hallucination"/>
+        <DeathCustoms ActorModel="ZealotDeathRagdoll" ModelLink="ZealotDeathRagdoll" Name="RagdollBasic">
+            <BodySquibs Name="None"/>
+        </DeathCustoms>
+        <DeathCustoms Name="RagdollSiegeTank" InheritsFrom="RagdollBasic"/>
+        <DeathCustoms Name="RagdollNuke" InheritsFrom="RagdollBasic">
+            <BodySquibs Name="Fire"/>
+        </DeathCustoms>
+        <DeathCustoms Name="RagdollFire" InheritsFrom="RagdollBasic">
+            <BodySquibs Name="Fire"/>
+        </DeathCustoms>
+        <DeathCustoms Name="RagdollAcid" InheritsFrom="RagdollBasic">
+            <BodySquibs Name="Acid"/>
+        </DeathCustoms>
+        <DeathCustoms Name="RagdollBaneling" InheritsFrom="RagdollBasic">
+            <BodySquibs Name="Acid"/>
+        </DeathCustoms>
+        <DeathCustoms Name="RagdollUltraUnburrow" InheritsFrom="RagdollBasic"/>
+        <DeathCustoms ActorModel="SpineCrawlerHurlDeathRagdollWithTeamColor" ModelLink="ZealotDeathRagdoll" Name="RagdollSpineCrawlerHurl"/>
+        <DeathCustoms Name="RagdollOverkillDPRH" InheritsFrom="RagdollBasic"/>
+        <DeathCustoms Name="RagdollOverkillDOI" InheritsFrom="RagdollBasic"/>
+        <DeathCustoms Name="RagdollMidair" InheritsFrom="RagdollBasic"/>
+        <DeathCustoms ModelLink="DarkZealotDeath" Name="DarkProtoss"/>
+        <DeathActorModel value="UnitDeathModelWithDeathMotionGround"/>
+        <PlacementModel value="ZealotPlacement"/>
+        <PlacementSound value="Protoss_BuildingPlacementSmall"/>
+        <PortraitModel value="ZealotPortrait"/>
+        <TerrainSquibs>
+            <MovementDistance value="0.150000,0.150000"/>
+            <IdlePeriod value="0.100000,0.250000"/>
+            <RangeUp value="0.600000"/>
+            <RangeDown value="0.600000"/>
+            <AttachQuery Methods="AMFilterCenter"/>
+            <Visuals TerrainPhysicsMaterial="Water" ActorModel="TerrainSquibHarnessContinuous" ModelLink="WaterRippleMedium"/>
+        </TerrainSquibs>
+        <WalkAnimMoveSpeed value="3"/>
+        <BarOffset value="45"/>
+        <BarWidth value="42"/>
+        <GroupIcon>
+            <Image value="Assets\Textures\Wireframe-Protoss-Zealot.dds"/>
+        </GroupIcon>
+        <HeroIcon value="Assets\Textures\btn-unit-protoss-zealot.dds"/>
+        <HighlightTooltip value="Unit/Name/Zealot2"/>
+        <LifeArmorIcon value="Assets\Textures\btn-upgrade-protoss-groundarmorlevel0.dds"/>
+        <SoundArray index="Ready" value="Zealot_Ready"/>
+        <SoundArray index="Help" value="Zealot_Help"/>
+        <SoundArray index="What" value="Zealot_What"/>
+        <SoundArray index="Yes" value="Zealot_Yes"/>
+        <SoundArray index="Attack" value="Zealot_Attack"/>
+        <SoundArray index="Pissed" value="Zealot_Pissed"/>
+        <UnitIcon value="Assets\Textures\btn-unit-protoss-zealot.dds"/>
+        <Wireframe>
+            <Image value="Assets\Textures\Wireframe-Protoss-Zealot.dds"/>
+        </Wireframe>
+        <WireframeShield>
+            <Image value="Assets\Textures\Wireframe-Protoss-Zealot-Shield01.dds"/>
+            <Image value="Assets\Textures\Wireframe-Protoss-Zealot-Shield02.dds"/>
+            <Image value="Assets\Textures\Wireframe-Protoss-Zealot-Shield03.dds"/>
+        </WireframeShield>
+    </CActorUnit>
 </Catalog>

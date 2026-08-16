@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Catalog>
+    <CRequirementCountUpgrade id="UpgradeBaneling2CompleteOnly">
+        <Count Link="Lob_Ordeal_Dawn_Violet"/>
+    </CRequirementCountUpgrade>
+    <CRequirementCountUpgrade id="UpgradeBaneling2QueuedOrBetter">
+        <Count Link="Lob_Ordeal_Dawn_Violet"/>
+    </CRequirementCountUpgrade>
+</Catalog>
