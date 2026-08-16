@@ -13,7 +13,8 @@
 | 在编辑器里摆东西 / 建单位 / 写 catalog | [`dev/authoring-contract.md`](dev/authoring-contract.md) | — |
 | 改工作循环、PE-Box、能源、胜利 | [`design/systems/energy.md`](design/systems/energy.md) | |
 | 改融毁 | [`design/systems/meltdown.md`](design/systems/meltdown.md) | |
-| 改难度、波次强度、考验 | [`design/systems/difficulty.md`](design/systems/difficulty.md) | |
+| 改难度、波次强度 | [`design/systems/difficulty.md`](design/systems/difficulty.md) | |
+| 改考验 | [`design/systems/ordeal.md`](design/systems/ordeal.md) | |
 | 改存档 / 跨局解锁 | [`design/systems/persistence.md`](design/systems/persistence.md) | |
 | 改防御设施、房间、守军 | [`design/systems/fortify.md`](design/systems/fortify.md) | |
 | 改任务计数、解锁 | [`design/systems/quests.md`](design/systems/quests.md) | |

@@ -300,6 +300,65 @@ void Debug_ReportCells (int player) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// -ordeal | -ordeal now
+//
+// The pool per tier, what is coming, and what is standing. Waiting for meltdown
+// level 8 to find out whether a Midnight spawns is not a test, so "now" starts
+// the scheduled one where it stands.
+//--------------------------------------------------------------------------------------------------
+string Debug_OrdealTier (int tier) {
+    return Diff_OrdealName(tier) + " " + IntToString(Ordeal_PoolSize(tier)) + " type(s)";
+}
+
+void Debug_Ordeal (int player, string word) {
+    string line;
+    int tier;
+
+    if (StringEqual(word, "now", false)) {
+        if (gv_ordealActive) {
+            Debug_Say(player, "ordeal: one is already running");
+        }
+        else if (gv_ordealNextType == "") {
+            Debug_Say(player, "ordeal: nothing scheduled -- that tier has no units yet");
+        }
+        else {
+            Ordeal_Begin(Ordeal_TierAtLevel(gv_ordealNextLevel), gv_ordealNextType);
+            Ordeal_ScheduleAfter(gv_ordealNextLevel);
+        }
+    }
+
+    line = "ordeal pool:";
+    tier = 0;
+    while (tier < c_diffCount) {
+        line = line + "  " + Debug_OrdealTier(tier);
+        tier = tier + 1;
+    }
+    Debug_Say(player, line);
+    Debug_Say(player, "ordeal cap " + Diff_OrdealName(Diff_OrdealCap())
+                      + "  melt " + IntToString(Melt_Level()));
+
+    if (gv_ordealActive) {
+        Debug_Say(player, "ordeal RUNNING " + gv_ordealType
+                          + " (" + Diff_OrdealName(gv_ordealTier) + ")  standing "
+                          + IntToString(Ordeal_Standing()) + "/" + IntToString(gv_ordealCount)
+                          + "  pays " + IntToString(Ordeal_RewardFor(gv_ordealTier)));
+        return;
+    }
+
+    line = "ordeal next at melt " + IntToString(gv_ordealNextLevel)
+           + " (" + Diff_OrdealName(gv_ordealNextTier) + "): ";
+    if (gv_ordealNextType == "") {
+        line = line + "NOTHING -- no units authored for that tier";
+    }
+    else {
+        line = line + gv_ordealNextType;
+    }
+    Debug_Say(player, line);
+    Debug_Say(player, "ordeal beaten: dusk+ " + IntToString(Ordeal_BeatenAtLeast(c_ordealDusk))
+                      + "  midnight " + IntToString(Ordeal_BeatenAtLeast(c_ordealMidnight)));
+}
+
+//--------------------------------------------------------------------------------------------------
 // -fort [slot]
 //
 // Every room and corridor: level, owner, how much of it is standing. With an
@@ -1048,6 +1107,21 @@ void Debug_BuildHelp () {
         "Assets\\Textures\\btn-ability-terran-stimpack-color.dds");
 
     Debug_Tip(
+        "Ordeals",
+        "<c val=\"ffff8a\">-ordeal</c>  what is coming, at which meltdown level, and "
+        + "how many types each tier has to draw from.<n/>"
+        + "<c val=\"ffff8a\">-ordeal now</c>  start the scheduled one immediately.<n/><n/>"
+        + "Every meltdown level from the second brings one: 2 is a Dawn, 3 to 5 a "
+        + "Noon, 6 and 7 a Dusk, 8 and beyond a Midnight. Your difficulty is a "
+        + "ceiling on the tier, not a schedule -- on Casual they keep coming and "
+        + "never get worse than a Dawn.<n/><n/>"
+        + "You are always told which one is next before it lands, because a "
+        + "surprise cannot be prepared for and preparing is the whole game.<n/><n/>"
+        + "One entity per department. Suppressing all of them pays 10 / 15 / 20 / "
+        + "25 percent of the ENERGY TARGET into the pool, by tier.",
+        "Assets\\Textures\\btn-ability-terran-holdfire.dds");
+
+    Debug_Tip(
         "Fortifications",
         "<c val=\"ffff8a\">-fort</c>  every room and corridor: level, owner, how much "
         + "of it is standing.<n/>"
@@ -1209,6 +1283,9 @@ bool Debug_Chat_Func (bool testConds, bool runActions) {
     }
     else if (StringEqual(command, "-energy", false)) {
         Debug_Energy(player, StringWord(message, 2));
+    }
+    else if (StringEqual(command, "-ordeal", false)) {
+        Debug_Ordeal(player, StringWord(message, 2));
     }
     else if (StringEqual(command, "-fort", false)) {
         Debug_Fortify(player, StringWord(message, 2));
