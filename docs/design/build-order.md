@@ -23,7 +23,7 @@
 | 12 | 防御设施 + 房间/走廊 | — | **已落地并跑通**，欠守军/回收装置单位与更多点位 | [`systems/fortify.md`](systems/fortify.md) |
 | 13 | **理智**：崩溃与恢复 | — | **已落地**，欠白伤 E.G.O 这件实物 | [`systems/sanity.md`](systems/sanity.md) |
 | 14 | **难度**：逐玩家四档 + 全局平均 | — | **已落地** `01_difficulty.galaxy` | [`systems/difficulty.md`](systems/difficulty.md) |
-| 15 | **考验**：四档，上限由难度定 | 14 | 待做（上限已就位） | [`systems/difficulty.md`](systems/difficulty.md) |
+| 15 | **考验**：四档，上限由难度定 | 14 | **框架已落地** `27_ordeals.galaxy`，欠单位与逐类型行为 | [`systems/ordeal.md`](systems/ordeal.md) |
 
 § 指 `agents-and-abnormalities.md`。PE-Box 与能源见 [`systems/energy.md`](systems/energy.md)。
 
@@ -58,8 +58,9 @@
 
 所以剩下的顺序按"能不能自己跑起来"排：
 
-1. **第 15 项 考验**。只依赖第 14 项，而上限已经就位（`Diff_OrdealCap`）。它一次解锁四条挑战任务。**但它的设计只有一句话**，动手前要先把四档考验各自是什么写进 `systems/`。
-2. **第 5 项剩下的**：Qliphoth 归零之后每个异想体各自做什么。
-3. **第 8 / 10 项**要读存档，跟着第 7 项走。
+1. **`Lob_Ordeal_Dawn_*` 四个单位**。框架在等它们——建出来之前 `-ordeal` 会一直说 `NOTHING`。四份原作资料在 `docs/usr/ordeals/`，血量/伤害/移速/四抗全在里面。
+2. **每种考验自己的行为**：虫子钻地、小丑偷箱子、机器人处决溅白伤、紫罗兰自爆清 Qliphoth。要等单位存在。
+3. **第 5 项剩下的**：Qliphoth 归零之后每个异想体各自做什么。
+4. **第 8 / 10 项**要读存档，跟着第 7 项走。
 
 任务**内容表本身还有空格**——`usr/quests_unlocks.md` 里安保部 2/3、中央本部 1-3、福利部整节都是空的。那 25 条数不了的任务里有一部分就是这个原因，**填表是策划侧的事**，代码这边已经把位置留好了（声明了但标成 `countable = false`，`-quest` 会说 "no channel yet"）。

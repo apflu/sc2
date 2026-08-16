@@ -435,6 +435,12 @@ int Quest_StepProgress (int player, int quest, int step) {
     else if (quest == c_qMalkuth3) {
         value = Melt_CleanRoundsBy(player);
     }
+    // Table-wide, like Training Team 3: an Ordeal arrives in every department
+    // at once and ends when the last entity anywhere falls. There is no
+    // per-player half of it that could be counted instead.
+    else if (quest == c_qMalkuth4) {
+        value = Ordeal_BeatenAtLeast(c_ordealDusk);
+    }
 
     // Information Team.
     else if (quest == c_qYesod1) {
@@ -466,6 +472,12 @@ int Quest_StepProgress (int player, int quest, int step) {
     else if (quest == c_qHod3) {
         // Table-wide on purpose: the document says 队友的进度也计算在内.
         value = Cont_SuppressedDistinct();
+    }
+
+    // Disciplinary Team. The Midnight one; Geburah 2 and 3 are suppression
+    // counts that still have no channel.
+    else if (quest == c_deptGeburah * c_questPerDept + 3) {
+        value = Ordeal_BeatenAtLeast(c_ordealMidnight);
     }
 
     if (value > Quest_StepGoal(quest, step)) {
@@ -877,7 +889,7 @@ void Quests_Init () {
                               "Lob/Quest/Step/Malkuth1b", 1);
     Quest_Declare(c_qMalkuth2, 4, true, "Lob/Quest/Title/Malkuth2");
     Quest_Declare(c_qMalkuth3, 3, true, "Lob/Quest/Title/Malkuth3");
-    Quest_Declare(c_qMalkuth4, 1, false, "Lob/Quest/Title/Malkuth4");
+    Quest_Declare(c_qMalkuth4, 1, true, "Lob/Quest/Title/Malkuth4");
 
     // Information Team.
     Quest_Declare(c_qYesod1, 3, true, "Lob/Quest/Title/Yesod1");
@@ -925,7 +937,7 @@ void Quests_Init () {
                  "Lob/Quest/Step/Geburah2a", 3,
                  "Lob/Quest/Step/Geburah2b", 2);
     Quest_Declare(c_deptGeburah * c_questPerDept + 2, 3, false, "Lob/Quest/Title/Geburah3");
-    Quest_Declare(c_deptGeburah * c_questPerDept + 3, 1, false, "Lob/Quest/Title/Geburah4");
+    Quest_Declare(c_deptGeburah * c_questPerDept + 3, 1, true, "Lob/Quest/Title/Geburah4");
 
     // After the table, because publishing reads it. Departments are dealt in
     // Departments_Init, which the build orders before this one.

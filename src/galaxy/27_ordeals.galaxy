@@ -1,0 +1,458 @@
+//--------------------------------------------------------------------------------------------------
+// Ordeals.
+//
+// The meltdown clock's other output. 13_meltdown turns a level into cells that
+// have to be worked; this turns the same level into something that walks in and
+// has to be killed. Both are the same pressure arriving through two doors, which
+// is why nothing here has a timer of its own -- an Ordeal is not scheduled, it
+// is a CONSEQUENCE of a meltdown level, and giving it an independent clock would
+// let the two drift into arriving together by accident.
+//
+//   meltdown 2        -> Dawn
+//   meltdown 3, 4, 5  -> Noon
+//   meltdown 6, 7     -> Dusk
+//   meltdown 8 and up -> Midnight
+//
+// Difficulty is a CEILING on the tier, not a schedule (Diff_OrdealCap, and the
+// reasoning is in systems/difficulty.md). It clamps rather than skips: on Casual
+// the Dawns keep coming and never get worse, which keeps both the rhythm and the
+// energy reward intact. Skipping would have made Casual a game with exactly one
+// Ordeal in it, which is a different game rather than an easier one.
+//
+// WHICH Ordeal is drawn from the units that exist. Lob_Ordeal_Dawn_Amber lands
+// in the generated Ordeal_Dawn table, so the pool for a tier is whatever has
+// been authored for it -- adding an Ordeal is building a unit, and this file
+// does not change. A tier with no units draws nothing and says so.
+//
+// The next one is rolled the moment the previous is scheduled, because the
+// design requires the players to KNOW what is coming and at which meltdown
+// level. That is the whole tactical content of an Ordeal for the ten minutes
+// before it lands: you cannot prepare for a surprise.
+//
+// Numbered 27 because it reads locations off 26_fortify and is called by nobody.
+//--------------------------------------------------------------------------------------------------
+
+// Percent of the shared energy target paid for suppressing one, by tier.
+//
+// Of the TARGET rather than of the pool, so an Ordeal is worth the same whether
+// it arrives while you are flush or while you are scraping -- which is the point,
+// since the tier is already the difficulty axis and the pool is not.
+int[4] gvg_ordealRewardPct;
+
+const fixed c_ordealTick = 1.0;
+
+// Spawned entities, by handle. Same argument as the fortification slots: a
+// handle IS the world, where a count could disagree with it.
+const int c_ordealUnitMax = 64;
+unit[64] gvg_ordealUnit;
+int gv_ordealCount;
+
+// What is running, if anything.
+bool gv_ordealActive;
+int gv_ordealTier;
+string gv_ordealType;
+int gv_ordealKilled;
+
+// What is coming, and when. gv_ordealNextType is "" when a tier has no units
+// authored yet, which is the inert-not-broken case.
+int gv_ordealNextLevel;
+int gv_ordealNextTier;
+string gv_ordealNextType;
+
+// The meltdown level this module has already reacted to, so a level is not
+// answered twice.
+int gv_ordealSeenLevel;
+
+int gv_ordealObj;
+
+// Ordeals suppressed this game, by tier. Table-wide, because an Ordeal is:
+// every department gets one entity and it is over when the last of them falls,
+// so there is no per-player half of it to count. Control Team 4 and
+// Disciplinary Team 4 read this.
+int[4] gvg_ordealBeaten;
+
+trigger gt_ordealTick;
+
+//--------------------------------------------------------------------------------------------------
+// How many Ordeals of at least this tier have been put down.
+//
+// At LEAST, because "survive a Dusk Ordeal" is satisfied by a Midnight. A task
+// that asked for exactly a Dusk would get harder as the night got worse, which
+// is backwards.
+//--------------------------------------------------------------------------------------------------
+int Ordeal_BeatenAtLeast (int tier) {
+    int total;
+    int i;
+
+    total = 0;
+    i = tier;
+    while (i < c_diffCount) {
+        if (i >= 0) {
+            total = total + gvg_ordealBeaten[i];
+        }
+        i = i + 1;
+    }
+    return total;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Which tier a meltdown level calls for, before the difficulty ceiling.
+// -1 for a level that calls for none.
+//--------------------------------------------------------------------------------------------------
+int Ordeal_TierForLevel (int level) {
+    if (level < 2) {
+        return -1;
+    }
+    if (level == 2) {
+        return c_ordealDawn;
+    }
+    if (level <= 5) {
+        return c_ordealNoon;
+    }
+    if (level <= 7) {
+        return c_ordealDusk;
+    }
+    return c_ordealMidnight;
+}
+
+int Ordeal_TierAtLevel (int level) {
+    int tier;
+
+    tier = Ordeal_TierForLevel(level);
+    if (tier > Diff_OrdealCap()) {
+        return Diff_OrdealCap();
+    }
+    return tier;
+}
+
+//--------------------------------------------------------------------------------------------------
+// How many types are authored for a tier, and one of them by index.
+//
+// Galaxy has no array parameters, so a tier cannot be looked up in a table --
+// hence the four-way branch. It is written twice rather than once because the
+// alternative is copying the type names into a table this file owns, and then
+// there would be two lists of Ordeals that could disagree.
+//--------------------------------------------------------------------------------------------------
+int Ordeal_PoolSize (int tier) {
+    if (tier == c_ordealDawn) { return c_typesOrdeal_DawnCount; }
+    if (tier == c_ordealNoon) { return c_typesOrdeal_NoonCount; }
+    if (tier == c_ordealDusk) { return c_typesOrdeal_DuskCount; }
+    if (tier == c_ordealMidnight) { return c_typesOrdeal_MidnightCount; }
+    return 0;
+}
+
+string Ordeal_PoolAt (int tier, int i) {
+    if (i < 0 || i >= Ordeal_PoolSize(tier)) {
+        return "";
+    }
+    if (tier == c_ordealDawn) { return gvg_typesOrdeal_Dawn[i]; }
+    if (tier == c_ordealNoon) { return gvg_typesOrdeal_Noon[i]; }
+    if (tier == c_ordealDusk) { return gvg_typesOrdeal_Dusk[i]; }
+    if (tier == c_ordealMidnight) { return gvg_typesOrdeal_Midnight[i]; }
+    return "";
+}
+
+string Ordeal_Draw (int tier) {
+    int size;
+
+    size = Ordeal_PoolSize(tier);
+    if (size <= 0) {
+        return "";
+    }
+    return Ordeal_PoolAt(tier, RandomInt(0, size - 1));
+}
+
+//--------------------------------------------------------------------------------------------------
+// What to call one, for a player to read.
+//
+// The unit's own display name, not a second string of ours. The editor already
+// wrote Unit/Name/Lob_Ordeal_Dawn_Amber and the panel already shows it; a
+// parallel Lob/ key would be a copy free to drift from the thing it names.
+//--------------------------------------------------------------------------------------------------
+text Ordeal_NameOf (string type) {
+    if (type == "") {
+        return StringExternal("Lob/Ordeal/None");
+    }
+    return StringExternal("Unit/Name/" + type);
+}
+
+int Ordeal_RewardFor (int tier) {
+    if (tier < 0 || tier >= c_diffCount) {
+        return 0;
+    }
+    return gv_energyGoal * gvg_ordealRewardPct[tier] / 100;
+}
+
+//--------------------------------------------------------------------------------------------------
+// The objective line, which is a STATUS line rather than a thing to complete.
+//
+// One line that says either what is coming or what is here. Bonus, because an
+// Ordeal pays energy and energy is spent when the ship leaves -- the same
+// reasoning that makes the energy target itself a bonus objective.
+//--------------------------------------------------------------------------------------------------
+void Ordeal_Refresh () {
+    if (gv_ordealObj == c_invalidObjectiveId) {
+        return;
+    }
+
+    if (gv_ordealActive) {
+        ObjectiveSetName(
+            gv_ordealObj,
+            TextReplaceWord(StringExternal("Lob/Objective/Ordeal/Here"),
+                            StringToText("%NAME%"), Ordeal_NameOf(gv_ordealType),
+                            c_stringReplaceAll, c_stringCase)
+            + StringToText(" <s val=\"" + c_questProgressStyle + "\">("
+                           + IntToString(gv_ordealKilled) + "/"
+                           + IntToString(gv_ordealCount) + ")</s>"));
+        return;
+    }
+
+    if (gv_ordealNextType == "") {
+        ObjectiveSetName(gv_ordealObj, StringExternal("Lob/Objective/Ordeal/Nothing"));
+        return;
+    }
+
+    ObjectiveSetName(
+        gv_ordealObj,
+        TextReplaceWord(
+            TextReplaceWord(StringExternal("Lob/Objective/Ordeal/Next"),
+                            StringToText("%NAME%"), Ordeal_NameOf(gv_ordealNextType),
+                            c_stringReplaceAll, c_stringCase),
+            StringToText("%LEVEL%"), IntToText(gv_ordealNextLevel),
+            c_stringReplaceAll, c_stringCase));
+}
+
+//--------------------------------------------------------------------------------------------------
+// Rolls the one after this, and tells everybody.
+//
+// Called after each Ordeal is dispatched rather than when it is defeated, so
+// the warning is as early as it can possibly be. An Ordeal that is announced
+// while it is already walking down the corridor is not a warning.
+//--------------------------------------------------------------------------------------------------
+void Ordeal_ScheduleAfter (int level) {
+    int at;
+
+    at = level + 1;
+    if (at < 2) {
+        at = 2;
+    }
+
+    gv_ordealNextLevel = at;
+    gv_ordealNextTier = Ordeal_TierAtLevel(at);
+    gv_ordealNextType = Ordeal_Draw(gv_ordealNextTier);
+
+    Ordeal_Refresh();
+
+    if (gv_ordealNextType != "") {
+        UIDisplayMessage(
+            PlayerGroupAll(), c_messageAreaSubtitle,
+            Msg2("Lob/Msg/OrdealNext",
+                 "%NAME%", Ordeal_NameOf(gv_ordealNextType),
+                 "%LEVEL%", MsgInt(gv_ordealNextLevel)));
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// Where one entity belonging to a player appears.
+//
+// A corridor or room of theirs, chosen at random, which is the doc's "one per
+// department in a random hallway". Their core is the fallback for a sector with
+// no regions drawn yet, so the system works before the editor side is finished
+// rather than silently spawning nothing.
+//--------------------------------------------------------------------------------------------------
+point Ordeal_SpawnPointFor (int player) {
+    unit core;
+    int found;
+    int pick;
+    int loc;
+
+    found = 0;
+    loc = 0;
+    while (loc < gv_locCount) {
+        if (Fort_OwnerOf(loc) == player) {
+            found = found + 1;
+        }
+        loc = loc + 1;
+    }
+
+    if (found > 0) {
+        pick = RandomInt(1, found);
+        loc = 0;
+        while (loc < gv_locCount) {
+            if (Fort_OwnerOf(loc) == player) {
+                pick = pick - 1;
+                if (pick == 0) {
+                    return gvg_locCenter[loc];
+                }
+            }
+            loc = loc + 1;
+        }
+    }
+
+    core = Sector_AnyCore(player);
+    if (core != null) {
+        return UnitGetPosition(core);
+    }
+    return Point(0.0, 0.0);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Puts the drawn Ordeal on the map, one entity per player at the table.
+//
+// One each, not a number scaled by anything. How many an Ordeal brings is a
+// per-TYPE fact -- Amber Dawn's worms arrive in fives and the clowns arrive
+// alone -- and there is no channel for a per-type number yet. That decision is
+// pending and shared with three other systems (see build-order.md); inventing a
+// fourth channel for it here is exactly what that note forbids.
+//--------------------------------------------------------------------------------------------------
+void Ordeal_Begin (int tier, string type) {
+    unit made;
+    int player;
+
+    if (type == "") {
+        return;
+    }
+
+    gv_ordealActive = true;
+    gv_ordealTier = tier;
+    gv_ordealType = type;
+    gv_ordealCount = 0;
+    gv_ordealKilled = 0;
+
+    player = 1;
+    while (player <= 15) {
+        if (Slot_IsTablePlayer(player) && gv_ordealCount < c_ordealUnitMax) {
+            UnitCreate(1, type, c_unitCreateIgnorePlacement, c_zergPlayer,
+                       Ordeal_SpawnPointFor(player), 270.0);
+            made = UnitLastCreated();
+            if (made != null) {
+                gvg_ordealUnit[gv_ordealCount] = made;
+                gv_ordealCount = gv_ordealCount + 1;
+            }
+        }
+        player = player + 1;
+    }
+
+    if (gv_ordealCount == 0) {
+        // Nowhere to put anything. Not an Ordeal that was survived.
+        gv_ordealActive = false;
+        return;
+    }
+
+    UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle,
+                     Msg1("Lob/Msg/OrdealBegin", "%NAME%", Ordeal_NameOf(type)));
+    Ordeal_Refresh();
+}
+
+//--------------------------------------------------------------------------------------------------
+// How many of the spawned entities are still standing.
+//--------------------------------------------------------------------------------------------------
+int Ordeal_Standing () {
+    int alive;
+    int i;
+
+    alive = 0;
+    i = 0;
+    while (i < gv_ordealCount) {
+        if (gvg_ordealUnit[i] != null && UnitIsAlive(gvg_ordealUnit[i])) {
+            alive = alive + 1;
+        }
+        i = i + 1;
+    }
+    return alive;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Paid once, into the shared pool, when the last one falls.
+//--------------------------------------------------------------------------------------------------
+void Ordeal_Finish () {
+    int reward;
+
+    reward = Ordeal_RewardFor(gv_ordealTier);
+    Energy_Add(reward);
+    gvg_ordealBeaten[gv_ordealTier] = gvg_ordealBeaten[gv_ordealTier] + 1;
+
+    UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle,
+                     Msg2("Lob/Msg/OrdealDone",
+                          "%NAME%", Ordeal_NameOf(gv_ordealType),
+                          "%ENERGY%", MsgInt(reward)));
+
+    gv_ordealActive = false;
+    gv_ordealCount = 0;
+    gv_ordealKilled = 0;
+    gv_ordealType = "";
+    Ordeal_Refresh();
+}
+
+//--------------------------------------------------------------------------------------------------
+// The one clock, and it is not the Ordeal's own.
+//
+// Two jobs, and both are readings of state that changes underneath rather than
+// events this module could have subscribed to: the meltdown level is owned by a
+// module that loads BEFORE this one and so cannot call into it, and "the last
+// entity died" has no event that is not a death event per spawned unit.
+//--------------------------------------------------------------------------------------------------
+bool Ordeal_Tick_Func (bool testConds, bool runActions) {
+    int level;
+    int killed;
+
+    if (!runActions) {
+        return true;
+    }
+
+    if (gv_ordealActive) {
+        killed = gv_ordealCount - Ordeal_Standing();
+        if (killed != gv_ordealKilled) {
+            gv_ordealKilled = killed;
+            Ordeal_Refresh();
+        }
+        if (Ordeal_Standing() == 0) {
+            Ordeal_Finish();
+        }
+        return true;
+    }
+
+    level = Melt_Level();
+    if (level > gv_ordealSeenLevel) {
+        gv_ordealSeenLevel = level;
+        if (level >= gv_ordealNextLevel && Ordeal_TierForLevel(level) >= 0) {
+            Ordeal_Begin(Ordeal_TierAtLevel(level), gv_ordealNextType);
+            Ordeal_ScheduleAfter(level);
+        }
+    }
+    return true;
+}
+
+void Ordeals_Init () {
+    // TUNING is not the word: these four are from the design directly, 10 / 15 /
+    // 20 / 25 percent of the energy target by tier.
+    gvg_ordealRewardPct[c_ordealDawn] = 10;
+    gvg_ordealRewardPct[c_ordealNoon] = 15;
+    gvg_ordealRewardPct[c_ordealDusk] = 20;
+    gvg_ordealRewardPct[c_ordealMidnight] = 25;
+
+    gv_ordealActive = false;
+    gv_ordealCount = 0;
+    gv_ordealKilled = 0;
+    gv_ordealType = "";
+    gv_ordealSeenLevel = Melt_Level();
+
+    gvg_ordealBeaten[c_ordealDawn] = 0;
+    gvg_ordealBeaten[c_ordealNoon] = 0;
+    gvg_ordealBeaten[c_ordealDusk] = 0;
+    gvg_ordealBeaten[c_ordealMidnight] = 0;
+
+    gv_ordealObj = ObjectiveCreate(
+        StringExternal("Lob/Objective/Ordeal/Nothing"),
+        StringExternal("Lob/Objective/Ordeal/Desc"),
+        c_objectiveStateActive,
+        false);
+
+    // The first warning goes out before anything has happened, which is the
+    // point: the players should walk into meltdown 1 already knowing what
+    // meltdown 2 brings.
+    Ordeal_ScheduleAfter(1);
+
+    gt_ordealTick = TriggerCreate("Ordeal_Tick_Func");
+    TriggerAddEventTimePeriodic(gt_ordealTick, c_ordealTick, c_timeGame);
+}
