@@ -255,11 +255,10 @@
          14_work's, and 11_employee issues a stop so a person who breaks mid-walk
          does not keep walking.
 
-         The way back up is a White E.G.O round: the same damage that takes an
-         abnormality's mind apart puts an employee's back together. The rest hall
-         still trickles SP, but a frozen employee cannot walk to it — so whoever
-         broke outside is recovered by a teammate spending attention on them, or
-         not at all. See systems/sanity.md. -->
+         The way back up is a White E.G.O round and nothing else: the same damage
+         that takes an abnormality's mind apart puts an employee's back together.
+         Not Black, which touches SP but is a mixed type and heals nobody. The
+         rest hall's trickle is switched off below. See systems/sanity.md. -->
     <CBehaviorBuff id="Lob_Panicked">
         <EditorCategories value="AbilityorEffectType:Units"/>
         <BehaviorFlags index="Permanent" value="1"/>
@@ -267,6 +266,21 @@
         <InfoIcon value="Assets\Textures\btn-ability-terran-stimpack-color.dds"/>
         <Modification>
             <AbilClassDisableArray index="CAbilMove" value="1"/>
+            <!-- The rest hall must not quietly undo this. Its Energy trickle is
+                 regeneration, so one flag stops it without splitting that buff
+                 in two and without touching its life regen: a broken employee
+                 sitting in the room still gets their wounds seen to, and still
+                 does not get their mind back for free. -->
+            <StateFlags index="SuppressEnergyRegen" value="1"/>
+            <!-- The marker that makes "is this one broken" a question a WEAPON
+                 can ask. Weapons select targets by filters only — they have no
+                 validators, so a behavior is invisible to them — and of the
+                 flags a buff can set, this is the one that is also true:
+                 somebody who has stopped functioning has stopped fighting.
+                 Their own rifle goes quiet as a consequence, which is the
+                 "strike" half of baseline 8 arriving for free.
+                 See systems/sanity.md for what reads it. -->
+            <StateFlags index="Passive" value="1"/>
         </Modification>
     </CBehaviorBuff>
 
