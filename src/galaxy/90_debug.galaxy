@@ -396,16 +396,15 @@ void Debug_Ordeal (int player, string word) {
                 line = line + " dead";
             }
             else if (gv_ordealAct == c_ordealActThief) {
-                if (gvg_ordealAt[tier] > 0.0) {
-                    line = line + " robbing, "
-                           + IntToString(FixedToInt(gvg_ordealAt[tier] - GameGetMissionTime()))
-                           + "s left";
-                }
-                else if (gvg_ordealMark[tier] == null) {
+                if (gvg_ordealMark[tier] == null) {
                     line = line + " idle -- no cell to rob";
                 }
+                else if (UnitOrderHasAbil(gvg_ordealUnit[tier], c_ordealRobAbil)) {
+                    line = line + " on " + Debug_AbnoName(gvg_ordealMark[tier]);
+                }
                 else {
-                    line = line + " walking to " + Debug_AbnoName(gvg_ordealMark[tier]);
+                    line = line + " marked " + Debug_AbnoName(gvg_ordealMark[tier])
+                           + " but not ordered";
                 }
             }
             else if (gv_ordealAct == c_ordealActBomb) {
