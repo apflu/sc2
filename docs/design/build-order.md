@@ -20,7 +20,7 @@
 | 9 | **bank** | — | **已落地** `16_bank.galaxy` | [`systems/persistence.md`](systems/persistence.md) |
 | 10 | **核心抑制**：lobby game attribute | 7, 8 | 待做 | §7.8 |
 | 11 | **三选一发牌** | 6 + 残余难度字段 | **堵住**，见下 | §4 |
-| 12 | 防御设施 + 房间/走廊 | — | **已落地** `26_fortify.galaxy`，欠编辑器侧 | [`systems/fortify.md`](systems/fortify.md) |
+| 12 | 防御设施 + 房间/走廊 | — | **已落地并跑通**，欠守军/回收装置单位与更多点位 | [`systems/fortify.md`](systems/fortify.md) |
 | 13 | SP = Energy vital | — | **已落地**（在 11 里），欠「疯狂做什么」 | 基线 8 |
 | 14 | **难度**：逐玩家四档 + 全局平均 | — | **已落地** `01_difficulty.galaxy` | [`systems/difficulty.md`](systems/difficulty.md) |
 | 15 | **考验**：四档，上限由难度定 | 14 | 待做（上限已就位） | [`systems/difficulty.md`](systems/difficulty.md) |
@@ -37,15 +37,20 @@
 
 同一个未决问题还挡着另外两件事：存档压缩需要的**稳定逐异想体序号**（见 `systems/persistence.md`），以及**"工具异想体"标志**（融毁永不点名它，见 `systems/meltdown.md`）。三个都是"每个异想体一个 per-type 值"，很可能是同一次决定。
 
-### 第 12 项：代码写完了，等编辑器
+### 第 12 项：已经不堵了
 
-`26_fortify.galaxy` 已经落地，但它现在**扫不到任何东西**。要跑起来需要三样编辑器侧的东西：
+一条 `corridor_a` + 一个 `fort1` 点位 + `Lob_Turret_Fire` + `Lob_Build` 已经端到端跑通：买级 → 工人前往 → 建造虚影 → 工地 → 成型 → 空闲钻地 → 敌人靠近升起。
+
+要扩就是重复同一套四样东西：
 
 1. **region** 命名 `room_*` / `corridor_*`
-2. **`Lob_Turret_*` / `Lob_Guard_*` / `Lob_Salvage_*`** 单位（按"单位由用户建"那条）
-3. 把真单位摆到该站的位置上，加进 group **`fort1` / `fort2` / `fort3`**（group 名 = 等级）。init 会读走它们然后删掉
+2. 单位（按"单位由用户建"那条），`Cost` **置 0**——修复费用按单位自身 Cost 算，置 0 才让"SCV 免费重建"成立，钱在升级那一步收
+3. `CAbilBuild` 的 `InfoArray` 里加一行（守军**不需要**，它们是折跃进来的）
+4. 把真单位摆到该站的位置上，加进 group **`fort1` / `fort2` / `fort3`**（group 名 = 等级）
 
-建工事建筑时**把 `Cost` 置 0**——修复费用是按单位自身 Cost 算的，置 0 才让"SCV 免费重建"成立，钱在升级那一步收。
+还没有的：`Lob_Guard_*`（守军，两张表现在是空的，所以 `Fort_SeedGarrison` 惰性）、`Lob_Salvage_*`、以及 2/3 级的点位。
+
+**从原版复制单位时，凡是按单位名键控的东西都要跟着改。**morph 技能、驱动 morph 的 behavior/effect、morph 音效、`##unitName##Build` 那个脚手架 actor——这四样都咬过一次，细节在 [`systems/fortify.md`](systems/fortify.md)。
 
 ## 下一个
 
