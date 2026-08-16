@@ -36,4 +36,21 @@
     <CEffectApplyBehavior id="Lob_WorkCheck">
         <Behavior value="Lob_Worked"/>
     </CEffectApplyBehavior>
+
+    <!-- Retracting is not something the turret decides. Nothing in the morph
+         ability makes it happen; a hidden behavior tries once a second and the
+         ability's NotAttacking validator is what turns "there are no enemies"
+         into "go down". So the ability named here has to be OURS — the stock
+         effect names PerditionTurretBurrow, which our turret does not have, and
+         an order for an ability a unit does not own is simply dropped. That is
+         a turret that builds correctly and then never retracts, with nothing
+         anywhere saying why.
+
+         Coming back up is the opposite: that one IS on the ability, as autocast
+         with a range and a filter, so it needs no help from here. -->
+    <CEffectIssueOrder id="Lob_Turret_Fire_BurrowOrder">
+        <WhichUnit Value="Caster"/>
+        <Abil value="Lob_Turret_Fire_Burrow"/>
+        <CmdFlags index="Preempt" value="1"/>
+    </CEffectIssueOrder>
 </Catalog>

@@ -539,4 +539,17 @@
     <CActorModel id="Lob_Turret_FireBuild" parent="TerranBuildingBuildSmall">
         <Model value="PerditionTurretBuild"/>
     </CActorModel>
+    <!-- The retract and deploy sounds. Stock keys these on the unit NAME, not on
+         the morph ability, so copying the units without copying these leaves a
+         turret that opens and closes in silence. -->
+    <CActorSound id="Lob_Turret_Fire_MorphCloseSound" parent="SoundOneShot">
+        <Sound value="PerditionTurret_MorphClose"/>
+        <On Terms="AbilMorph.*.Start; MorphTo Lob_Turret_Fire_Underground" Send="Create"/>
+        <On Terms="UnitDeath.Lob_Turret_Fire" Send="Destroy"/>
+    </CActorSound>
+    <CActorSound id="Lob_Turret_Fire_MorphOpenSound" parent="SoundOneShot">
+        <Sound value="PerditionTurret_MorphOpen"/>
+        <On Terms="AbilMorph.*.Start; MorphTo Lob_Turret_Fire" Send="Create"/>
+        <On Terms="UnitDeath.Lob_Turret_Fire" Send="Destroy"/>
+    </CActorSound>
 </Catalog>

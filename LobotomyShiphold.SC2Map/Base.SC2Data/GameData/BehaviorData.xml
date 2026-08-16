@@ -270,4 +270,13 @@
         <Duration value="0.5"/>
         <InfoFlags index="Hidden" value="1"/>
     </CBehaviorBuff>
+
+    <!-- The clock behind the turret retracting. Replaces stock TurretBurrow,
+         which fires the same shape at PerditionTurretBurrow by name. -->
+    <CBehaviorBuff id="Lob_Turret_Fire_BurrowLoop">
+        <EditorCategories value="Race:Terran,AbilityorEffectType:Structures"/>
+        <InfoFlags index="Hidden" value="1"/>
+        <Period value="1"/>
+        <PeriodicEffect value="Lob_Turret_Fire_BurrowOrder"/>
+    </CBehaviorBuff>
 </Catalog>

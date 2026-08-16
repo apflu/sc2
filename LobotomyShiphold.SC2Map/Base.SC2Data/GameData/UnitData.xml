@@ -716,7 +716,7 @@
         <AbilArray Link="Lob_Turret_Fire_Burrow"/>
         <BehaviorArray Link="TerranBuildingBurnDown"/>
         <BehaviorArray Link="DistortionSensors"/>
-        <BehaviorArray Link="TurretBurrow"/>
+        <BehaviorArray Link="Lob_Turret_Fire_BurrowLoop"/>
         <BehaviorArray Link="FireSuppressionSystem"/>
         <WeaponArray Link="PerditionTurretFlamethrower" Turret="PerditionTurret"/>
         <CardLayouts>
