@@ -2,7 +2,7 @@
 <Preload>
 <Actor id="SYSTEM_ActorConfig"/>
 <Terrain id="KorhalPlatformEx2"/>
-<Unit id="PerditionTurret"/>
+<Unit id="Lob_Turret_Fire"/>
 <Unit id="ContainGateHorizontal"/>
 <Unit id="ContainGateControl"/>
 <Unit id="Lob_Marker_Spawn"/>
