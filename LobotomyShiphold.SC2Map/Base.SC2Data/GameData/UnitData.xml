@@ -549,6 +549,7 @@
         <AbilArray Link="Repair"/>
         <AbilArray Link="SCVHarvest"/>
         <AbilArray Link="TerranBuild"/>
+        <AbilArray Link="Lob_Build"/>
         <WeaponArray Link="FusionCutter"/>
         <CardLayouts>
             <LayoutButtons Face="Move" Type="AbilCmd" AbilCmd="move,Move" Row="0" Column="0"/>
@@ -751,7 +752,7 @@
         <Race value="Abnormality"/>
         <FlagArray index="Invulnerable" value="1"/>
     </CUnit>
-    <CUnit id="Lob_Fire_Turret">
+    <CUnit id="Lob_Turret_Fire">
         <DeathRevealRadius value="3"/>
         <Facing value="29.9926"/>
         <Race value="Terr"/>
@@ -776,12 +777,12 @@
         <LifeArmor value="1"/>
         <LifeArmorName value="Unit/LifeArmorName/TerranBuildingPlating"/>
         <Sight value="7"/>
-        <CostResource index="Minerals" value="150"/>
+        <CostResource index="Minerals" value="0"/>
         <RepairTime value="33.3332"/>
         <AttackTargetPriority value="20"/>
         <AbilArray Link="BuildInProgress"/>
         <AbilArray Link="attack"/>
-        <AbilArray Link="PerditionTurretBurrow"/>
+        <AbilArray Link="Lob_Turret_Fire_Burrow"/>
         <BehaviorArray Link="TerranBuildingBurnDown"/>
         <BehaviorArray Link="DistortionSensors"/>
         <BehaviorArray Link="TurretBurrow"/>
@@ -814,7 +815,7 @@
         <KillDisplay value="Always"/>
         <RankDisplay value="Always"/>
     </CUnit>
-    <CUnit id="Lob_Fire_Turret_Underground">
+    <CUnit id="Lob_Turret_Fire_Underground">
         <DeathRevealRadius value="3"/>
         <Race value="Terr"/>
         <FlagArray index="Turnable" value="0"/>
@@ -836,11 +837,11 @@
         <LifeArmor value="1"/>
         <LifeArmorName value="Unit/LifeArmorName/TerranBuildingPlating"/>
         <Sight value="7"/>
-        <CostResource index="Minerals" value="150"/>
+        <CostResource index="Minerals" value="0"/>
         <RepairTime value="33.3332"/>
         <AttackTargetPriority value="20"/>
         <AbilArray Link="BuildInProgress"/>
-        <AbilArray Link="PerditionTurretUnburrow"/>
+        <AbilArray Link="Lob_Turret_Fire_Unburrow"/>
         <BehaviorArray Link="TerranBuildingBurnDown"/>
         <BehaviorArray Link="DistortionSensors"/>
         <BehaviorArray Link="FireSuppressionSystem"/>
@@ -856,7 +857,7 @@
         <SubgroupPriority value="12"/>
         <MinimapRadius value="0.75"/>
         <EditorCategories value="ObjectType:Structure,ObjectFamily:Campaign"/>
-        <SelectAlias value="PerditionTurret"/>
+        <SelectAlias value="Lob_Turret_Fire"/>
         <KillDisplay value="Always"/>
         <RankDisplay value="Always"/>
     </CUnit>

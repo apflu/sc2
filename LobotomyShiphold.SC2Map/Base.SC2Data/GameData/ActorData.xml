@@ -503,12 +503,12 @@
             <Image value="Assets\Textures\Wireframe-critter-utilitybot.dds"/>
         </Wireframe>
     </CActorUnit>
-    <CActorUnit id="Lob_Fire_Turret" parent="TerranBuilding" unitName="Lob_Fire_Turret">
+    <CActorUnit id="Lob_Turret_Fire" parent="TerranBuilding" unitName="Lob_Turret_Fire">
         <Aliases value="_UnitLarge"/>
-        <On Terms="UnitBirth.PerditionTurretUnderground" Send="Create"/>
-        <On Terms="UnitBirth.PerditionTurretUnderground" Send="AnimGroupApply Burrow Burrow Unburrow ClosingFull,Instant"/>
-        <On Terms="AbilMorph.*.Start; MorphTo PerditionTurretUnderground" Send="AnimGroupApply Burrow Burrow Unburrow ClosingFull"/>
-        <On Terms="AbilMorph.*.Start; MorphTo PerditionTurret" Send="AnimGroupRemove Burrow"/>
+        <On Terms="UnitBirth.Lob_Turret_Fire_Underground" Send="Create"/>
+        <On Terms="UnitBirth.Lob_Turret_Fire_Underground" Send="AnimGroupApply Burrow Burrow Unburrow ClosingFull,Instant"/>
+        <On Terms="AbilMorph.*.Start; MorphTo Lob_Turret_Fire_Underground" Send="AnimGroupApply Burrow Burrow Unburrow ClosingFull"/>
+        <On Terms="AbilMorph.*.Start; MorphTo Lob_Turret_Fire" Send="AnimGroupRemove Burrow"/>
         <On Terms="UnitDeathCustomize; ValidateUnit IsBuried" Send="DeathCustomize Burrowed"/>
         <Model value="PerditionTurret"/>
         <BuildModel value="PerditionTurret"/>
@@ -533,4 +533,10 @@
             <Image value="Assets\Textures\Wireframe-terran-PerditionTurret.dds"/>
         </Wireframe>
     </CActorUnit>
+    <!-- TerranBuilding sends "Create ##unitName##Build" when construction starts, so this actor
+         must exist under exactly this id or the site has no scaffolding model. Model must be
+         explicit: there is no asset named Lob_Turret_FireBuild, only the stock one. -->
+    <CActorModel id="Lob_Turret_FireBuild" parent="TerranBuildingBuildSmall">
+        <Model value="PerditionTurretBuild"/>
+    </CActorModel>
 </Catalog>

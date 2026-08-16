@@ -72,7 +72,7 @@
         <EditorCategories value="Race:Terran,AbilityorEffectType:Units"/>
         <FlagArray index="Interruptible" value="1"/>
         <FlagArray index="PeonDisableCollision" value="1"/>
-        <InfoArray index="Build1">
+        <InfoArray index="Build1" Unit="Lob_Turret_Fire" Time="25">
             <Charge Link="Abil/##id##"/>
             <Cooldown Link="Abil/##id##"/>
         </InfoArray>
@@ -139,12 +139,12 @@
         <FidgetDelayMax value="10"/>
         <ConstructionMover value="Construction"/>
     </CAbilBuild>
-    <CAbilMorph id="Lob_Fire_Turret_Burrow">
+    <CAbilMorph id="Lob_Turret_Fire_Burrow">
         <EditorCategories value="Race:Terran,AbilityorEffectType:Units"/>
         <ActorKey value="BurrowDown"/>
         <Flags index="IgnoreFacing" value="1"/>
         <Flags index="SuppressMovement" value="1"/>
-        <InfoArray Unit="Lob_Fire_Turret_Underground">
+        <InfoArray Unit="Lob_Turret_Fire_Underground">
             <SectionArray index="Actor">
                 <DurationArray index="Duration" value="1"/>
             </SectionArray>
@@ -157,7 +157,7 @@
         </InfoArray>
         <ValidatorArray value="NotAttacking"/>
     </CAbilMorph>
-    <CAbilMorph id="Lob_Fire_Turret_Unburrow">
+    <CAbilMorph id="Lob_Turret_Fire_Unburrow">
         <EditorCategories value="Race:Terran,AbilityorEffectType:Units"/>
         <ActorKey value="BurrowUp"/>
         <Flags index="AutoCast" value="1"/>
@@ -166,7 +166,7 @@
         <Flags index="IgnorePlacement" value="0"/>
         <Flags index="MoveBlockers" value="1"/>
         <Flags index="SuppressMovement" value="1"/>
-        <InfoArray Unit="Lob_Fire_Turret" CollideRange="0">
+        <InfoArray Unit="Lob_Turret_Fire" CollideRange="0">
             <SectionArray index="Actor">
                 <DurationArray index="Duration" value="0.6"/>
             </SectionArray>
