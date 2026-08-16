@@ -38,20 +38,15 @@
         <AbilArray Link="stop"/>
         <AbilArray Link="attack"/>
         <AbilArray Link="move"/>
-        <AbilArray Link="BurrowBanelingDown"/>
-        <AbilArray Link="SapStructure"/>
-        <AbilArray Link="Explode"/>
         <BehaviorArray Link="BanelingExplode"/>
-        <WeaponArray Link="VolatileBurst"/>
         <CardLayouts>
             <LayoutButtons Face="Move" Type="AbilCmd" AbilCmd="move,Move" Row="0" Column="0"/>
+            <LayoutButtons Row="0" Column="0"/>
             <LayoutButtons Face="Stop" Type="AbilCmd" AbilCmd="stop,Stop" Row="0" Column="1"/>
             <LayoutButtons Face="MoveHoldPosition" Type="AbilCmd" AbilCmd="move,HoldPos" Row="0" Column="2"/>
             <LayoutButtons Face="Attack" Type="AbilCmd" AbilCmd="attack,Execute" Row="0" Column="4"/>
             <LayoutButtons Face="MovePatrol" Type="AbilCmd" AbilCmd="move,Patrol" Row="0" Column="3"/>
-            <LayoutButtons Row="0" Column="0"/>
             <LayoutButtons Face="Explode" Type="AbilCmd" AbilCmd="Explode,Execute" Row="2" Column="0"/>
-            <LayoutButtons Face="BurrowDown" Type="AbilCmd" AbilCmd="BurrowBanelingDown,Execute" Row="2" Column="4"/>
         </CardLayouts>
         <Radius value="0.375"/>
         <SeparationRadius value="0.375"/>
@@ -718,7 +713,6 @@
         <Collide index="ForceField" value="1"/>
         <Collide index="Small" value="1"/>
         <Attributes index="Light" value="1"/>
-        <Attributes index="Biological" value="1"/>
         <LifeStart value="65"/>
         <LifeMax value="65"/>
         <LifeRegenRate value="0.2734"/>
@@ -735,7 +729,6 @@
         <AbilArray Link="stop"/>
         <AbilArray Link="attack"/>
         <AbilArray Link="move"/>
-        <AbilArray Link="LocustMPMorphToAir"/>
         <WeaponArray Link="LocustMPMelee"/>
         <WeaponArray Link="LocustMP"/>
         <CardLayouts>
@@ -1013,8 +1006,6 @@
         <AbilArray Link="attack"/>
         <AbilArray Link="move"/>
         <AbilArray Link="Warpable"/>
-        <AbilArray Link="ProgressRally"/>
-        <AbilArray Link="Charge"/>
         <WeaponArray Link="PsiBlades"/>
         <CardLayouts>
             <LayoutButtons Face="Move" Type="AbilCmd" AbilCmd="move,Move" Row="0" Column="0"/>
