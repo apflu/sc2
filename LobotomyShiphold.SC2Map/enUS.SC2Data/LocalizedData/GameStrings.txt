@@ -161,6 +161,7 @@ Lob/Work/Refusal/NoDocument=that unit has no abnormality document
 Lob/Work/Refusal/NoEmployee=nobody was sent
 Lob/Work/Refusal/NotInCell=it is not in its cell
 Lob/Work/Refusal/NotRegistered=that abnormality is not in the cell registry
+Lob/Work/Refusal/Panicked=that employee has broken down
 Lob/Work/Refusal/TooMany=too many works are running at once
 Lob/Work/Refused=Cannot work: %REASON%
 Lob/Work/Result/Bad=Bad

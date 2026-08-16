@@ -352,11 +352,12 @@ bool Emp_Created_Func (bool testConds, bool runActions) {
 // person breaks, and that delay is what makes the choice feel like a judgement
 // rather than a trade.
 //
-// Panic is a behavior applied at zero and removed above it, so the state and
-// its consequences are one object -- the same arrangement as Lob_Contained. What
-// panic actually does is authored in that behavior's Modification and is empty
-// for now: the design says it happens (2.4, and Training Team lv2 has an
-// upgrade for not panicking at the sight of an HE), but not what it looks like.
+// Panic is a behavior applied at zero and removed above it, so the state is one
+// object anything can test -- the same arrangement as Lob_Contained. Its
+// Modification is empty and stays empty: baseline 8's three consequences for a
+// broken NPC are strike, flee and refuse orders, and all three are behaviour
+// rather than statistics. Work_Tick drops the job, Work_Refusal turns away the
+// next one, Emp_Flee walks them home. None of that is a number a buff can hold.
 //--------------------------------------------------------------------------------------------------
 int Emp_SP (unit who) {
     if (who == null) {
@@ -577,6 +578,47 @@ int Emp_CountAtRank (int player, int rank) {
 //
 // The stats themselves need nothing here: their points are their display.
 //--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// A broken employee goes home.
+//
+// Baseline 8 gives NPC panic three consequences -- strike, flee, refuse orders.
+// The other two were already here and are both in 14_work: Work_Tick drops the
+// work of anybody who breaks mid-job, and Work_Refusal turns away anybody who is
+// already broken. This is the third, and it is the one that makes the other two
+// survivable, because the rest hall is where SP comes back. Without it panic is
+// terminal -- a person at zero SP has no way back up and is simply deleted from
+// the roster while still standing there.
+//
+// Idle only. An employee the player has personally ordered somewhere keeps going;
+// this fills the silence rather than arguing with anyone. That is the same
+// restraint as baseline 8's "never take control away", applied one level down.
+//
+// Nothing here has to notice recovery. Standing in the room applies the regen
+// buff, SP climbs, the next SP_Add lifts the panic behavior, and the employee
+// simply stops being a candidate. The loop closes itself.
+//--------------------------------------------------------------------------------------------------
+void Emp_Flee (unit who) {
+    int owner;
+
+    if (who == null || !UnitIsAlive(who) || !Emp_IsPanicked(who)) {
+        return;
+    }
+    // Already home, or already walking somewhere. Reissuing every tick would
+    // restart the move and they would never arrive.
+    if (Sector_InRestHall(who) || UnitOrderCount(who) > 0) {
+        return;
+    }
+
+    owner = UnitGetOwner(who);
+    if (!Sector_HasRestHall(owner)) {
+        return;
+    }
+    UnitIssueOrder(who,
+                   OrderTargetingPoint(AbilityCommand("move", 0),
+                                       Sector_RestHallPoint(owner)),
+                   c_orderQueueReplace);
+}
+
 bool Emp_Tick_Func (bool testConds, bool runActions) {
     unitgroup all;
     int count;
@@ -595,6 +637,9 @@ bool Emp_Tick_Func (bool testConds, bool runActions) {
         // Zero on purpose, so an employee whose Prudence just went up does not
         // become panicked by having a ceiling raised out from under a full bar.
         SP_Add(UnitGroupUnit(all, i), 0);
+        // After SP_Add, so somebody who just recovered this tick is not sent
+        // walking home for a panic they no longer have.
+        Emp_Flee(UnitGroupUnit(all, i));
         i = i + 1;
     }
     return true;

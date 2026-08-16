@@ -254,6 +254,12 @@ string Work_Refusal (unit abno, unit emp) {
     if (Work_IsBusy(emp)) {
         return "Lob/Work/Refusal/Busy";
     }
+    // Baseline 8's "refuse orders". Work_Tick already drops the work of anybody
+    // who breaks mid-job, so without this the command was accepted and then
+    // silently undone a tick later -- which reads as the button not working.
+    if (Emp_IsPanicked(emp)) {
+        return "Lob/Work/Refusal/Panicked";
+    }
     if (gv_workCount >= c_workMax) {
         return "Lob/Work/Refusal/TooMany";
     }

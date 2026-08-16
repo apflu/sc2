@@ -247,11 +247,17 @@
          state and its consequences are one object, the same arrangement as
          Lob_Contained.
 
-         The Modification is EMPTY, and that is the honest state of it. The
-         design says panic happens — 2.4 leans on it, Training Team lv2 sells an
-         upgrade for not panicking at the sight of an HE, and Welfare Team sells
-         the cure — but nothing anywhere says what a panicked employee does.
-         Whatever it turns out to be goes here, and no Galaxy changes. -->
+         The Modification is EMPTY and now stays that way on purpose. Baseline 8
+         does say what a panicked NPC does — strike, flee, refuse orders — and
+         all three of those are BEHAVIOUR, not statistics: 14_work drops the job
+         and turns away the next one, 11_employee walks them to the rest hall.
+         None of it is a number this catalog could hold.
+
+         The half that would live here is baseline 8's other clause, the PLAYER's
+         accuracy and move speed falling. Lob_Hero_Agent has no Energy vital at
+         all, so the player has no SP yet and there is nothing for a modifier to
+         act on. That is a design decision, not an oversight to paper over with a
+         number. -->
     <CBehaviorBuff id="Lob_Panicked">
         <EditorCategories value="AbilityorEffectType:Units"/>
         <BehaviorFlags index="Permanent" value="1"/>

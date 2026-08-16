@@ -21,7 +21,7 @@
 | 10 | **核心抑制**：lobby game attribute | 7, 8 | 待做 | §7.8 |
 | 11 | **三选一发牌** | 6 + 残余难度字段 | **堵住**，见下 | §4 |
 | 12 | 防御设施 + 房间/走廊 | — | **已落地并跑通**，欠守军/回收装置单位与更多点位 | [`systems/fortify.md`](systems/fortify.md) |
-| 13 | SP = Energy vital | — | **已落地**（在 11 里），欠「疯狂做什么」 | 基线 8 |
+| 13 | SP = Energy vital | — | **NPC 那半边已落地**（11 + 14），玩家那半边欠一个决定 | 基线 8 |
 | 14 | **难度**：逐玩家四档 + 全局平均 | — | **已落地** `01_difficulty.galaxy` | [`systems/difficulty.md`](systems/difficulty.md) |
 | 15 | **考验**：四档，上限由难度定 | 14 | 待做（上限已就位） | [`systems/difficulty.md`](systems/difficulty.md) |
 
@@ -51,6 +51,14 @@
 还没有的：`Lob_Guard_*`（守军，两张表现在是空的，所以 `Fort_SeedGarrison` 惰性）、`Lob_Salvage_*`、以及 2/3 级的点位。
 
 **从原版复制单位时，凡是按单位名键控的东西都要跟着改。**morph 技能、驱动 morph 的 behavior/effect、morph 音效、`##unitName##Build` 那个脚手架 actor——这四样都咬过一次，细节在 [`systems/fortify.md`](systems/fortify.md)。
+
+### 第 13 项：玩家有没有 SP，这是个决定
+
+基线 §8 分两半。**NPC 那半边（罢工、逃跑、拒绝执行指令）已经全部落地**，而且三条都是行为不是数值，所以 `Lob_Panicked` 的 `Modification` 是空的——**这不是欠账，是它本来就不该有内容**。
+
+另一半是"玩家低理智：命中 / 移速 / 施法下降"。而 `Lob_Hero_Agent` **根本没有 Energy vital**，所以玩家现在没有 SP，也就没有任何东西给修饰器去改。
+
+给它加一条 Energy 是一分钟的事，但那等于替这个问题作答：**玩家角色到底该不该有理智条？**加了之后就要回答它从哪儿掉（§8 的三个来源全是 [提案]）、掉光了怎么办（而 §8 同时又说"绝不剥夺玩家操作权"）。所以先不加。
 
 ## 下一个
 

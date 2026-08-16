@@ -216,6 +216,15 @@ void Debug_ReportEmployees (int player) {
         if (Emp_IsPanicked(who)) {
             line = line + " PANICKED";
         }
+        // Where they are relative to the one room that gives SP back. A broken
+        // employee outside it is not recovering, and that is invisible from the
+        // numbers alone.
+        if (Sector_InRestHall(who)) {
+            line = line + " [resting]";
+        }
+        else if (Emp_IsPanicked(who) && UnitOrderCount(who) > 0) {
+            line = line + " [heading home]";
+        }
         Debug_Say(player, line);
         i = i + 1;
     }

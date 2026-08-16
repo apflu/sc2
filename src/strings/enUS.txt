@@ -132,6 +132,7 @@ Lob/Work/Result/Bad=Bad
 Lob/Work/Refused=Cannot work: %REASON%
 Lob/Work/Refusal/NoEmployee=nobody was sent
 Lob/Work/Refusal/Busy=that employee is already working
+Lob/Work/Refusal/Panicked=that employee has broken down
 Lob/Work/Refusal/TooMany=too many works are running at once
 Lob/Work/Refusal/NoAbnormality=there is no abnormality behind that door
 Lob/Work/Refusal/NoDocument=that unit has no abnormality document
