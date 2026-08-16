@@ -385,6 +385,39 @@ void Debug_Ordeal (int player, string word) {
                           + " (" + Diff_OrdealName(gv_ordealTier) + ")  standing "
                           + IntToString(Ordeal_Standing()) + "/" + IntToString(gv_ordealCount)
                           + "  pays " + IntToString(Ordeal_RewardFor(gv_ordealTier)));
+
+        // What each entity is up to. A thief walking to a cell and a thief
+        // standing next to one look identical on screen, and the twenty seconds
+        // between them is the whole mechanic.
+        tier = 0;
+        while (tier < gv_ordealCount) {
+            line = "  ent " + IntToString(tier) + " p" + IntToString(gvg_ordealHome[tier]);
+            if (gvg_ordealUnit[tier] == null || !UnitIsAlive(gvg_ordealUnit[tier])) {
+                line = line + " dead";
+            }
+            else if (gv_ordealAct == c_ordealActThief) {
+                if (gvg_ordealAt[tier] > 0.0) {
+                    line = line + " robbing, "
+                           + IntToString(FixedToInt(gvg_ordealAt[tier] - GameGetMissionTime()))
+                           + "s left";
+                }
+                else if (gvg_ordealMark[tier] == null) {
+                    line = line + " idle -- no cell to rob";
+                }
+                else {
+                    line = line + " walking to " + Debug_AbnoName(gvg_ordealMark[tier]);
+                }
+            }
+            else if (gv_ordealAct == c_ordealActBomb) {
+                line = line + " fuse "
+                       + IntToString(FixedToInt(gvg_ordealAt[tier] - GameGetMissionTime())) + "s";
+            }
+            else {
+                line = line + " alive";
+            }
+            Debug_Say(player, line);
+            tier = tier + 1;
+        }
         return;
     }
 

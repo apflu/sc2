@@ -64,6 +64,64 @@ string gv_ordealNextType;
 int[4] gvg_ordealAtLevel;
 bool[4] gvg_ordealSpent;
 
+//--------------------------------------------------------------------------------------------------
+// What an Ordeal DOES beyond existing and being killable.
+//
+// Most of an Ordeal is unit data -- life, damage, speed, the four defences --
+// and needs nothing here. Two of the dawns are not: Crimson robs cells and
+// moves on, Violet is a timer that ends the night early if it is ignored.
+// Neither is expressible as a stat.
+//
+// The type-to-behaviour map is a hardcoded list in Ordeal_ActOf, which is worth
+// being uncomfortable about: it is the one place an Ordeal's unit id has to be
+// spelled out in script. It stays a list rather than a channel because there is
+// no per-type value channel yet and inventing one here is what the standing note
+// in build-order.md forbids. A type not in the list simply fights.
+//--------------------------------------------------------------------------------------------------
+const int c_ordealActPlain = 0;
+const int c_ordealActThief = 1;
+const int c_ordealActBomb = 2;
+
+int gv_ordealAct;
+
+// Seconds a thief spends working on one cell before it takes what it came for.
+const fixed c_ordealRobSeconds = 20.0;
+
+// Percent of that cell's PE boxes it leaves with.
+const int c_ordealRobPct = 30;
+
+// How long a bomb waits. Drawn per entity, so the departments do not all go up
+// on the same second.
+const fixed c_ordealFuseMin = 60.0;
+const fixed c_ordealFuseMax = 70.0;
+
+// White damage the burst does to everybody in that department.
+const int c_ordealBurstMin = 10;
+const int c_ordealBurstMax = 14;
+
+// Close enough to a door to start working on it.
+const fixed c_ordealReach = 2.0;
+
+// Per entity, parallel to gvg_ordealUnit.
+//
+//   gvg_ordealHome   the department it belongs to -- a bomb's burst is scoped
+//                    to it, and a thief prefers its own cells
+//   gvg_ordealMark   the cell a thief is walking to or working on
+//   gvg_ordealAt     when the current phase ends: the robbery, or the fuse
+int[64] gvg_ordealHome;
+unit[64] gvg_ordealMark;
+fixed[64] gvg_ordealAt;
+
+int Ordeal_ActOf (string type) {
+    if (type == "Lob_Ordeal_Dawn_Crimson") {
+        return c_ordealActThief;
+    }
+    if (type == "Lob_Ordeal_Dawn_Violet") {
+        return c_ordealActBomb;
+    }
+    return c_ordealActPlain;
+}
+
 int gv_ordealObj;
 
 // Ordeals suppressed this game, by tier. Table-wide, because an Ordeal is:
@@ -311,6 +369,192 @@ point Ordeal_SpawnPointFor (int player) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// A cell a thief could rob: a contained abnormality with a door still up.
+//
+// Its own department first, any department second. The doc has the clowns
+// spawning in a hallway that has a Containment Unit's door, so a department
+// with no cells at all should not make them stand still -- it should make them
+// somebody else's problem, which is the same thing the meltdown does.
+//--------------------------------------------------------------------------------------------------
+unit Ordeal_CellFor (int player, bool ownOnly) {
+    unit abno;
+    int found;
+    int pick;
+    int slot;
+
+    found = 0;
+    slot = 0;
+    while (slot < gv_cellCount) {
+        abno = gvg_cellAbno[slot];
+        if (abno != null && UnitIsAlive(abno) && Cont_State(abno) == c_cellContained
+            && Cont_DoorIsUp(abno)
+            && (!ownOnly || Cont_OwnerOf(slot) == player)) {
+            found = found + 1;
+        }
+        slot = slot + 1;
+    }
+
+    if (found == 0) {
+        if (ownOnly) {
+            return Ordeal_CellFor(player, false);
+        }
+        return null;
+    }
+
+    pick = RandomInt(1, found);
+    slot = 0;
+    while (slot < gv_cellCount) {
+        abno = gvg_cellAbno[slot];
+        if (abno != null && UnitIsAlive(abno) && Cont_State(abno) == c_cellContained
+            && Cont_DoorIsUp(abno)
+            && (!ownOnly || Cont_OwnerOf(slot) == player)) {
+            pick = pick - 1;
+            if (pick == 0) {
+                return abno;
+            }
+        }
+        slot = slot + 1;
+    }
+    return null;
+}
+
+//--------------------------------------------------------------------------------------------------
+// What a thief leaves with: 30% of that cell's boxes, and one off the counter.
+//
+// The boxes come off the CELL OWNER's pile, because that is whose research it
+// was. The counter is the part that hurts on a delay -- a cell one step closer
+// to zero is a breach that has not happened yet.
+//--------------------------------------------------------------------------------------------------
+void Ordeal_Rob (unit abno) {
+    int slot;
+    int owner;
+    int index;
+    int taken;
+
+    slot = Cont_SlotOf(abno);
+    index = AbnoGen_IndexOf(abno);
+    if (slot < 0 || index < 0) {
+        return;
+    }
+    owner = Cont_OwnerOf(slot);
+
+    taken = 0;
+    if (owner >= 1 && owner <= 15) {
+        taken = Cont_BoxesOf(owner, index) * c_ordealRobPct / 100;
+        Cont_AddBoxes(owner, index, -taken);
+    }
+    if (Cont_Counter(abno) > 0) {
+        Cont_SetCounter(abno, Cont_Counter(abno) - 1);
+    }
+
+    // Told to the person whose cell it was. A theft nobody is told about is
+    // indistinguishable from a bug in the counter.
+    if (owner >= 1 && owner <= 15) {
+        UIDisplayMessage(
+            PlayerGroupSingle(owner), c_messageAreaSubtitle,
+            Msg3("Lob/Msg/OrdealRobbed",
+                 "%NAME%", Ordeal_NameOf(gv_ordealType),
+                 "%ABNO%", AbnoGen_NameText(index),
+                 "%BOXES%", MsgInt(taken)));
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// One thief, once a tick.
+//
+// Three states and no flags to hold them: walking (has a mark, not there yet),
+// working (gvg_ordealAt is set), and between jobs (no mark). Each is a question
+// about the world rather than a bit somebody remembered to clear.
+//--------------------------------------------------------------------------------------------------
+void Ordeal_ThiefStep (int i, fixed now) {
+    unit who;
+
+    who = gvg_ordealUnit[i];
+    if (who == null || !UnitIsAlive(who)) {
+        return;
+    }
+
+    // Working. When the twenty seconds are up it takes what it came for and
+    // reappears somewhere else, which is the doc's smoke cloud.
+    if (gvg_ordealAt[i] > 0.0) {
+        if (now < gvg_ordealAt[i]) {
+            return;
+        }
+        if (gvg_ordealMark[i] != null && UnitIsAlive(gvg_ordealMark[i])) {
+            Ordeal_Rob(gvg_ordealMark[i]);
+        }
+        gvg_ordealAt[i] = 0.0;
+        gvg_ordealMark[i] = null;
+        UnitSetPosition(who, Ordeal_SpawnPointFor(gvg_ordealHome[i]), false);
+        return;
+    }
+
+    if (gvg_ordealMark[i] == null || !UnitIsAlive(gvg_ordealMark[i])) {
+        gvg_ordealMark[i] = Ordeal_CellFor(gvg_ordealHome[i], true);
+        if (gvg_ordealMark[i] == null) {
+            return;
+        }
+        UnitIssueOrder(who,
+                       OrderTargetingPoint(AbilityCommand("move", 0),
+                                           UnitGetPosition(gvg_ordealMark[i])),
+                       c_orderQueueReplace);
+        return;
+    }
+
+    if (DistanceBetweenPoints(UnitGetPosition(who),
+                              UnitGetPosition(gvg_ordealMark[i])) <= c_ordealReach) {
+        gvg_ordealAt[i] = now + c_ordealRobSeconds;
+        UnitIssueOrder(who, Order(AbilityCommand("stop", 0)), c_orderQueueReplace);
+    }
+    else if (UnitOrderCount(who) == 0) {
+        UnitIssueOrder(who,
+                       OrderTargetingPoint(AbilityCommand("move", 0),
+                                           UnitGetPosition(gvg_ordealMark[i])),
+                       c_orderQueueReplace);
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// What a bomb does when nobody dealt with it.
+//
+// Every counter in that department to zero and White damage to everyone in it.
+// Zeroing a counter is not "a breach happens" -- it is the condition under which
+// one is about to, so the punishment arrives as a room full of cells that are
+// all one bad second away, which is worse than any single explosion.
+//--------------------------------------------------------------------------------------------------
+void Ordeal_Burst (int i) {
+    unitgroup people;
+    unit abno;
+    int player;
+    int count;
+    int slot;
+    int j;
+
+    player = gvg_ordealHome[i];
+
+    slot = 0;
+    while (slot < gv_cellCount) {
+        abno = gvg_cellAbno[slot];
+        if (abno != null && UnitIsAlive(abno) && Cont_OwnerOf(slot) == player) {
+            Cont_SetCounter(abno, 0);
+        }
+        slot = slot + 1;
+    }
+
+    people = Emp_Of(player);
+    count = UnitGroupCount(people, c_unitCountAlive);
+    j = 1;
+    while (j <= count) {
+        Emp_WorkDamage(UnitGroupUnit(people, j), c_dmgWhite,
+                       RandomInt(c_ordealBurstMin, c_ordealBurstMax));
+        j = j + 1;
+    }
+
+    UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle,
+                     Msg1("Lob/Msg/OrdealBurst", "%NAME%", Ordeal_NameOf(gv_ordealType)));
+}
+
+//--------------------------------------------------------------------------------------------------
 // Puts the drawn Ordeal on the map, one entity per player at the table.
 //
 // One each, not a number scaled by anything. How many an Ordeal brings is a
@@ -332,6 +576,7 @@ void Ordeal_Begin (int tier, string type) {
     gv_ordealType = type;
     gv_ordealCount = 0;
     gv_ordealKilled = 0;
+    gv_ordealAct = Ordeal_ActOf(type);
 
     player = 1;
     while (player <= 15) {
@@ -341,6 +586,18 @@ void Ordeal_Begin (int tier, string type) {
             made = UnitLastCreated();
             if (made != null) {
                 gvg_ordealUnit[gv_ordealCount] = made;
+                gvg_ordealHome[gv_ordealCount] = player;
+                gvg_ordealMark[gv_ordealCount] = null;
+                // A bomb's fuse is drawn per entity so the departments do not
+                // all reach zero on the same second; a thief starts with none.
+                if (gv_ordealAct == c_ordealActBomb) {
+                    gvg_ordealAt[gv_ordealCount] =
+                        GameGetMissionTime()
+                        + RandomFixed(c_ordealFuseMin, c_ordealFuseMax);
+                }
+                else {
+                    gvg_ordealAt[gv_ordealCount] = 0.0;
+                }
                 gv_ordealCount = gv_ordealCount + 1;
             }
         }
@@ -377,19 +634,43 @@ int Ordeal_Standing () {
 }
 
 //--------------------------------------------------------------------------------------------------
-// Paid once, into the shared pool, when the last one falls.
+// The end of one, and there are two of those.
+//
+// SUPPRESSED means every entity was put down, and it pays. Anything else does
+// not -- an Ordeal that ended because a bomb went off is the failure case the
+// bomb exists to threaten, and paying for it would make ignoring Violet the
+// cheapest way to farm energy.
+//
+// Whatever is left standing is removed rather than left wandering: the Ordeal is
+// over, and an entity that outlives it belongs to no bookkeeping at all.
 //--------------------------------------------------------------------------------------------------
-void Ordeal_Finish () {
+void Ordeal_End (bool suppressed) {
     int reward;
+    int i;
 
-    reward = Ordeal_RewardFor(gv_ordealTier);
-    Energy_Add(reward);
-    gvg_ordealBeaten[gv_ordealTier] = gvg_ordealBeaten[gv_ordealTier] + 1;
+    if (suppressed) {
+        reward = Ordeal_RewardFor(gv_ordealTier);
+        Energy_Add(reward);
+        gvg_ordealBeaten[gv_ordealTier] = gvg_ordealBeaten[gv_ordealTier] + 1;
+        UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle,
+                         Msg2("Lob/Msg/OrdealDone",
+                              "%NAME%", Ordeal_NameOf(gv_ordealType),
+                              "%ENERGY%", MsgInt(reward)));
+    }
+    else {
+        UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle,
+                         Msg1("Lob/Msg/OrdealLost", "%NAME%", Ordeal_NameOf(gv_ordealType)));
+    }
 
-    UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle,
-                     Msg2("Lob/Msg/OrdealDone",
-                          "%NAME%", Ordeal_NameOf(gv_ordealType),
-                          "%ENERGY%", MsgInt(reward)));
+    i = 0;
+    while (i < gv_ordealCount) {
+        if (gvg_ordealUnit[i] != null && UnitIsAlive(gvg_ordealUnit[i])) {
+            UnitRemove(gvg_ordealUnit[i]);
+        }
+        gvg_ordealUnit[i] = null;
+        gvg_ordealMark[i] = null;
+        i = i + 1;
+    }
 
     gv_ordealActive = false;
     gv_ordealCount = 0;
@@ -407,21 +688,43 @@ void Ordeal_Finish () {
 // entity died" has no event that is not a death event per spawned unit.
 //--------------------------------------------------------------------------------------------------
 bool Ordeal_Tick_Func (bool testConds, bool runActions) {
+    fixed now;
     int level;
     int killed;
+    int i;
 
     if (!runActions) {
         return true;
     }
 
     if (gv_ordealActive) {
+        now = GameGetMissionTime();
+
+        // Per-entity behaviour first, because a bomb going off this tick ends
+        // the Ordeal and there is nothing to count afterwards.
+        i = 0;
+        while (i < gv_ordealCount) {
+            if (gvg_ordealUnit[i] != null && UnitIsAlive(gvg_ordealUnit[i])) {
+                if (gv_ordealAct == c_ordealActThief) {
+                    Ordeal_ThiefStep(i, now);
+                }
+                else if (gv_ordealAct == c_ordealActBomb && now >= gvg_ordealAt[i]) {
+                    Ordeal_Burst(i);
+                    UnitKill(gvg_ordealUnit[i]);
+                    Ordeal_End(false);
+                    return true;
+                }
+            }
+            i = i + 1;
+        }
+
         killed = gv_ordealCount - Ordeal_Standing();
         if (killed != gv_ordealKilled) {
             gv_ordealKilled = killed;
             Ordeal_Refresh();
         }
         if (Ordeal_Standing() == 0) {
-            Ordeal_Finish();
+            Ordeal_End(true);
         }
         return true;
     }
