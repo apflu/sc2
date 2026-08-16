@@ -37,6 +37,15 @@
         <Behavior value="Lob_Worked"/>
     </CEffectApplyBehavior>
 
+    <!-- The far end of Lob_Ordeal_Rob. It does nothing to the door; the theft
+         itself is 27_ordeals' business. This exists because an Effect-Target
+         ability needs an effect that unambiguously acts on a unit or the
+         command never becomes a targeting command — the same lesson as
+         Lob_WorkCheck above, and the same shape. -->
+    <CEffectApplyBehavior id="Lob_Ordeal_RobHit">
+        <Behavior value="Lob_Worked"/>
+    </CEffectApplyBehavior>
+
     <!-- Retracting is not something the turret decides. Nothing in the morph
          ability makes it happen; a hidden behavior tries once a second and the
          ability's NotAttacking validator is what turns "there are no enemies"

@@ -950,6 +950,7 @@
         <DamageTakenXP value="1"/>
         <AbilArray Link="stop"/>
         <AbilArray Link="move"/>
+        <AbilArray Link="Lob_Ordeal_Rob"/>
         <CardLayouts>
             <LayoutButtons Face="Move" Type="AbilCmd" AbilCmd="move,Move" Row="0" Column="0"/>
             <LayoutButtons Face="Stop" Type="AbilCmd" AbilCmd="stop,Stop" Row="0" Column="1"/>

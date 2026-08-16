@@ -84,8 +84,9 @@ const int c_ordealActBomb = 2;
 
 int gv_ordealAct;
 
-// Seconds a thief spends working on one cell before it takes what it came for.
-const fixed c_ordealRobSeconds = 20.0;
+// The ability a thief casts on a containment door. Its PrepTime IS the twenty
+// seconds and the engine draws the bar; nothing here counts them.
+const string c_ordealRobAbil = "Lob_Ordeal_Rob";
 
 // Percent of that cell's PE boxes it leaves with.
 const int c_ordealRobPct = 30;
@@ -99,15 +100,18 @@ const fixed c_ordealFuseMax = 70.0;
 const int c_ordealBurstMin = 10;
 const int c_ordealBurstMax = 14;
 
-// Close enough to a door to start working on it.
-const fixed c_ordealReach = 2.0;
+// Close enough to a door to start casting at it. The same number as the
+// ability's Range and as Interact's, and it has to be: a door is a wall
+// footprint, so range is measured from a centre nothing can stand on.
+const fixed c_ordealReach = 4.0;
 
 // Per entity, parallel to gvg_ordealUnit.
 //
 //   gvg_ordealHome   the department it belongs to -- a bomb's burst is scoped
 //                    to it, and a thief prefers its own cells
 //   gvg_ordealMark   the cell a thief is walking to or working on
-//   gvg_ordealAt     when the current phase ends: the robbery, or the fuse
+//   gvg_ordealAt     when the fuse burns out. Only a bomb uses it -- a thief's
+//                    twenty seconds belong to the ability, not to this file
 int[64] gvg_ordealHome;
 unit[64] gvg_ordealMark;
 fixed[64] gvg_ordealAt;
@@ -131,6 +135,7 @@ int gv_ordealObj;
 int[4] gvg_ordealBeaten;
 
 trigger gt_ordealTick;
+trigger gt_ordealRob;
 
 //--------------------------------------------------------------------------------------------------
 // How many Ordeals of at least this tier have been put down.
@@ -466,52 +471,100 @@ void Ordeal_Rob (unit abno) {
 // working (gvg_ordealAt is set), and between jobs (no mark). Each is a question
 // about the world rather than a bit somebody remembered to clear.
 //--------------------------------------------------------------------------------------------------
-void Ordeal_ThiefStep (int i, fixed now) {
+void Ordeal_ThiefStep (int i) {
     unit who;
+    unit door;
 
     who = gvg_ordealUnit[i];
     if (who == null || !UnitIsAlive(who)) {
         return;
     }
 
-    // Working. When the twenty seconds are up it takes what it came for and
-    // reappears somewhere else, which is the doc's smoke cloud.
-    if (gvg_ordealAt[i] > 0.0) {
-        if (now < gvg_ordealAt[i]) {
-            return;
-        }
-        if (gvg_ordealMark[i] != null && UnitIsAlive(gvg_ordealMark[i])) {
-            Ordeal_Rob(gvg_ordealMark[i]);
-        }
-        gvg_ordealAt[i] = 0.0;
-        gvg_ordealMark[i] = null;
-        UnitSetPosition(who, Ordeal_SpawnPointFor(gvg_ordealHome[i]), false);
+    // Already casting, or walking to somewhere to cast. The ability carries the
+    // approach and the twenty seconds with it, so an entity with an order is an
+    // entity with nothing to decide.
+    if (UnitOrderCount(who) > 0) {
         return;
     }
 
-    if (gvg_ordealMark[i] == null || !UnitIsAlive(gvg_ordealMark[i])) {
+    if (gvg_ordealMark[i] == null || !UnitIsAlive(gvg_ordealMark[i])
+        || Cont_State(gvg_ordealMark[i]) != c_cellContained) {
         gvg_ordealMark[i] = Ordeal_CellFor(gvg_ordealHome[i], true);
-        if (gvg_ordealMark[i] == null) {
-            return;
-        }
-        UnitIssueOrder(who,
-                       OrderTargetingPoint(AbilityCommand("move", 0),
-                                           UnitGetPosition(gvg_ordealMark[i])),
-                       c_orderQueueReplace);
+    }
+    if (gvg_ordealMark[i] == null) {
         return;
     }
 
-    if (DistanceBetweenPoints(UnitGetPosition(who),
-                              UnitGetPosition(gvg_ordealMark[i])) <= c_ordealReach) {
-        gvg_ordealAt[i] = now + c_ordealRobSeconds;
-        UnitIssueOrder(who, Order(AbilityCommand("stop", 0)), c_orderQueueReplace);
+    // The DOOR, never the abnormality. The abnormality is behind a wall the
+    // clown cannot path through, so an order aimed at it is an order that never
+    // arrives -- which is exactly what the first version did, silently.
+    door = Cont_DoorOf(gvg_ordealMark[i]);
+    if (door == null) {
+        gvg_ordealMark[i] = null;
+        return;
     }
-    else if (UnitOrderCount(who) == 0) {
-        UnitIssueOrder(who,
-                       OrderTargetingPoint(AbilityCommand("move", 0),
-                                           UnitGetPosition(gvg_ordealMark[i])),
-                       c_orderQueueReplace);
+
+    UnitIssueOrder(who,
+                   OrderTargetingUnit(AbilityCommand(c_ordealRobAbil, 0), door),
+                   c_orderQueueReplace);
+}
+
+//--------------------------------------------------------------------------------------------------
+// A robbery finished.
+//
+// Heard rather than counted. The ability's PrepTime is the twenty seconds, so
+// dying halfway through means this never fires and nothing was taken -- which is
+// the fight the clown is supposed to be worth having, and which a script timer
+// would have had to reimplement badly.
+//
+// Registered on every stage and filtered here, the same way 14_work does it,
+// because the stage sequence of a prepare-time cast is not obvious and finding
+// it out again would be a second trace through the same ground.
+//--------------------------------------------------------------------------------------------------
+bool Ordeal_Rob_Func (bool testConds, bool runActions) {
+    unit who;
+    unit door;
+    int i;
+    int slot;
+
+    if (!runActions) {
+        return true;
     }
+    if (EventUnitAbilityStage() != c_unitAbilStageComplete) {
+        return true;
+    }
+
+    who = EventUnit();
+    door = EventUnitTargetUnit();
+    if (who == null || door == null) {
+        return true;
+    }
+
+    slot = 0;
+    while (slot < gv_cellCount) {
+        if (Cont_DoorAt(gvg_cellHome[slot]) == door) {
+            Ordeal_Rob(gvg_cellAbno[slot]);
+            slot = gv_cellCount;
+        }
+        else {
+            slot = slot + 1;
+        }
+    }
+
+    // The smoke cloud: it leaves the cell it just robbed and turns up somewhere
+    // else in its own department, then picks a new one on the next tick.
+    i = 0;
+    while (i < gv_ordealCount) {
+        if (gvg_ordealUnit[i] == who) {
+            gvg_ordealMark[i] = null;
+            UnitSetPosition(who, Ordeal_SpawnPointFor(gvg_ordealHome[i]), false);
+            i = gv_ordealCount;
+        }
+        else {
+            i = i + 1;
+        }
+    }
+    return true;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -706,7 +759,7 @@ bool Ordeal_Tick_Func (bool testConds, bool runActions) {
         while (i < gv_ordealCount) {
             if (gvg_ordealUnit[i] != null && UnitIsAlive(gvg_ordealUnit[i])) {
                 if (gv_ordealAct == c_ordealActThief) {
-                    Ordeal_ThiefStep(i, now);
+                    Ordeal_ThiefStep(i);
                 }
                 else if (gv_ordealAct == c_ordealActBomb && now >= gvg_ordealAt[i]) {
                     Ordeal_Burst(i);
@@ -784,4 +837,8 @@ void Ordeals_Init () {
 
     gt_ordealTick = TriggerCreate("Ordeal_Tick_Func");
     TriggerAddEventTimePeriodic(gt_ordealTick, c_ordealTick, c_timeGame);
+
+    gt_ordealRob = TriggerCreate("Ordeal_Rob_Func");
+    TriggerAddEventUnitAbility(gt_ordealRob, null, AbilityCommand(c_ordealRobAbil, 0),
+                               c_unitAbilStageAll, true);
 }

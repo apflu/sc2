@@ -26,6 +26,31 @@
         <ShowProgressArray index="Prep" value="1"/>
         <ProgressButtonArray index="Prep" value="Interact"/>
     </CAbilEffectTarget>
+    <!-- What a Crimson Dawn does to a containment unit.
+
+         Deliberately the same SHAPE as Interact: same range, same target
+         filters, a prep time that IS the twenty seconds, and ShowProgress so
+         the engine draws the bar. The clown is not imitating a cast with a
+         script timer — it is casting, so being killed halfway through really
+         does mean nothing was taken, and that is the fight the player is
+         supposed to be having.
+
+         Range 4 rather than something smaller for the same reason Interact
+         uses it: the target is the DOOR and a door is a wall footprint, so
+         range is measured from a centre that nothing can stand on. Aiming a
+         walk at the abnormality instead put the clown outside a wall it could
+         never path through, which is why the first version simply stood there.
+
+         No CmdButtonArray: nothing presses this, 27_ordeals orders it. -->
+    <CAbilEffectTarget id="Lob_Ordeal_Rob">
+        <EditorCategories value="AbilityorEffectType:Units"/>
+        <Effect index="0" value="Lob_Ordeal_RobHit"/>
+        <PrepTime value="20"/>
+        <Range value="4"/>
+        <TargetFilters value="Structure,Visible;Self"/>
+        <ShowProgressArray index="Prep" value="1"/>
+        <ProgressButtonArray index="Prep" value="Interact"/>
+    </CAbilEffectTarget>
     <!-- Debug only. No cost, no cooldown, recastable to refresh. -->
     <CAbilEffectInstant id="Lob_Debug_Haste">
         <Flags index="Transient" value="1"/>
