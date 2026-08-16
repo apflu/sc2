@@ -247,22 +247,47 @@
          state and its consequences are one object, the same arrangement as
          Lob_Contained.
 
-         The Modification is EMPTY and now stays that way on purpose. Baseline 8
-         does say what a panicked NPC does — strike, flee, refuse orders — and
-         all three of those are BEHAVIOUR, not statistics: 14_work drops the job
-         and turns away the next one, 11_employee walks them to the rest hall.
-         None of it is a number this catalog could hold.
+         A broken employee STOPS. Which breakdown they suffer is meant to be
+         chosen by their highest stat — a proud one and a careful one do not come
+         apart the same way — but none of those are written yet, so there is one
+         and it is the simplest thing that is visibly a breakdown and easy to
+         test against. Disabling CAbilMove is the whole of it; refusing work is
+         14_work's, and 11_employee issues a stop so a person who breaks mid-walk
+         does not keep walking.
 
-         The half that would live here is baseline 8's other clause, the PLAYER's
-         accuracy and move speed falling. Lob_Hero_Agent has no Energy vital at
-         all, so the player has no SP yet and there is nothing for a modifier to
-         act on. That is a design decision, not an oversight to paper over with a
-         number. -->
+         The way back up is a White E.G.O round: the same damage that takes an
+         abnormality's mind apart puts an employee's back together. The rest hall
+         still trickles SP, but a frozen employee cannot walk to it — so whoever
+         broke outside is recovered by a teammate spending attention on them, or
+         not at all. See systems/sanity.md. -->
     <CBehaviorBuff id="Lob_Panicked">
         <EditorCategories value="AbilityorEffectType:Units"/>
         <BehaviorFlags index="Permanent" value="1"/>
         <Alignment value="Negative"/>
         <InfoIcon value="Assets\Textures\btn-ability-terran-stimpack-color.dds"/>
+        <Modification>
+            <AbilClassDisableArray index="CAbilMove" value="1"/>
+        </Modification>
+    </CBehaviorBuff>
+
+    <!-- The same state on a player character, which is a different thing.
+
+         Baseline 8 forbids taking control away, and that rule survives intact:
+         every input still works, the camera still follows, nothing is stunned.
+         What goes is the E.G.O — CAbilAttack, since a player's weapon IS their
+         E.G.O — plus a little speed, so being broken is felt as being unable to
+         fight rather than as being unable to play.
+
+         Deliberately NOT CAbilMove. Freezing a person holding a mouse is exactly
+         the experience baseline 8 rules out; freezing an NPC is a consequence. -->
+    <CBehaviorBuff id="Lob_Panicked_Hero">
+        <EditorCategories value="AbilityorEffectType:Units"/>
+        <BehaviorFlags index="Permanent" value="1"/>
+        <Alignment value="Negative"/>
+        <InfoIcon value="Assets\Textures\btn-ability-terran-stimpack-color.dds"/>
+        <Modification MoveSpeedMultiplier="0.85">
+            <AbilClassDisableArray index="CAbilAttack" value="1"/>
+        </Modification>
     </CBehaviorBuff>
 
     <!-- What the work ability applies, and it is nothing.

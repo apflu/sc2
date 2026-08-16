@@ -160,26 +160,6 @@ void Sector_RestHallExtend (int player, region extra) {
 }
 
 //--------------------------------------------------------------------------------------------------
-// Where a player's rest hall is, for anything that needs to WALK there rather
-// than test whether it is already inside.
-//
-// A player with no core has no rest hall at all -- the region is left empty and
-// its centre would be the map origin, which is a real point and a completely
-// wrong answer. So the question "is there one" is asked separately and answered
-// by the core, not by the geometry.
-//--------------------------------------------------------------------------------------------------
-bool Sector_HasRestHall (int player) {
-    if (player < 1 || player > 15) {
-        return false;
-    }
-    return Sector_AnyCore(player) != null;
-}
-
-point Sector_RestHallPoint (int player) {
-    return RegionGetCenter(gvg_restHall[player]);
-}
-
-//--------------------------------------------------------------------------------------------------
 // Whether a unit is standing in its owner's rest hall, with that rest hall
 // still held.
 //

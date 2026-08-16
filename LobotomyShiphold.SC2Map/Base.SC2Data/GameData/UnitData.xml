@@ -313,6 +313,17 @@
              countdown to a death the player cannot avoid, which is the
              opposite of "death costs only time". -->
         <LifeRegenRate value="1"/>
+        <!-- SP, the same vital an employee uses. Where the player's drains from
+             is deliberately not decided yet: it will fall out of the
+             abnormalities and E.G.O that do not exist, and inventing sources now
+             would be inventing the game they belong to. What is decided is what
+             running out DOES, and that is Lob_Panicked_Hero.
+
+             No intrinsic regeneration, on purpose. SP comes back from the rest
+             hall and from a White E.G.O round, both of which cost something; a
+             bar that refilled wherever you stood would make both pointless. -->
+        <EnergyStart value="100"/>
+        <EnergyMax value="100"/>
         <Speed value="3"/>
         <Food value="0"/>
         <AbilArray index="3" Link="Repair"/>

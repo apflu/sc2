@@ -2984,26 +2984,6 @@ void Sector_RestHallExtend (int player, region extra) {
 }
 
 //--------------------------------------------------------------------------------------------------
-// Where a player's rest hall is, for anything that needs to WALK there rather
-// than test whether it is already inside.
-//
-// A player with no core has no rest hall at all -- the region is left empty and
-// its centre would be the map origin, which is a real point and a completely
-// wrong answer. So the question "is there one" is asked separately and answered
-// by the core, not by the geometry.
-//--------------------------------------------------------------------------------------------------
-bool Sector_HasRestHall (int player) {
-    if (player < 1 || player > 15) {
-        return false;
-    }
-    return Sector_AnyCore(player) != null;
-}
-
-point Sector_RestHallPoint (int player) {
-    return RegionGetCenter(gvg_restHall[player]);
-}
-
-//--------------------------------------------------------------------------------------------------
 // Whether a unit is standing in its owner's rest hall, with that rest hall
 // still held.
 //
@@ -3296,7 +3276,11 @@ const string c_rankBehavior = "Lob_Rank";
 
 const fixed c_empPeriod = 2.0;
 
+// Breaking down is one state with two sets of consequences, so it is two
+// behaviors rather than one with a compromise in it. An employee freezes where
+// they stand; the player keeps every input and loses their E.G.O and some speed.
 const string c_panicBuff = "Lob_Panicked";
+const string c_panicBuffHero = "Lob_Panicked_Hero";
 
 string[4] gvg_statBehavior;
 string[4] gvg_statName;
@@ -3572,8 +3556,15 @@ int Emp_SPMax (unit who) {
     return FixedToInt(UnitGetPropertyFixed(who, c_unitPropEnergyMax, true));
 }
 
+string Emp_PanicBuff (unit who) {
+    if (ObjectsGen_IsHero(who)) {
+        return c_panicBuffHero;
+    }
+    return c_panicBuff;
+}
+
 bool Emp_IsPanicked (unit who) {
-    return who != null && UnitHasBehavior2(who, c_panicBuff);
+    return who != null && UnitHasBehavior2(who, Emp_PanicBuff(who));
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -3597,7 +3588,32 @@ void SP_Add (unit who, int delta) {
         value = cap;
     }
     UnitSetPropertyFixed(who, c_unitPropEnergy, IntToFixed(value));
-    Buffs_Set(who, c_panicBuff, value <= 0 && cap > 0);
+
+    // Panic LATCHES. It closes at zero and only opens again at FULL, which is
+    // not symmetry for its own sake: the way back up is somebody spending a
+    // White E.G.O on you, and a threshold anywhere below the top would let one
+    // point of incidental regen put a broken person straight back to work.
+    //
+    // The asymmetry is also what makes recovery a decision. "Shoot them until
+    // the bar is full" is an amount of someone's attention; "shoot them once"
+    // would not be.
+    if (cap > 0) {
+        if (value <= 0 && !Emp_IsPanicked(who)) {
+            Buffs_Set(who, Emp_PanicBuff(who), true);
+            // Employees stop where they are. The behavior refuses new move
+            // orders but does not put down one already being carried out, and a
+            // person who breaks mid-walk should not keep walking.
+            //
+            // Not done to the player: taking an order away from somebody who is
+            // holding the mouse is the one thing baseline 8 rules out.
+            if (!ObjectsGen_IsHero(who)) {
+                UnitIssueOrder(who, Order(AbilityCommand("stop", 0)), c_orderQueueReplace);
+            }
+        }
+        else if (value >= cap) {
+            Buffs_Set(who, Emp_PanicBuff(who), false);
+        }
+    }
 }
 
 void SP_Damage (unit who, int amount) {
@@ -3777,47 +3793,6 @@ int Emp_CountAtRank (int player, int rank) {
 //
 // The stats themselves need nothing here: their points are their display.
 //--------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------
-// A broken employee goes home.
-//
-// Baseline 8 gives NPC panic three consequences -- strike, flee, refuse orders.
-// The other two were already here and are both in 14_work: Work_Tick drops the
-// work of anybody who breaks mid-job, and Work_Refusal turns away anybody who is
-// already broken. This is the third, and it is the one that makes the other two
-// survivable, because the rest hall is where SP comes back. Without it panic is
-// terminal -- a person at zero SP has no way back up and is simply deleted from
-// the roster while still standing there.
-//
-// Idle only. An employee the player has personally ordered somewhere keeps going;
-// this fills the silence rather than arguing with anyone. That is the same
-// restraint as baseline 8's "never take control away", applied one level down.
-//
-// Nothing here has to notice recovery. Standing in the room applies the regen
-// buff, SP climbs, the next SP_Add lifts the panic behavior, and the employee
-// simply stops being a candidate. The loop closes itself.
-//--------------------------------------------------------------------------------------------------
-void Emp_Flee (unit who) {
-    int owner;
-
-    if (who == null || !UnitIsAlive(who) || !Emp_IsPanicked(who)) {
-        return;
-    }
-    // Already home, or already walking somewhere. Reissuing every tick would
-    // restart the move and they would never arrive.
-    if (Sector_InRestHall(who) || UnitOrderCount(who) > 0) {
-        return;
-    }
-
-    owner = UnitGetOwner(who);
-    if (!Sector_HasRestHall(owner)) {
-        return;
-    }
-    UnitIssueOrder(who,
-                   OrderTargetingPoint(AbilityCommand("move", 0),
-                                       Sector_RestHallPoint(owner)),
-                   c_orderQueueReplace);
-}
-
 bool Emp_Tick_Func (bool testConds, bool runActions) {
     unitgroup all;
     int count;
@@ -3836,9 +3811,18 @@ bool Emp_Tick_Func (bool testConds, bool runActions) {
         // Zero on purpose, so an employee whose Prudence just went up does not
         // become panicked by having a ceiling raised out from under a full bar.
         SP_Add(UnitGroupUnit(all, i), 0);
-        // After SP_Add, so somebody who just recovered this tick is not sent
-        // walking home for a panic they no longer have.
-        Emp_Flee(UnitGroupUnit(all, i));
+        i = i + 1;
+    }
+
+    // Player characters have SP too and nothing else reconciles it. Their bar
+    // moves by regeneration and by whatever ends up spending it, neither of
+    // which goes through SP_Add -- so without this pass the latch would only
+    // ever be looked at on the frame something called into this module.
+    all = ObjectsGen_ScanHero();
+    count = UnitGroupCount(all, c_unitCountAlive);
+    i = 1;
+    while (i <= count) {
+        SP_Add(UnitGroupUnit(all, i), 0);
         i = i + 1;
     }
     return true;
@@ -9588,6 +9572,13 @@ int Debug_Int (string word, int fallback) {
     return StringToInt(word);
 }
 
+string Debug_PanicTag (unit who) {
+    if (Emp_IsPanicked(who)) {
+        return " PANICKED";
+    }
+    return "";
+}
+
 string Debug_RankName (int rank) {
     if (rank == 1) { return "I"; }
     if (rank == 2) { return "II"; }
@@ -9699,17 +9690,12 @@ void Debug_ReportEmployees (int player) {
                + " rank=" + Debug_RankName(Emp_Rank(who))
                + " panel=" + IntToString(UnitXPGetCurrentLevel(who, c_rankBehavior))
                + " sp=" + IntToString(Emp_SP(who)) + "/" + IntToString(Emp_SPMax(who));
-        if (Emp_IsPanicked(who)) {
-            line = line + " PANICKED";
-        }
-        // Where they are relative to the one room that gives SP back. A broken
-        // employee outside it is not recovering, and that is invisible from the
-        // numbers alone.
+        line = line + Debug_PanicTag(who);
+        // Whether the room is doing anything for them. A broken employee cannot
+        // walk, so one outside is not recovering at all until somebody shoots
+        // them with a White round -- and that is invisible from the numbers.
         if (Sector_InRestHall(who)) {
             line = line + " [resting]";
-        }
-        else if (Emp_IsPanicked(who) && UnitOrderCount(who) > 0) {
-            line = line + " [heading home]";
         }
         Debug_Say(player, line);
         i = i + 1;
@@ -10187,24 +10173,40 @@ void Debug_Observe (int player, string word) {
 }
 
 //--------------------------------------------------------------------------------------------------
-// -sp <n>
+// -sp <n> | -sp me <n>
 //
 // Signed, so -sp -30 is how panic gets tested without waiting for thirty failed
-// boxes.
+// boxes. Panic latches at zero and only lets go at full, so getting back out is
+// -sp 999 rather than -sp 1 -- which is the rule, not a rounding.
+//
+// "me" targets the player character, whose breakdown is a different behavior
+// with different consequences and which nothing else in the greybox can reach:
+// no source of player SP loss exists yet on purpose.
 //--------------------------------------------------------------------------------------------------
-void Debug_SP (int player, string word) {
+void Debug_SP (int player, string word, string more) {
     unitgroup mine;
     int count;
     int i;
 
-    mine = Debug_TargetEmployees(player);
+    if (StringEqual(word, "me", false)) {
+        mine = UnitGroupEmpty();
+        UnitGroupAdd(mine, Hero_Of(player));
+    }
+    else {
+        mine = Debug_TargetEmployees(player);
+        more = word;
+    }
+
     count = UnitGroupCount(mine, c_unitCountAlive);
     i = 1;
     while (i <= count) {
-        SP_Add(UnitGroupUnit(mine, i), Debug_Int(word, 0));
+        SP_Add(UnitGroupUnit(mine, i), Debug_Int(more, 0));
         i = i + 1;
     }
     Debug_ReportEmployees(player);
+    Debug_Say(player, "sp me " + IntToString(Emp_SP(Hero_Of(player)))
+                      + "/" + IntToString(Emp_SPMax(Hero_Of(player)))
+                      + Debug_PanicTag(Hero_Of(player)));
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -10669,7 +10671,7 @@ bool Debug_Chat_Func (bool testConds, bool runActions) {
         Debug_Observe(player, StringWord(message, 2));
     }
     else if (StringEqual(command, "-sp", false)) {
-        Debug_SP(player, StringWord(message, 2));
+        Debug_SP(player, StringWord(message, 2), StringWord(message, 3));
     }
     else if (StringEqual(command, "-work", false)) {
         Debug_Work(player, StringWord(message, 2));

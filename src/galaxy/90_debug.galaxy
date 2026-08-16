@@ -102,6 +102,13 @@ int Debug_Int (string word, int fallback) {
     return StringToInt(word);
 }
 
+string Debug_PanicTag (unit who) {
+    if (Emp_IsPanicked(who)) {
+        return " PANICKED";
+    }
+    return "";
+}
+
 string Debug_RankName (int rank) {
     if (rank == 1) { return "I"; }
     if (rank == 2) { return "II"; }
@@ -213,17 +220,12 @@ void Debug_ReportEmployees (int player) {
                + " rank=" + Debug_RankName(Emp_Rank(who))
                + " panel=" + IntToString(UnitXPGetCurrentLevel(who, c_rankBehavior))
                + " sp=" + IntToString(Emp_SP(who)) + "/" + IntToString(Emp_SPMax(who));
-        if (Emp_IsPanicked(who)) {
-            line = line + " PANICKED";
-        }
-        // Where they are relative to the one room that gives SP back. A broken
-        // employee outside it is not recovering, and that is invisible from the
-        // numbers alone.
+        line = line + Debug_PanicTag(who);
+        // Whether the room is doing anything for them. A broken employee cannot
+        // walk, so one outside is not recovering at all until somebody shoots
+        // them with a White round -- and that is invisible from the numbers.
         if (Sector_InRestHall(who)) {
             line = line + " [resting]";
-        }
-        else if (Emp_IsPanicked(who) && UnitOrderCount(who) > 0) {
-            line = line + " [heading home]";
         }
         Debug_Say(player, line);
         i = i + 1;
@@ -701,24 +703,40 @@ void Debug_Observe (int player, string word) {
 }
 
 //--------------------------------------------------------------------------------------------------
-// -sp <n>
+// -sp <n> | -sp me <n>
 //
 // Signed, so -sp -30 is how panic gets tested without waiting for thirty failed
-// boxes.
+// boxes. Panic latches at zero and only lets go at full, so getting back out is
+// -sp 999 rather than -sp 1 -- which is the rule, not a rounding.
+//
+// "me" targets the player character, whose breakdown is a different behavior
+// with different consequences and which nothing else in the greybox can reach:
+// no source of player SP loss exists yet on purpose.
 //--------------------------------------------------------------------------------------------------
-void Debug_SP (int player, string word) {
+void Debug_SP (int player, string word, string more) {
     unitgroup mine;
     int count;
     int i;
 
-    mine = Debug_TargetEmployees(player);
+    if (StringEqual(word, "me", false)) {
+        mine = UnitGroupEmpty();
+        UnitGroupAdd(mine, Hero_Of(player));
+    }
+    else {
+        mine = Debug_TargetEmployees(player);
+        more = word;
+    }
+
     count = UnitGroupCount(mine, c_unitCountAlive);
     i = 1;
     while (i <= count) {
-        SP_Add(UnitGroupUnit(mine, i), Debug_Int(word, 0));
+        SP_Add(UnitGroupUnit(mine, i), Debug_Int(more, 0));
         i = i + 1;
     }
     Debug_ReportEmployees(player);
+    Debug_Say(player, "sp me " + IntToString(Emp_SP(Hero_Of(player)))
+                      + "/" + IntToString(Emp_SPMax(Hero_Of(player)))
+                      + Debug_PanicTag(Hero_Of(player)));
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -1183,7 +1201,7 @@ bool Debug_Chat_Func (bool testConds, bool runActions) {
         Debug_Observe(player, StringWord(message, 2));
     }
     else if (StringEqual(command, "-sp", false)) {
-        Debug_SP(player, StringWord(message, 2));
+        Debug_SP(player, StringWord(message, 2), StringWord(message, 3));
     }
     else if (StringEqual(command, "-work", false)) {
         Debug_Work(player, StringWord(message, 2));
