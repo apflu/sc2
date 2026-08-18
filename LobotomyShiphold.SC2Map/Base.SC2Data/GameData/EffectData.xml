@@ -68,21 +68,44 @@
         <Abil value="Lob_Turret_Fire_Burrow"/>
         <CmdFlags index="Preempt" value="1"/>
     </CEffectIssueOrder>
-    <CEffectDamage id="Dawn_Ember_Damage">
+    <!-- A worm's bite. Two things came across from the Locust it was copied
+         from and both had to go.
+
+         Kind was Ranged, which under our mapping is WHITE, so Amber has been
+         quietly costing employees SANITY instead of blood since it was first
+         put on the map. It looked entirely normal. The doc says RED, which is
+         Melee here; Kind is our damage-type channel and has nothing to say
+         about how far away the biter is standing.
+
+         ArmorReduction was Blizzard's answer to flat armour and we no longer
+         have flat armour, so it was a modifier that could only ever surprise
+         somebody. See docs/dev/damage-channel.md.
+
+         AMOUNT IS FLAT AT 2 AND THE DOC SAYS 1-2. CEffectDamage has one number
+         and no way to state a range, and script cannot roll one either: it
+         learns the amount from EventUnitDamageAttempted, which is a number and
+         not a range. Every hit in this game is written as a range, so this
+         wants a table of (effect, min, max) generated from the docs ; the same
+         per-type value channel four other systems are waiting on. Two rather
+         than one because a ceiling is the honest placeholder for a range. -->
+    <CEffectDamage id="Lob_Ordeal_Dawn_Amber_Damage">
         <EditorCategories value="Race:Zerg"/>
         <ResponseFlags index="Acquire" value="1"/>
         <ResponseFlags index="Flee" value="1"/>
-        <ArmorReduction value="1"/>
         <Flags index="Notification" value="1"/>
-        <Kind value="Ranged"/>
-        <Amount value="12"/>
+        <Kind value="Melee"/>
+        <Amount value="2"/>
         <Death value="Disintegrate"/>
         <SearchFlags index="CallForHelp" value="1"/>
         <SearchFlags index="OffsetByUnitRadius" value="1"/>
     </CEffectDamage>
-    <CEffectLaunchMissile id="Dawn_Ember_LM">
+    <!-- The missile is why this was copied rather than written. AmmoUnit is the
+         projectile, and with it come the launch actor, the flight and the
+         impact; a hand-written CEffectDamage has none of those and the worm
+         bites at nothing. -->
+    <CEffectLaunchMissile id="Lob_Ordeal_Dawn_Amber_Missile">
         <EditorCategories value="Race:Zerg"/>
-        <ImpactEffect value="Dawn_Ember_Damage"/>
+        <ImpactEffect value="Lob_Ordeal_Dawn_Amber_Damage"/>
         <AmmoUnit value="LocustMPWeapon"/>
     </CEffectLaunchMissile>
     <CEffectDamage id="Lob_Ordeal_Dawn_Green_Damage" parent="DU_WEAP">

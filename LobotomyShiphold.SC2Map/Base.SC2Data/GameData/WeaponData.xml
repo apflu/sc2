@@ -7,16 +7,19 @@
          the SCVs are meant to win it back later through numbers and upgrades.
          Range 5 so the character can open on zerglings before contact, but
          not so far that walking away from a fight is free. -->
-    <CWeaponLegacy id="Lob_Hero_Rifle">
+        <!-- Spelled out rather than left to default to TargetFilters, because
+         the unit now carries a second weapon that DOES court allies and the
+         two must not be confused about which is which. -->
+<CWeaponLegacy id="Lob_Hero_Rifle">
         <EditorCategories value="Race:Terran"/>
         <Icon value="Assets\Textures\btn-upgrade-terran-infantryweaponslevel0.dds"/>
         <TargetFilters value="Visible;Player,Ally,Missile,Stasis,Dead,Hidden,Invulnerable"/>
-        <!-- Spelled out rather than left to default to TargetFilters, because
-             the unit now carries a second weapon that DOES court allies and the
-             two must not be confused about which is which. -->
         <AcquireFilters value="Visible;Player,Ally,Missile,Stasis,Dead,Hidden,Invulnerable"/>
+        <Range value="5"/>
         <Period value="1"/>
         <DamagePoint value="0.05"/>
+        <Backswing value="0.5"/>
+        <Effect value="Lob_Hero_Rifle"/>
     </CWeaponLegacy>
     <!-- The first White E.G.O. A probe, and it lives on the player character-->
     <!--         because that is the only thing on the map that can currently be walked-->
@@ -37,40 +40,47 @@
     <!--         Range 5 and Period 1.0 to match the rifle: mending somebody costs the-->
     <!--         same attention as shooting something, which is the trade the mechanic is-->
     <!--         made of. -->
-    <CWeaponLegacy id="Lob_Ego_Mercy">
-        <EditorCategories value="Race:Terran"/>
         <!-- Hidden from the unit panel, so a White E.G.O still shows ONE damage
-             number rather than two.
+         number rather than two.
 
-             This is stock's own answer to the same problem: a Hydralisk carries
-             a hidden HydraliskMelee beside its ranged weapon, a Roach carries
-             RoachMelee, and a Baneling's real VolatileBurst is hidden behind a
-             VolatileBurstDummy that exists only to be the row in the panel. A
-             unit fires whichever of its weapons can legally reach what is in
-             front of it; how many of them the panel admits to is a separate
-             question, and this is the field that answers it.
+         This is stock's own answer to the same problem: a Hydralisk carries
+         a hidden HydraliskMelee beside its ranged weapon, a Roach carries
+         RoachMelee, and a Baneling's real VolatileBurst is hidden behind a
+         VolatileBurstDummy that exists only to be the row in the panel. A
+         unit fires whichever of its weapons can legally reach what is in
+         front of it; how many of them the panel admits to is a separate
+         question, and this is the field that answers it.
 
-             Hiding it is also the honest reading. "White mends the broken" is a
-             rule of the damage type, not a property of one E.G.O — the panel
-             should say what the weapon does to a target, and the second row
-             would be saying the same thing twice. -->
+         Hiding it is also the honest reading. "White mends the broken" is a
+         rule of the damage type, not a property of one E.G.O — the panel
+         should say what the weapon does to a target, and the second row
+         would be saying the same thing twice. -->
+<CWeaponLegacy id="Lob_Ego_Mercy">
+        <EditorCategories value="Race:Terran"/>
         <Options index="Hidden" value="1"/>
         <Icon value="Assets\Textures\btn-ability-spearofadun-guardianshell.dds"/>
         <TargetFilters value="Ground,Visible,Passive;Self,Structure,Missile,Stasis,Dead,Hidden,Invulnerable"/>
         <AcquireFilters value="Ground,Visible,Passive;Self,Structure,Missile,Stasis,Dead,Hidden,Invulnerable"/>
+        <Range value="5"/>
         <Period value="1"/>
         <DamagePoint value="0.05"/>
+        <Backswing value="0.5"/>
+        <Effect value="Lob_Ego_Mercy"/>
     </CWeaponLegacy>
-    <CWeaponLegacy id="Dawn_Ember_Weapon">
+    <!-- Renamed from Dawn_Ember_Weapon. Every other Ordeal id in the map reads
+         Lob_Ordeal_<tier>_<colour>, the unit this hangs on is
+         Lob_Ordeal_Dawn_Amber, and Ember appears nowhere else; one weapon named
+         off-pattern is a curiosity, thirty of them is a search you cannot do. -->
+    <CWeaponLegacy id="Lob_Ordeal_Dawn_Amber_Weapon">
         <EditorCategories value="Race:Zerg"/>
         <Icon value="Assets\Textures\btn-upgrade-zerg-missileattacks-level0.dds"/>
-        <DisplayEffect value="Dawn_Ember_Damage"/>
+        <DisplayEffect value="Lob_Ordeal_Dawn_Amber_Damage"/>
         <TargetFilters value="Ground,Visible;Missile,Stasis,Dead,Hidden,Invulnerable"/>
         <MinScanRange value="10"/>
         <Range value="3"/>
         <Period value="0.8"/>
         <DamagePoint value="0.2666"/>
-        <Effect value="Dawn_Ember_LM"/>
+        <Effect value="Lob_Ordeal_Dawn_Amber_Missile"/>
     </CWeaponLegacy>
     <CWeaponLegacy id="Lob_Ordeal_Dawn_Green_Weapon">
         <EditorCategories value="Race:Protoss"/>
