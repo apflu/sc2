@@ -1,2 +1,6 @@
 [8/18/2026 3:35:21 PM] Error: Error (XML: not well-formed (invalid token)) occurred while loading Weapon from game data file 'GameData/WeaponData.xml'
 [8/18/2026 3:35:24 PM] Warning: XML: M:\sc2\LobotomyShiphold.SC2Map\Base.SC2Data\GameData\WeaponData.xml(1,2) : XML: not well-formed (invalid token):   Source: M:\sc2\LobotomyShiphold.SC2Map\
+[8/18/2026 4:23:13 PM] Error: Error (XML: not well-formed (invalid token)) occurred while loading Effect from game data file 'GameData/EffectData.xml'
+[8/18/2026 4:23:13 PM] Error: Error (XML: not well-formed (invalid token)) occurred while loading Weapon from game data file 'GameData/WeaponData.xml'
+[8/18/2026 4:23:16 PM] Warning: XML: M:\sc2\LobotomyShiphold.SC2Map\Base.SC2Data\GameData\EffectData.xml(1,2) : XML: not well-formed (invalid token):   Source: M:\sc2\LobotomyShiphold.SC2Map\
+[8/18/2026 4:23:16 PM] Warning: XML: M:\sc2\LobotomyShiphold.SC2Map\Base.SC2Data\GameData\WeaponData.xml(1,2) : XML: not well-formed (invalid token):   Source: M:\sc2\LobotomyShiphold.SC2Map\
