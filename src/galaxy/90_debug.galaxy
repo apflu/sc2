@@ -854,6 +854,7 @@ void Debug_Observe (int player, string word) {
 //--------------------------------------------------------------------------------------------------
 void Debug_SP (int player, string word, string more) {
     unitgroup mine;
+    unit who;
     int count;
     int i;
 
@@ -866,10 +867,23 @@ void Debug_SP (int player, string word, string more) {
         more = word;
     }
 
+    // break / full are absolute; a bare number is a delta. Both forms exist
+    // because "-sp 0" is what anybody reaches for first to break somebody, and
+    // as a delta it does exactly nothing -- a command that silently no-ops is
+    // worse than one that does not exist.
     count = UnitGroupCount(mine, c_unitCountAlive);
     i = 1;
     while (i <= count) {
-        SP_Add(UnitGroupUnit(mine, i), Debug_Int(more, 0));
+        who = UnitGroupUnit(mine, i);
+        if (StringEqual(more, "break", false)) {
+            SP_Add(who, -Emp_SPMax(who));
+        }
+        else if (StringEqual(more, "full", false)) {
+            SP_Add(who, Emp_SPMax(who));
+        }
+        else {
+            SP_Add(who, Debug_Int(more, 0));
+        }
         i = i + 1;
     }
     Debug_ReportEmployees(player);
@@ -1115,7 +1129,11 @@ void Debug_BuildHelp () {
         + "<c val=\"ffff8a\">-emp spawn [n]</c>  spawn n at your character.<n/>"
         + "<c val=\"ffff8a\">-stat NAME VALUE</c>  set a stat. s is fort, prud, temp, just or all.<n/>"
         + "<c val=\"ffff8a\">-stat NAME +5</c>  move it instead of setting it; negatives work.<n/>"
-        + "<c val=\"ffff8a\">-sp N</c>  move SP. -sp -30 is how panic gets tested.<n/><n/>"
+        + "<c val=\"ffff8a\">-sp break</c>  straight to zero, which latches panic.  "
+        + "<c val=\"ffff8a\">-sp full</c>  back to the top, which opens it.  "
+        + "<c val=\"ffff8a\">-sp N</c>  move it by N.<n/>"
+        + "Applies to the employees you have SELECTED, or to all of yours if "
+        + "none are.  <c val=\"ffff8a\">-sp me break</c>  for your own character.<n/><n/>"
         + "Rank is the SUM of the four stat levels, not the lowest, so a "
         + "three-stat specialist with one stat left deliberately low is still "
         + "rank V. Abnormalities that require a stat to stay BELOW some value "
