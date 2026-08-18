@@ -421,10 +421,27 @@
         <BehaviorFlags index="Permanent" value="1"/>
         <InfoFlags index="Hidden" value="1"/>
         <Modification>
-            <DamageTakenFraction index="Melee" value="0.8"/>
-            <DamageTakenFraction index="Ranged" value="1.3"/>
-            <DamageTakenFraction index="Spell" value="1.3"/>
-            <DamageTakenFraction index="Splash" value="2.0"/>
+        <!-- READ THE VALUES BELOW TWICE. DamageTakenFraction is ADDITIVE, not a
+             multiplier: the engine computes base * (1 + value). So the wiki's
+             number minus one goes here, and pasting the wiki number straight in
+             gives you the OPPOSITE of what it says.
+
+             Measured, not guessed. A 20-damage Red rifle against value="0.8"
+             dealt 36, which is 20 * 1.8. Stock only uses this field twice and
+             both agree: FlashBangGrenade sets 0.15 on a unit it has just
+             stunned, which is fifteen percent MORE damage taken, not eighty-five
+             percent less.
+
+                 wiki 0.8 Endured     -> -0.2      wiki 1.0 Normal    -> 0
+                 wiki 1.3 Weak        ->  0.3      wiki 2.0 Vulnerable-> 1.0
+
+             This conversion is exactly the sort of thing that should happen once
+             in a generator rather than thirty times by hand; see the note on
+             the per-type value channel in docs/dev/damage-channel.md. -->
+            <DamageTakenFraction index="Melee" value="-0.2"/>
+            <DamageTakenFraction index="Ranged" value="0.3"/>
+            <DamageTakenFraction index="Spell" value="0.3"/>
+            <DamageTakenFraction index="Splash" value="1.0"/>
         </Modification>
     </CBehaviorBuff>
 </Catalog>
