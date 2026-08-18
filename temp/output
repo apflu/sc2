@@ -1,2 +1,2 @@
-[8/18/2026 2:46:06 PM] Warning: XML: M:\sc2\LobotomyShiphold.SC2Map\Base.SC2Data\GameData\BehaviorData.xml(349,13) : Unable to find field DamageResponse  Source: M:\sc2\LobotomyShiphold.SC2Map\  Entry: Lob_Mind_White  Scope: CBehaviorBuff.SModification  Field: Modification
-[8/18/2026 2:46:06 PM] Warning: XML: M:\sc2\LobotomyShiphold.SC2Map\Base.SC2Data\GameData\BehaviorData.xml(350,17) : Unable to find field Kind  Source: M:\sc2\LobotomyShiphold.SC2Map\  Entry: Lob_Mind_White  Scope: CBehaviorBuff.SModification  Field: Modification
+[8/18/2026 3:35:21 PM] Error: Error (XML: not well-formed (invalid token)) occurred while loading Weapon from game data file 'GameData/WeaponData.xml'
+[8/18/2026 3:35:24 PM] Warning: XML: M:\sc2\LobotomyShiphold.SC2Map\Base.SC2Data\GameData\WeaponData.xml(1,2) : XML: not well-formed (invalid token):   Source: M:\sc2\LobotomyShiphold.SC2Map\
