@@ -146,7 +146,7 @@ scan: hero=N debris=N worker=N miner=N device=N | group(debris)=N
 > 如果三个数字全是 0，说明预放单位在 `InitMap()` 执行时还没创建完。届时把扫描挪到 0 秒定时触发器里即可，代码侧改一行。
 
 ## 一条通用的
-每当一类 bug 花掉不止一轮调试，**加一个构建期检查，而不是修那一个实例**。现在有六个，全是这么来的：
+每当一类 bug 花掉不止一轮调试，**加一个构建期检查，而不是修那一个实例**。现在有七个，全是这么来的：
 
 | | 挡什么 |
 |---|---|
@@ -156,7 +156,24 @@ scan: hero=N debris=N worker=N miner=N device=N | group(debris)=N
 | `check_globals` | 引用了已改名/不存在的全局 |
 | `check_calls` | 调用了哪儿都没定义的函数 |
 | `check_catalogs` | catalog XML 解析不了（含注释里的 `--`） |
+| `check_catalog_fields` | **字段名是真的，但放错了地方** |
 
 中间四个挡的是**同一件事的四张面孔**，见上面那张表。
+
+## catalog 字段放错地方，游戏里没有任何声音
+
+```xml
+<CBehaviorBuff id="Lob_Mind_White">
+    <Modification>
+        <DamageResponse .../>      <!-- 字段是真的，位置是错的 -->
+```
+
+`DamageResponse` 挂在**行为本体下**，和 `Modification` 平级；而看起来是它孪生兄弟的 `DeathResponse` **就在 `Modification` 里面**。两个名字都没有任何一处暗示这件事，游戏也不带 schema。
+
+**编辑器只会在日志里印一行 `Unable to find field`，然后把这个字段直接忽略。**于是单位安静地没有你给它的那个东西，而"没生效"和"机制没做对"在游戏里长得一模一样。
+
+`check_catalog_fields` 用的是暴雪自己的数据当白名单：`tools/catalog_fields.txt` 收了原版每一个 `(类, 父元素, 子元素)` 三元组，`tools/gen_catalog_fields.py` 生成，已提交，构建不依赖 `~/SC2GameData/`。
+
+比对**按类族**而不是按精确类名（`CBehaviorAttribute` → `CBehavior`），**父元素名也一起模糊**——因为最外层的父元素就是条目本身，`InfoIcon` 挂在 `CBehaviorAttribute` 上会读成 `CBehavior/CBehaviorAttribute/InfoIcon`，而原版只演示过 `CBehavior/CBehaviorBuff/InfoIcon`。只模糊一头，基类字段挂在冷门子类上就会全被判成瞎编。原版从没出现过的类整个跳过。**名单故意放宽**：误报会挡住本来能跑的构建，比漏掉一个冷门字段更糟。
 
 > 这几道闸都会报行号，所以剥注释和字符串时**必须等长替换成空格**，不能删掉——删掉会让第一个注释之后的所有偏移量整体错位，指向一行完全没问题的代码。这比没有闸更糟。`blanked()` 就是干这个的。

@@ -345,11 +345,38 @@
         <EditorCategories value="AbilityorEffectType:Units"/>
         <BehaviorFlags index="Permanent" value="1"/>
         <InfoFlags index="Hidden" value="1"/>
-        <Modification>
-            <DamageResponse ModifyFraction="0">
-                <Kind value="Ranged"/>
-            </DamageResponse>
-        </Modification>
+        <!-- THE SHAPE OF THIS IS NOT GUESSABLE and the editor only says
+             "Unable to find field", so it is written out here.
+
+             DamageResponse is a field of the BEHAVIOR, not of Modification.
+             Modification is the "what does carrying this change about you" half
+             — speed, armour, DamageTakenFraction; a response is a thing that
+             happens when you are hit, and it sits beside Modification rather
+             than inside it. DeathResponse, confusingly, IS inside.
+
+             Kind is an opt-OUT array, not a value. Every kind responds by
+             default and you switch off the ones you do not want, which is why
+             this lists the three we ignore rather than the one we catch.
+             GuardianShield and HardenedShield are the stock models. NoProc is
+             off too: it is what damage with no Kind at all counts as, and our
+             mapping has no meaning for it.
+
+             ModifyFraction is a MULTIPLIER — stock uses 2 for a vulnerability
+             and 0.5 for a resistance — so 0 is "none of it lands", which is
+             what DamageTakenNone, SpectreShield and ProtectiveBarrier all do.
+             ModifyMinimumDamage rides along with it in every one of those,
+             because the engine otherwise insists a hit takes at least a point,
+             and one leaked point of life is a slow death by mercy.
+
+             Chance is stated because stock states it everywhere and an unset
+             chance is not a thing worth finding out about at runtime. -->
+        <DamageResponse ModifyFraction="0" ModifyMinimumDamage="1">
+            <Kind index="Melee" value="0"/>
+            <Kind index="Spell" value="0"/>
+            <Kind index="Splash" value="0"/>
+            <Kind index="NoProc" value="0"/>
+            <Chance value="1"/>
+        </DamageResponse>
     </CBehaviorBuff>
     <!-- The Crimson Dawn's four defences, straight off the wiki table:
 

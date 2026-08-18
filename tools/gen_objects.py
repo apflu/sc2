@@ -83,6 +83,8 @@ EXPECTED_CATEGORIES = [
     "Tool",
 ]
 
+CATALOG_FIELDS = ROOT / "tools" / "catalog_fields.txt"
+
 HEADER = """//--------------------------------------------------------------------------------------------------
 // GENERATED FILE -- DO NOT EDIT.
 //
@@ -107,11 +109,103 @@ def check_catalogs() -> None:
     data_dir = MAP / "Base.SC2Data" / "GameData"
     if not data_dir.is_dir():
         return
+    roots = {}
     for path in sorted(data_dir.glob("*.xml")):
         try:
-            ET.parse(path)
+            roots[path.name] = ET.parse(path).getroot()
         except ET.ParseError as exc:
             raise SystemExit(f"{path.name}: {exc}") from exc
+    check_catalog_fields(roots)
+
+
+def family(cls: str) -> str:
+    """CBehaviorAttribute -> CBehavior, CAbilEffectTarget -> CAbil.
+
+    Fields declared on a base class are usable by every class under it, and
+    stock only demonstrates each one wherever it happened to be needed. InfoIcon
+    is a CBehavior field and stock never puts one on a CBehaviorAttribute, so
+    without this the table would call ours a mistake.
+    """
+    m = re.match(r"(C[A-Z][a-z]+)", cls)
+    return m.group(1) if m else cls
+
+
+def loose_key(cls: str, parent: str, child: str) -> str:
+    """The same triple with both class names blurred to their families.
+
+    The PARENT has to be blurred too, not just the owning class: the outermost
+    parent of any field is the entry element itself, so InfoIcon on a
+    CBehaviorAttribute reads as CBehavior/CBehaviorAttribute/InfoIcon while
+    stock only ever shows CBehavior/CBehaviorBuff/InfoIcon. Blurring one end
+    and not the other leaves every base-class field on a rarer sibling looking
+    invented.
+    """
+    if re.match(r"C[A-Z]", parent):
+        parent = family(parent)
+    return f"{family(cls)}\t{parent}\t{child}"
+
+
+def check_catalog_fields(roots: dict) -> None:
+    """Refuse a real field name in a place the engine will not look for it.
+
+    THE EDITOR'S ONLY COMPLAINT IS A WARNING IN A LOG, and the field is then
+    silently ignored at runtime — so this fails as a unit that quietly does not
+    have the thing you gave it, which is indistinguishable from the thing not
+    working.
+
+        <CBehaviorBuff id="Lob_Mind_White">
+            <Modification>
+                <DamageResponse .../>      <-- real field, wrong parent
+
+    DamageResponse hangs directly off the behavior. DeathResponse, which looks
+    like its twin, goes inside Modification. Nothing about either name says so
+    and there is no schema shipped with the game, so the permitted set is
+    harvested from Blizzard's own data: tools/catalog_fields.txt, every
+    (class, parent, child) triple that appears anywhere in it.
+
+    Matched by class family rather than exact class, and skipped entirely for a
+    class stock has never used, so the list errs wide. A false positive stops a
+    build that would have worked, which is worse than missing one exotic field.
+    """
+    if not CATALOG_FIELDS.is_file():
+        return
+
+    exact = set()
+    loose = set()
+    seen_classes = set()
+    for line in CATALOG_FIELDS.read_text(encoding="utf-8").splitlines():
+        parts = line.split("\t")
+        if len(parts) != 3:
+            continue
+        cls, parent, child = parts
+        exact.add(line)
+        loose.add(loose_key(cls, parent, child))
+        seen_classes.add(cls)
+
+    bad = []
+
+    def walk(cls: str, entry_id: str, el, name: str) -> None:
+        for child in el:
+            if not isinstance(child.tag, str):
+                continue
+            if (f"{cls}\t{el.tag}\t{child.tag}" not in exact
+                    and loose_key(cls, el.tag, child.tag) not in loose):
+                bad.append(f"  {name}: <{cls} id=\"{entry_id}\"> "
+                           f"has <{child.tag}> inside <{el.tag}>")
+            walk(cls, entry_id, child, name)
+
+    for name, root in sorted(roots.items()):
+        for entry in root:
+            if not isinstance(entry.tag, str) or entry.tag not in seen_classes:
+                continue
+            walk(entry.tag, entry.get("id", "?"), entry, name)
+
+    if bad:
+        raise SystemExit(
+            "catalog field in a place the engine does not look for it. The\n"
+            'editor says "Unable to find field" in a log and then ignores it, so\n'
+            "the unit simply does not have what you gave it:\n"
+            + "\n".join(sorted(set(bad))))
 
 
 def read_categories() -> dict[str, list[str]]:

@@ -115,12 +115,34 @@ native void TriggerAddEventUnitDamaged (trigger t, unitref u,
 ### 六、`DamageResponse` 能拦
 
 ```xml
-<DamageResponse Kind="Ranged" ModifyFraction="0" Handled="..."/>
+<CBehaviorBuff id="Lob_Mind_White">
+    <BehaviorFlags index="Permanent" value="1"/>
+    <InfoFlags index="Hidden" value="1"/>
+    <DamageResponse ModifyFraction="0" ModifyMinimumDamage="1">
+        <Kind index="Melee" value="0"/>
+        <Kind index="Spell" value="0"/>
+        <Kind index="Splash" value="0"/>
+        <Kind index="NoProc" value="0"/>
+        <Chance value="1"/>
+    </DamageResponse>
+</CBehaviorBuff>
 ```
 
-字段全集：`Chance ClampMaximum ClampMinimum Exhausted Fatal Handled Location Minimum ModifyAmount ModifyFraction ModifyLimit ModifyMinimumDamage Priority TargetFilters`，外加一个 `<Kind>` 子元素。
+**这个形状猜不出来，而且编辑器只会说 `Unable to find field`。**三处都反直觉：
 
-**清零 + 触发另一个效果**，都在目录里。
+| 直觉 | 实际 |
+|---|---|
+| `DamageResponse` 在 `<Modification>` 里 | **在行为本体下**，和 `Modification` 平级。`Modification` 是"带着它你有什么不同"（移速、护甲、`DamageTakenFraction`），而"被打时发生什么"不属于那一类。**但 `DeathResponse` 偏偏在 `Modification` 里** |
+| `<Kind value="Ranged"/>` 选中一种 | `<Kind index="X" value="0"/>` 是**排除**。默认全部响应，你关掉不要的——所以上面列的是**忽略的三种**，不是捕获的那一种。原版范本是 `GuardianShield` 和 `HardenedShield` |
+| `ModifyFraction` 是减免比例 | 是**乘数**。原版拿 2 做易伤、0.5 做抗性，所以 0 才是"一点都不落"。`DamageTakenNone` / `SpectreShield` / `ProtectiveBarrier` 都是这么写的，而且都**同时带 `ModifyMinimumDamage="1"`**——否则引擎坚持每次至少打掉一点，慈悲武器会把人慢慢治死 |
+
+`Chance` 原版处处显式写 1，跟着写。
+
+字段全集：`Chance ClampMaximum ClampMinimum Exhausted Fatal Handled Location Minimum ModifyAmount ModifyFraction ModifyLimit ModifyMinimumDamage Priority TargetFilters`，子元素还有 `Kind` / `RequireEffectArray` / `ExcludeEffectArray` / `ValidatorArray`。
+
+**一个行为只能带一个 `DamageResponse`**（原版无反例），所以黑伤和苍伤各要一个自己的行为，不能挤在一起。
+
+> `DamageTakenFraction` 则**确实**在 `<Modification>` 里（`FlashBangGrenade` 是范本）。两个字段一个在里一个在外，是这次踩坑的全部内容。
 
 ---
 

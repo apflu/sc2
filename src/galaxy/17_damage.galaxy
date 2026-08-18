@@ -74,9 +74,9 @@ const int c_dmgKindPale = c_unitDamageTypeSplash;
 // spent somewhere the engine cannot see.
 //
 // Only White for now, on purpose. Black and Pale want the same treatment and one
-// behavior each -- a Modification carries a single DamageResponse, and stock has
-// no counter-example -- but there is no sense authoring three interceptors
-// before the first one has been seen to work.
+// behavior EACH: a behavior carries a single DamageResponse and nothing in stock
+// carries two, so they cannot share this one. No sense authoring three
+// interceptors before the first has been seen to work.
 const string c_dmgMindWhite = "Lob_Mind_White";
 
 bool gv_dmgTrace;
