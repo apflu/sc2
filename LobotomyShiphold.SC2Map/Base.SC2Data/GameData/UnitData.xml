@@ -1015,7 +1015,7 @@
         <AbilArray Link="attack"/>
         <AbilArray Link="move"/>
         <AbilArray Link="Warpable"/>
-        <WeaponArray Link="PsiBlades"/>
+        <WeaponArray Link="Lob_Ordeal_Dawn_Green_Weapon"/>
         <CardLayouts>
             <LayoutButtons Face="Move" Type="AbilCmd" AbilCmd="move,Move" Row="0" Column="0"/>
             <LayoutButtons Face="Stop" Type="AbilCmd" AbilCmd="stop,Stop" Row="0" Column="1"/>
