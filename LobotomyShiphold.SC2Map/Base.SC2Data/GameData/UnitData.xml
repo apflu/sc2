@@ -381,7 +381,6 @@
         <Attributes index="Biological" value="0"/>
         <LifeStart value="250"/>
         <LifeMax value="250"/>
-        <LifeArmor value="0"/>
         <!-- Slow constant regeneration. Nothing in P0 heals, and chip damage
              that never comes back would quietly turn every wave into a
              countdown to a death the player cannot avoid, which is the
@@ -405,7 +404,7 @@
         <WeaponArray index="0" Link="Lob_Hero_Rifle"/>
         <!-- PROBE. Move or remove once E.G.O is a real equipment system; this is
              here so a White weapon exists to point at a broken employee. -->
-        <WeaponArray index="1" Link="Lob_Ego_Mercy"/>
+        <WeaponArray Link="Lob_Ego_Mercy"/>
         <CardLayouts index="0">
             <LayoutButtons index="5" Face="Repair" Type="AbilCmd" AbilCmd="Repair,Execute" Row="1" Column="0"/>
             <LayoutButtons Face="Lob_Debug_Haste" Type="AbilCmd" AbilCmd="Lob_Debug_Haste,Execute" Row="2" Column="0"/>
@@ -731,8 +730,7 @@
         <AbilArray Link="stop"/>
         <AbilArray Link="attack"/>
         <AbilArray Link="move"/>
-        <WeaponArray Link="LocustMPMelee"/>
-        <WeaponArray Link="LocustMP"/>
+        <WeaponArray Link="Dawn_Ember_Weapon"/>
         <CardLayouts>
             <LayoutButtons Face="Move" Type="AbilCmd" AbilCmd="move,Move" Row="0" Column="0"/>
             <LayoutButtons Face="Stop" Type="AbilCmd" AbilCmd="stop,Stop" Row="0" Column="1"/>

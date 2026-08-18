@@ -5,12 +5,6 @@
          the two together are what P0 tunes when asking whether a player clears
          debris meaningfully faster than a worker does. -->
     <CEffectDamage id="Lob_Hero_Rifle" parent="DU_WEAP">
-        <!-- Melee means RED. Kind is our damage-type channel now and it has
-             nothing to say about how far away the shooter is standing — see
-             17_damage.galaxy. A rifle deals Red because Red is what a bullet
-             costs you, and every target's DamageTakenFraction index="Melee" is
-             its RED defence. -->
-        <Kind value="Melee"/>
         <Amount value="20"/>
     </CEffectDamage>
     <!-- The first White E.G.O, and a probe. 12 White, and against a person that
@@ -74,4 +68,21 @@
         <Abil value="Lob_Turret_Fire_Burrow"/>
         <CmdFlags index="Preempt" value="1"/>
     </CEffectIssueOrder>
+    <CEffectDamage id="Dawn_Ember_Damage">
+        <EditorCategories value="Race:Zerg"/>
+        <ResponseFlags index="Acquire" value="1"/>
+        <ResponseFlags index="Flee" value="1"/>
+        <ArmorReduction value="1"/>
+        <Flags index="Notification" value="1"/>
+        <Kind value="Ranged"/>
+        <Amount value="12"/>
+        <Death value="Disintegrate"/>
+        <SearchFlags index="CallForHelp" value="1"/>
+        <SearchFlags index="OffsetByUnitRadius" value="1"/>
+    </CEffectDamage>
+    <CEffectLaunchMissile id="Dawn_Ember_LM">
+        <EditorCategories value="Race:Zerg"/>
+        <ImpactEffect value="Dawn_Ember_Damage"/>
+        <AmmoUnit value="LocustMPWeapon"/>
+    </CEffectLaunchMissile>
 </Catalog>

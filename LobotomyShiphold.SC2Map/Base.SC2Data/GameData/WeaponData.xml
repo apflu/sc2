@@ -15,11 +15,8 @@
              the unit now carries a second weapon that DOES court allies and the
              two must not be confused about which is which. -->
         <AcquireFilters value="Visible;Player,Ally,Missile,Stasis,Dead,Hidden,Invulnerable"/>
-        <Range value="5"/>
         <Period value="1"/>
         <DamagePoint value="0.05"/>
-        <Backswing value="0.5"/>
-        <Effect value="Lob_Hero_Rifle"/>
     </CWeaponLegacy>
     <!-- The first White E.G.O. A probe, and it lives on the player character-->
     <!--         because that is the only thing on the map that can currently be walked-->
@@ -61,10 +58,18 @@
         <Icon value="Assets\Textures\btn-ability-spearofadun-guardianshell.dds"/>
         <TargetFilters value="Ground,Visible,Passive;Self,Structure,Missile,Stasis,Dead,Hidden,Invulnerable"/>
         <AcquireFilters value="Ground,Visible,Passive;Self,Structure,Missile,Stasis,Dead,Hidden,Invulnerable"/>
-        <Range value="5"/>
         <Period value="1"/>
         <DamagePoint value="0.05"/>
-        <Backswing value="0.5"/>
-        <Effect value="Lob_Ego_Mercy"/>
+    </CWeaponLegacy>
+    <CWeaponLegacy id="Dawn_Ember_Weapon">
+        <EditorCategories value="Race:Zerg"/>
+        <Icon value="Assets\Textures\btn-upgrade-zerg-missileattacks-level0.dds"/>
+        <DisplayEffect value="Dawn_Ember_Damage"/>
+        <TargetFilters value="Ground,Visible;Missile,Stasis,Dead,Hidden,Invulnerable"/>
+        <MinScanRange value="10"/>
+        <Range value="3"/>
+        <Period value="0.8"/>
+        <DamagePoint value="0.2666"/>
+        <Effect value="Dawn_Ember_LM"/>
     </CWeaponLegacy>
 </Catalog>
