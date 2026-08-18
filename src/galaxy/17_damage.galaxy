@@ -95,7 +95,15 @@ const string c_dmgMindWhite = "Lob_Mind_White";
 const string c_dmgMindBlack = "Lob_Mind_Black";
 const string c_dmgMindPale = "Lob_Mind_Pale";
 
-bool gv_dmgTrace;
+// 0 off, 1 people only, 2 everything. Two levels because a wave of zerglings
+// chewing on a turret is ten lines a second and drowns the one line you were
+// waiting for -- but "everything" is the only setting that can answer what the
+// engine does to a number before we see it.
+const int c_dmgTraceOff = 0;
+const int c_dmgTracePeople = 1;
+const int c_dmgTraceAll = 2;
+
+int gv_dmgTrace;
 
 trigger gt_dmgRed;
 trigger gt_dmgWhite;
@@ -168,10 +176,13 @@ string Dmg_Word (unit who) {
     return UnitGetType(who) + "/p" + IntToString(UnitGetOwner(who));
 }
 
-void Dmg_Trace (string what, unit victim, unit source) {
+void Dmg_Trace (string what, unit victim, unit source, bool ours) {
     string line;
 
-    if (!gv_dmgTrace) {
+    if (gv_dmgTrace == c_dmgTraceOff) {
+        return;
+    }
+    if (gv_dmgTrace == c_dmgTracePeople && !ours) {
         return;
     }
 
@@ -179,6 +190,18 @@ void Dmg_Trace (string what, unit victim, unit source) {
            + " attempted=" + FixedToString(EventUnitDamageAttempted(), 2)
            + " actual=" + FixedToString(EventUnitDamageAmount(), 2)
            + " effect=" + EventUnitDamageEffect();
+
+    // WHO APPLIED IT, which is the whole question on the monster side. [engine]
+    // means the number in "actual" is what the target really lost, after its
+    // DamageTakenFraction -- so [engine] with attempted != actual is the engine
+    // showing its working, and attempted already carrying the resistance would
+    // show up as attempted being lower than the weapon's own Amount.
+    if (ours) {
+        line = line + " [ours]";
+    }
+    else {
+        line = line + " [engine]";
+    }
     if (Emp_IsPanicked(victim)) {
         line = line + " [panicked]";
     }
@@ -196,14 +219,21 @@ void Dmg_Hit (int type) {
     unit victim;
     unit source;
     int amount;
+    bool ours;
 
     victim = EventUnit();
-    if (!Dmg_IsPerson(victim)) {
+    source = EventUnitDamageSourceUnit();
+
+    // A monster is not ours to arbitrate: it has one pool and one multiplier per
+    // type, and DamageTakenFraction already did that. But it IS traced, because
+    // "nothing printed" and "the trigger never fired" look identical from the
+    // outside, and this readout is the only way to see where the engine applies
+    // a resistance.
+    ours = Dmg_IsPerson(victim);
+    Dmg_Trace(AbnoGen_DmgName(type), victim, source, ours);
+    if (!ours) {
         return;
     }
-
-    source = EventUnitDamageSourceUnit();
-    Dmg_Trace(AbnoGen_DmgName(type), victim, source);
 
     // Attempted, not actual: actual is what survived the DamageResponse, and the
     // whole point of that response is that it is zero.
@@ -253,7 +283,7 @@ void Damage_Init () {
     int count;
     int i;
 
-    gv_dmgTrace = false;
+    gv_dmgTrace = c_dmgTraceOff;
 
     // Everybody already standing on the map when it loads. The created event
     // below only ever hears about the future.

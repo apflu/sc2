@@ -1206,8 +1206,11 @@ void Debug_BuildHelp () {
 
     Debug_Tip(
         "Damage types, and the bridge",
-        "<c val=\"ffff8a\">-dmg on|off</c>  echo every White hit the bridge "
-        + "intercepts, with every number the engine exposes.<n/><n/>"
+        "<c val=\"ffff8a\">-dmg on</c>  echo every hit on a PERSON, with every number "
+        + "the engine exposes.  <c val=\"ffff8a\">-dmg all</c>  monsters as well.  "
+        + "<c val=\"ffff8a\">-dmg off</c>.<n/>"
+        + "Each line is marked <c val=\"ffff8a\">[ours]</c> or "
+        + "<c val=\"ffff8a\">[engine]</c> — who actually applied the number.<n/><n/>"
         + "THE ENGINE\'S Kind FIELD IS OUR DAMAGE TYPE.  Melee = RED, Ranged = "
         + "WHITE, Spell = BLACK, Splash = PALE.  Kind takes exactly four values "
         + "in all of StarCraft and we have exactly four types, so E.G.O weapons "
@@ -1215,11 +1218,15 @@ void Debug_BuildHelp () {
         + "An abnormality\'s four defences are then four lines of "
         + "DamageTakenFraction and no script at all -- the Crimson Dawn already "
         + "has its wiki table on it.<n/><n/>"
-        + "Only one direction needs us: White, Black and Pale landing on a "
-        + "PERSON, because SP is not something the engine can be told to spend.  "
-        + "A hidden buff takes the life loss to zero and this file spends the "
-        + "number instead.  Against a monster every type is just damage, Pale "
-        + "included.<n/><n/>"
+        + "ALL FOUR types landing on a PERSON are ours -- SP is not something the "
+        + "engine can be told to spend, Pale is a fraction of MAXIMUM life, and "
+        + "Red joined them because the engine subtracts amounts that are nowhere "
+        + "on screen.  A hidden buff takes the life loss to zero and script "
+        + "spends the number instead.<n/><n/>"
+        + "Monsters are still the engine's: one pool and one multiplier per type "
+        + "is exactly DamageTakenFraction, and Pale against a monster is plain "
+        + "damage.  E.G.O grade will end that, being a bonus that depends on "
+        + "both sides at once.<n/><n/>"
         + "The player carries a probe White weapon.  Point it at a broken "
         + "colleague: it should give sanity BACK, and it should pick them up on "
         + "its own without being ordered, because being broken sets Passive and "
@@ -1351,22 +1358,30 @@ void Debug_BuildHelp () {
 //--------------------------------------------------------------------------------------------------
 void Debug_DamageTrace (int player, string word) {
     if (StringEqual(word, "off", false)) {
-        gv_dmgTrace = false;
+        gv_dmgTrace = c_dmgTraceOff;
+    }
+    else if (StringEqual(word, "all", false)) {
+        gv_dmgTrace = c_dmgTraceAll;
     }
     else if (StringEqual(word, "on", false) || word == "") {
-        gv_dmgTrace = true;
+        gv_dmgTrace = c_dmgTracePeople;
     }
     else {
-        Debug_Say(player, "-dmg on | off");
+        Debug_Say(player, "-dmg on | all | off");
         return;
     }
 
-    if (gv_dmgTrace) {
-        Debug_Say(player, "damage trace ON -- shoot a colleague with the mercy weapon. "
-                        + "attempted is the number before Lob_Mind_White ate it; "
-                        + "actual should be 0. If nothing prints at all, the damage "
-                        + "event does not survive ModifyFraction=0 and the bridge "
-                        + "needs a different hook.");
+    if (gv_dmgTrace == c_dmgTraceAll) {
+        Debug_Say(player, "damage trace ALL -- monsters too, marked [engine] because "
+                        + "the engine applied them and we did not. Shoot a Crimson Dawn: "
+                        + "its RED defence is 0.8, so a 20 rifle should read 16 in one of "
+                        + "the two numbers, and WHICH one says whether the resistance "
+                        + "lands before we see it.");
+    }
+    else if (gv_dmgTrace == c_dmgTracePeople) {
+        Debug_Say(player, "damage trace on, people only, marked [ours] -- attempted is the "
+                        + "number before Lob_Mind_* ate it and actual should be 0. "
+                        + "-dmg all adds monsters, at the cost of one line per zergling bite.");
     }
     else {
         Debug_Say(player, "damage trace off");

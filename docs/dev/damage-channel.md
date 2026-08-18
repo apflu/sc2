@@ -206,7 +206,16 @@ native void TriggerAddEventUnitDamaged (trigger t, unitref u,
 
 ### 还没验的
 
-1. **`DamageTakenFraction` 在事件之前还是之后？**上面那次 `attempted=12` 打在**人**身上，而人身上没有防御表，所以这条还没被问到。它决定 E.G.O 护甲是白送的（原生）还是要走 `Emp_DamageScale`。要验它得让一个带防御表的东西吃一发白伤——绯红已经挂上表了，但慈悲枪要求 `Passive` 打不着它，得先有一件**对敌**的白 E.G.O。
+1. **`DamageTakenFraction` 在事件之前还是之后？**它决定抗性是引擎白送的还是得由 `Emp_DamageScale` 自己算。
+
+   **`-dmg all` 就是这个实验。**用步枪（20 点，`Kind="Melee"` 即红伤）打绯红，它的红防是 0.8：
+
+   | 读到 | 结论 |
+   |---|---|
+   | `attempted=16` | 抗性在事件**之前**就算完了——`attempted` 已经含抗性 |
+   | `attempted=20 actual=16` | 抗性在**之后**，脚本拿到的是原始值 |
+
+   两种都能用，但**必须知道是哪一种**，否则把 `Emp_DamageScale` 接上的那天会把抗性算两遍。
 2. **`Kind` 除了伤害响应之外还影响什么？**比如 AI 的近战/远程判断、`KindSplash` 的配合。看上去不影响，但没验过。
 3. **面板能不能显示伤害类型？**一个数字是够的，但"12（白）"更好。武器名和提示文本是本地化字符串而不是 UI 布局，所以应该能写——**这一条不碰 layout 文件**。
 
@@ -253,7 +262,9 @@ native void TriggerAddEventUnitDamaged (trigger t, unitref u,
 
 ### 用 `-dmg` 验什么
 
-打开之后每次拦截都会打印 `attempted` / `actual` / `effect`。
+`-dmg on` 只印打在**人**身上的，`-dmg all` 连怪物一起（一波跳虫是一秒十行，所以分了两档）。每行都标了 **`[ours]`** 还是 **`[engine]`**——谁真正把这个数落下去的。
+
+**打怪物的伤害不被"拦截"，但现在会被印出来。**之前它是静默跳过的，而"什么都没印"和"触发器根本没响"从外面看一模一样。
 
 - **什么都不打印** → `ModifyFraction="0"` 之后伤害事件不触发，整个方案要换钩子。这是最关键的一条。
 - **`attempted=12 actual=0`** → 正确，桥通了。
