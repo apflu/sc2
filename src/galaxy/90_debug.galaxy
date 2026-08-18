@@ -1224,7 +1224,7 @@ void Debug_BuildHelp () {
         + "colleague: it should give sanity BACK, and it should pick them up on "
         + "its own without being ordered, because being broken sets Passive and "
         + "that is what the weapon hunts.",
-        "Assets\\Textures\\btn-ability-protoss-guardianshield-color.dds");
+        "Assets\\Textures\\btn-ability-terran-heal.dds");
 
     Debug_Tip(
         "Ordeals",

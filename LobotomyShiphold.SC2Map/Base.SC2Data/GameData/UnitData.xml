@@ -381,7 +381,7 @@
         <Attributes index="Biological" value="0"/>
         <LifeStart value="250"/>
         <LifeMax value="250"/>
-        <LifeArmor value="1"/>
+        <LifeArmor value="0"/>
         <!-- Slow constant regeneration. Nothing in P0 heals, and chip damage
              that never comes back would quietly turn every wave into a
              countdown to a death the player cannot avoid, which is the
