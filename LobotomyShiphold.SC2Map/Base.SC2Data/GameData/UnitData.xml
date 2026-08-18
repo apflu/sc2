@@ -403,6 +403,9 @@
         <AbilArray index="3" Link="Repair"/>
         <AbilArray Link="Lob_Debug_Haste"/>
         <WeaponArray index="0" Link="Lob_Hero_Rifle"/>
+        <!-- PROBE. Move or remove once E.G.O is a real equipment system; this is
+             here so a White weapon exists to point at a broken employee. -->
+        <WeaponArray index="1" Link="Lob_Ego_Mercy"/>
         <CardLayouts index="0">
             <LayoutButtons index="5" Face="Repair" Type="AbilCmd" AbilCmd="Repair,Execute" Row="1" Column="0"/>
             <LayoutButtons Face="Lob_Debug_Haste" Type="AbilCmd" AbilCmd="Lob_Debug_Haste,Execute" Row="2" Column="0"/>
@@ -950,6 +953,9 @@
         <AbilArray Link="stop"/>
         <AbilArray Link="move"/>
         <AbilArray Link="Lob_Ordeal_Rob"/>
+        <!-- Its four defences, from the wiki table. Four lines and no script;
+             see Lob_Def_Ordeal_Dawn_Crimson in BehaviorData. -->
+        <BehaviorArray Link="Lob_Def_Ordeal_Dawn_Crimson"/>
         <CardLayouts>
             <LayoutButtons Face="Move" Type="AbilCmd" AbilCmd="move,Move" Row="0" Column="0"/>
             <LayoutButtons Face="Stop" Type="AbilCmd" AbilCmd="stop,Stop" Row="0" Column="1"/>

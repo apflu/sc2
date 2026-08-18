@@ -10,11 +10,49 @@
     <CWeaponLegacy id="Lob_Hero_Rifle">
         <EditorCategories value="Race:Terran"/>
         <Icon value="Assets\Textures\btn-upgrade-terran-infantryweaponslevel0.dds"/>
-        <TargetFilters value="Visible;Missile,Stasis,Dead,Hidden,Invulnerable"/>
+        <TargetFilters value="Visible;Player,Ally,Missile,Stasis,Dead,Hidden,Invulnerable"/>
+        <!-- Spelled out rather than left to default to TargetFilters, because
+             the unit now carries a second weapon that DOES court allies and the
+             two must not be confused about which is which. -->
+        <AcquireFilters value="Visible;Player,Ally,Missile,Stasis,Dead,Hidden,Invulnerable"/>
         <Range value="5"/>
         <Period value="1.0"/>
         <DamagePoint value="0.05"/>
         <Backswing value="0.5"/>
         <Effect value="Lob_Hero_Rifle"/>
+    </CWeaponLegacy>
+    <!-- The first White E.G.O. A probe, and it lives on the player character
+         because that is the only thing on the map that can currently be walked
+         up to a broken employee on purpose.
+
+         TWO THINGS ARE BEING TESTED HERE and both are about filters.
+
+         AcquireFilters permits Ally and REQUIRES Passive. Passive is the flag
+         Lob_Panicked sets, so the only friendly this can ever pick up by itself
+         is somebody who has already stopped functioning — which is the whole
+         QoL ask: a crew member carrying White walks past healthy colleagues and
+         stops for broken ones, and nobody carrying Red ever stops at all,
+         because their weapon has no such filter. Whether the engine really
+         auto-acquires an ally on the strength of a filter is the open question.
+
+         A filter is one conjunction — required;excluded — so it cannot say
+         "enemies, OR allies who are broken". That is why this is a SECOND weapon
+         beside the rifle rather than a widened first one, which is also how
+         stock does ground-and-air. The unit picks whichever weapon can legally
+         hit what is in front of it.
+
+         Range 5 and Period 1.0 to match the rifle: mending somebody costs the
+         same attention as shooting something, which is the trade the mechanic is
+         made of. -->
+    <CWeaponLegacy id="Lob_Ego_Mercy">
+        <EditorCategories value="Race:Terran"/>
+        <Icon value="Assets\Textures\btn-ability-protoss-guardianshield-color.dds"/>
+        <TargetFilters value="Ground,Visible,Passive;Self,Structure,Missile,Stasis,Dead,Hidden,Invulnerable"/>
+        <AcquireFilters value="Ground,Visible,Passive;Self,Structure,Missile,Stasis,Dead,Hidden,Invulnerable"/>
+        <Range value="5"/>
+        <Period value="1.0"/>
+        <DamagePoint value="0.05"/>
+        <Backswing value="0.5"/>
+        <Effect value="Lob_Ego_Mercy"/>
     </CWeaponLegacy>
 </Catalog>

@@ -189,6 +189,34 @@ native void TriggerAddEventUnitDamaged (trigger t, unitref u,
 
 ---
 
+## 已经做了的例子（一条竖切）
+
+`17_damage.galaxy` + 四处目录改动，只覆盖**白伤**这一种，用来验前面那三个问号。
+
+| 东西 | 在哪 | 干什么 |
+|---|---|---|
+| 映射 | `17_damage.galaxy` 顶部 | `c_dmgKindWhite = c_unitDamageTypeRanged` 等四条。用引擎自己的常量改名，**没有表可以对不上** |
+| 拦截 | `Lob_Mind_White` | `<DamageResponse ModifyFraction="0"><Kind value="Ranged"/></DamageResponse>`。**由脚本挂上**（`Dmg_GiveMind`），不写在 CUnit 里，所以复制出来的员工不会缺一个脑子 |
+| 桥 | `Dmg_White_Func` | 读 `EventUnitDamageAttempted()`（**被拦之前**的数），送进 `Emp_CombatDamage` |
+| 慈悲 | `Dmg_IsMercy` | 队友开的白伤 + 目标已崩溃 → `SP_Restore`。**这条规则在脚本里而不是在伤害类型里**，因为紫罗兰的自爆也是白伤，写进类型会让考验去治疗它本该击垮的人。区别不是类型，是**谁开的枪** |
+| 第一件白 E.G.O | `Lob_Ego_Mercy` | 12 白，`AcquireFilters` 允许 Ally 且**要求 `Passive`**——崩溃状态设的正是这个旗标，所以拿白武器的人会自己停在崩溃的同事面前，拿红武器的人不会 |
+| 一张防御表 | `Lob_Def_Ordeal_Dawn_Crimson` | 维基上那四个数，四行，挂在绯红身上，**零脚本** |
+
+### 为什么慈悲武器是第二把枪
+
+过滤器是**一个合取式**（`required;excluded`），说不出"敌人，或者崩溃了的队友"。所以它是玩家身上的第二把武器，和原版处理对空对地是同一个办法——引擎自己挑哪把打得着。
+
+顺带给 `Lob_Hero_Rifle` 补了显式的 `AcquireFilters`（排除 Player/Ally）。它原来没写，靠 `TargetFilters` 兜底，而那个字符串**没有排除友军**——在这把枪之前无所谓，现在同一个单位身上有一把是真的会打友军的，两者不能含糊。
+
+### 用 `-dmg` 验什么
+
+打开之后每次拦截都会打印 `attempted` / `actual` / `effect`。
+
+- **什么都不打印** → `ModifyFraction="0"` 之后伤害事件不触发，整个方案要换钩子。这是最关键的一条。
+- **`attempted=12 actual=0`** → 正确，桥通了。
+- **`attempted` 不等于 12** → `DamageTakenFraction` 在事件之前就算过了。那是好事（护甲免费），但要写进文档。
+- **走过去不自动开枪** → `AcquireFilters` 允许 Ally 并不足以让引擎主动选中友军，慈悲得改成主动技能。
+
 ## 相关
 
 - `docs/dev/authoring-contract.md` —— 工作伤害 / 战斗伤害的分工，`Emp_DamageScale` 的位置

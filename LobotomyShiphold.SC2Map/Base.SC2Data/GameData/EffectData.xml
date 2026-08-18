@@ -5,8 +5,25 @@
          the two together are what P0 tunes when asking whether a player clears
          debris meaningfully faster than a worker does. -->
     <CEffectDamage id="Lob_Hero_Rifle" parent="DU_WEAP">
-        <Kind value="Ranged"/>
+        <!-- Melee means RED. Kind is our damage-type channel now and it has
+             nothing to say about how far away the shooter is standing — see
+             17_damage.galaxy. A rifle deals Red because Red is what a bullet
+             costs you, and every target's DamageTakenFraction index="Melee" is
+             its RED defence. -->
+        <Kind value="Melee"/>
         <Amount value="20"/>
+    </CEffectDamage>
+    <!-- The first White E.G.O, and a probe. 12 White, and against a person that
+         is 12 off SP rather than 12 off life, because Lob_Mind_White eats the
+         life half and 17_damage spends the rest.
+
+         Aimed at a broken colleague it gives 12 BACK. That branch is in script
+         and not here on purpose: Violet Dawn's burst is White as well, and a
+         rule written into the damage type would have made an Ordeal heal the
+         people it exists to break. Who fired is what separates them. -->
+    <CEffectDamage id="Lob_Ego_Mercy" parent="DU_WEAP">
+        <Kind value="Ranged"/>
+        <Amount value="12"/>
     </CEffectDamage>
     <CEffectApplyBehavior id="Lob_Debug_Haste"/>
     <!-- Deliberately empty. An ability has to point at an effect; this one's

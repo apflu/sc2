@@ -7888,6 +7888,247 @@ void Bank_Init () {
 }
 
 //--------------------------------------------------------------------------------------------------
+// src/galaxy/17_damage.galaxy
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// The bridge between the engine's damage and ours.
+//
+// THE IDEA IN ONE LINE: the engine's Kind field IS our damage type.
+//
+//     RED    ->  Melee       WHITE  ->  Ranged
+//     BLACK  ->  Spell       PALE   ->  Splash
+//
+// CEffectDamage's Kind takes exactly four values across the whole of stock, and
+// we have exactly four types. That is not a coincidence we are exploiting so
+// much as the only place in the engine where "what sort of damage was that"
+// exists at all -- and it is read in every one of the places we need:
+//
+//     <DamageTakenFraction index="Ranged" value="1.3"/>   one abnormality's
+//                                                         WHITE defence, from
+//                                                         the wiki table, no
+//                                                         script whatsoever
+//     <DamageResponse Kind="Ranged" ModifyFraction="0"/>  intercept it
+//     TriggerAddEventUnitDamaged(t, u, c_unitDamageTypeRanged, ...)
+//                                                         hear it, in script
+//
+// So E.G.O weapons keep REAL numbers. No placeholder, no DisplayEffect, and the
+// unit panel shows the truth because the truth is what the weapon deals. See
+// docs/dev/damage-channel.md for the whole argument and the evidence.
+//
+// WHAT STILL NEEDS US. Only one direction, and only for people:
+//
+//     Red into anything          engine. Life damage is what the engine's
+//                                entire pipeline is FOR, and routing it through
+//                                script would reimplement armour and death to
+//                                gain nothing.
+//     White/Black/Pale into a
+//     monster                    engine. An abnormality has no SP, so every
+//                                type is just damage to it, scaled by its own
+//                                DamageTakenFraction. Pale included -- against a
+//                                monster it is plain damage, and only against a
+//                                person is it a percentage.
+//     White/Black/Pale into a
+//     PERSON                     us. SP is not a thing CEffectDamage can reach,
+//                                and Pale is a fraction of MAXIMUM life, which
+//                                nothing in the catalog measures.
+//
+// The handoff is a DamageResponse that zeroes the life loss plus an event that
+// tells us what the loss WOULD have been. Nothing is applied twice and nothing
+// is estimated: EventUnitDamageAttempted is the engine's own number.
+//
+// THIS FILE IS A PROBE AS MUCH AS AN IMPLEMENTATION. Three things about the
+// engine are asserted here on strong evidence and not yet witnessed:
+//
+//     1. that the damage event still fires when a DamageResponse has already
+//        taken the number to zero. EventUnitDamageAttempted existing at all is
+//        hard to explain otherwise, but this is the load-bearing one.
+//     2. that a weapon whose filters permit Ally really does auto-acquire a
+//        friendly unit.
+//     3. what DamageTakenFraction does to the number the event reports --
+//        whether resistance is already in it or not.
+//
+// Dmg_Trace answers all three out loud rather than leaving them to be inferred
+// from a health bar. Turn it on with -dmg.
+//
+// Numbered 17 because it needs Emp_CombatDamage from 11 and is used by nobody.
+//--------------------------------------------------------------------------------------------------
+
+// The mapping, and the ONLY place it is written down. c_unitDamageType* are the
+// engine's own constants out of natives.galaxy, so this is a rename rather than
+// a translation -- there is no table to fall out of step.
+const int c_dmgKindRed = c_unitDamageTypeMelee;
+const int c_dmgKindWhite = c_unitDamageTypeRanged;
+const int c_dmgKindBlack = c_unitDamageTypeSpell;
+const int c_dmgKindPale = c_unitDamageTypeSplash;
+
+// The buff that makes a person's mind exist as far as the engine is concerned.
+// It does one thing: takes incoming White down to zero life so the number can be
+// spent somewhere the engine cannot see.
+//
+// Only White for now, on purpose. Black and Pale want the same treatment and one
+// behavior each -- a Modification carries a single DamageResponse, and stock has
+// no counter-example -- but there is no sense authoring three interceptors
+// before the first one has been seen to work.
+const string c_dmgMindWhite = "Lob_Mind_White";
+
+bool gv_dmgTrace;
+
+trigger gt_dmgWhite;
+trigger gt_dmgBorn;
+
+//--------------------------------------------------------------------------------------------------
+// Whether this unit is somebody rather than something.
+//
+// Employees and players both: a player standing in front of a White weapon has a
+// mind to lose in exactly the same way, and 11_employee's SP functions already
+// treat the two alike.
+//--------------------------------------------------------------------------------------------------
+bool Dmg_IsPerson (unit who) {
+    return who != null && (ObjectsGen_IsEmp(who) || ObjectsGen_IsHero(who));
+}
+
+//--------------------------------------------------------------------------------------------------
+// Puts the interceptor on somebody.
+//
+// Applied from script rather than listed on the unit, so it reaches every
+// employee and every player without thirty CUnit entries having to remember it
+// -- and so that a unit copied from another one cannot arrive without a mind.
+//--------------------------------------------------------------------------------------------------
+void Dmg_GiveMind (unit who) {
+    if (!Dmg_IsPerson(who)) {
+        return;
+    }
+    Buffs_Set(who, c_dmgMindWhite, true);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether this White hit is mercy rather than harm.
+//
+// THE RULE: a White weapon fired by one of the crew, at somebody who has already
+// broken, gives sanity back instead of taking it. That is the recovery path from
+// systems/sanity.md, and it lands here rather than in Emp_CombatDamage for a
+// reason worth stating -- Violet Dawn's burst is White too, and a burst that
+// healed the very people it is meant to break would be the opposite of the
+// mechanic. The difference is not the type. It is who fired.
+//
+// Panic latches at zero and only opens at FULL, so this is not one shot: it is
+// somebody standing there spending their attention on a colleague instead of on
+// the thing in the corridor. That cost is the point.
+//--------------------------------------------------------------------------------------------------
+bool Dmg_IsMercy (unit victim, unit source) {
+    if (source == null || !Emp_IsPanicked(victim)) {
+        return false;
+    }
+    return Slot_IsTablePlayer(UnitGetOwner(source));
+}
+
+//--------------------------------------------------------------------------------------------------
+// Says out loud what the engine just did. -dmg.
+//
+// Every number the event exposes, because the three open questions about this
+// system are all questions about which of these numbers is which. Attempted
+// against actual says whether the DamageResponse fired AND whether the event
+// still arrives once it has; either of them against the weapon's own Amount says
+// where DamageTakenFraction was applied.
+//--------------------------------------------------------------------------------------------------
+string Dmg_Word (unit who) {
+    if (who == null) {
+        return "nobody";
+    }
+    return UnitGetType(who) + "/p" + IntToString(UnitGetOwner(who));
+}
+
+void Dmg_Trace (string what, unit victim, unit source) {
+    string line;
+
+    if (!gv_dmgTrace) {
+        return;
+    }
+
+    line = what + " " + Dmg_Word(victim) + " <- " + Dmg_Word(source)
+           + " attempted=" + FixedToString(EventUnitDamageAttempted(), 2)
+           + " actual=" + FixedToString(EventUnitDamageAmount(), 2)
+           + " effect=" + EventUnitDamageEffect();
+    if (Emp_IsPanicked(victim)) {
+        line = line + " [panicked]";
+    }
+    UIDisplayMessage(PlayerGroupAll(), c_messageAreaDebug, StringToText(line));
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every White hit that lands on anything.
+//
+// Monsters fall straight through: the engine already dealt it, their
+// DamageTakenFraction already scaled it, and there is nothing about an
+// abnormality that our arithmetic knows better.
+//--------------------------------------------------------------------------------------------------
+bool Dmg_White_Func (bool testConds, bool runActions) {
+    unit victim;
+    unit source;
+    int amount;
+
+    if (!runActions) {
+        return true;
+    }
+
+    victim = EventUnit();
+    if (!Dmg_IsPerson(victim)) {
+        return true;
+    }
+
+    source = EventUnitDamageSourceUnit();
+    Dmg_Trace("white", victim, source);
+
+    // Attempted, not actual: actual is what survived the DamageResponse, and the
+    // whole point of that response is that it is zero.
+    amount = FixedToInt(EventUnitDamageAttempted());
+    if (amount <= 0) {
+        return true;
+    }
+
+    if (Dmg_IsMercy(victim, source)) {
+        SP_Restore(victim, amount);
+        return true;
+    }
+
+    Emp_CombatDamage(victim, c_dmgWhite, amount);
+    return true;
+}
+
+bool Dmg_Born_Func (bool testConds, bool runActions) {
+    if (!runActions) {
+        return true;
+    }
+    Dmg_GiveMind(EventUnitCreatedUnit());
+    return true;
+}
+
+void Damage_Init () {
+    unitgroup people;
+    int count;
+    int i;
+
+    gv_dmgTrace = false;
+
+    // Everybody already standing on the map when it loads. The created event
+    // below only ever hears about the future.
+    people = ObjectsGen_ScanEmp();
+    UnitGroupAddUnitGroup(people, ObjectsGen_ScanHero());
+    count = UnitGroupCount(people, c_unitCountAlive);
+    i = 1;
+    while (i <= count) {
+        Dmg_GiveMind(UnitGroupUnit(people, i));
+        i = i + 1;
+    }
+
+    gt_dmgBorn = TriggerCreate("Dmg_Born_Func");
+    TriggerAddEventUnitCreated(gt_dmgBorn, null, null, null);
+
+    gt_dmgWhite = TriggerCreate("Dmg_White_Func");
+    TriggerAddEventUnitDamaged(gt_dmgWhite, null, c_dmgKindWhite, c_unitDamageEither, null);
+}
+
+//--------------------------------------------------------------------------------------------------
 // src/galaxy/20_devices.galaxy
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
@@ -12615,6 +12856,28 @@ void Debug_BuildHelp () {
         "Assets\\Textures\\btn-ability-terran-stimpack-color.dds");
 
     Debug_Tip(
+        "Damage types, and the bridge",
+        "<c val=\"ffff8a\">-dmg on|off</c>  echo every White hit the bridge "
+        + "intercepts, with every number the engine exposes.<n/><n/>"
+        + "THE ENGINE\'S Kind FIELD IS OUR DAMAGE TYPE.  Melee = RED, Ranged = "
+        + "WHITE, Spell = BLACK, Splash = PALE.  Kind takes exactly four values "
+        + "in all of StarCraft and we have exactly four types, so E.G.O weapons "
+        + "carry REAL numbers and the unit panel shows the truth.<n/><n/>"
+        + "An abnormality\'s four defences are then four lines of "
+        + "DamageTakenFraction and no script at all -- the Crimson Dawn already "
+        + "has its wiki table on it.<n/><n/>"
+        + "Only one direction needs us: White, Black and Pale landing on a "
+        + "PERSON, because SP is not something the engine can be told to spend.  "
+        + "A hidden buff takes the life loss to zero and this file spends the "
+        + "number instead.  Against a monster every type is just damage, Pale "
+        + "included.<n/><n/>"
+        + "The player carries a probe White weapon.  Point it at a broken "
+        + "colleague: it should give sanity BACK, and it should pick them up on "
+        + "its own without being ordered, because being broken sets Passive and "
+        + "that is what the weapon hunts.",
+        "Assets\\Textures\\btn-ability-protoss-guardianshield-color.dds");
+
+    Debug_Tip(
         "Ordeals",
         "<c val=\"ffff8a\">-ordeal</c>  the whole night's schedule, what is coming, and "
         + "how many types each tier has to draw from.<n/>"
@@ -12730,6 +12993,37 @@ void Debug_BuildHelp () {
         "Assets\\Textures\\btn-ability-terran-battlefieldawareness.dds");
 }
 
+//--------------------------------------------------------------------------------------------------
+// -dmg -- echo every White hit the bridge intercepts.
+//
+// Off by default because it is loud, and the point of it is to answer three
+// questions about the engine that were reasoned out rather than witnessed. See
+// the header of 17_damage.galaxy.
+//--------------------------------------------------------------------------------------------------
+void Debug_DamageTrace (int player, string word) {
+    if (StringEqual(word, "off", false)) {
+        gv_dmgTrace = false;
+    }
+    else if (StringEqual(word, "on", false) || word == "") {
+        gv_dmgTrace = true;
+    }
+    else {
+        Debug_Say(player, "-dmg on | off");
+        return;
+    }
+
+    if (gv_dmgTrace) {
+        Debug_Say(player, "damage trace ON -- shoot a colleague with the mercy weapon. "
+                        + "attempted is the number before Lob_Mind_White ate it; "
+                        + "actual should be 0. If nothing prints at all, the damage "
+                        + "event does not survive ModifyFraction=0 and the bridge "
+                        + "needs a different hook.");
+    }
+    else {
+        Debug_Say(player, "damage trace off");
+    }
+}
+
 void Debug_Help (int player) {
     Debug_Say(player, "the command list is in the help panel -- press F12");
 }
@@ -12817,6 +13111,9 @@ bool Debug_Chat_Func (bool testConds, bool runActions) {
     else if (StringEqual(command, "-melt", false)) {
         Debug_Meltdown(player, StringWord(message, 2));
     }
+    else if (StringEqual(command, "-dmg", false)) {
+        Debug_DamageTrace(player, StringWord(message, 2));
+    }
     else if (StringEqual(command, "-qlip", false)) {
         Debug_SetCounter(player, StringWord(message, 2), StringWord(message, 3));
     }
@@ -12856,6 +13153,7 @@ void InitMap () {
     Work_Init();
     Hero_Init();
     Bank_Init();
+    Damage_Init();
     Devices_Init();
     Clearing_Init();
     Fortify_Init();

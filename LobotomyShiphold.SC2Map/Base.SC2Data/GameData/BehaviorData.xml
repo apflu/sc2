@@ -324,4 +324,55 @@
         <Period value="1"/>
         <PeriodicEffect value="Lob_Turret_Fire_BurrowOrder"/>
     </CBehaviorBuff>
+    <!-- A mind, as far as the engine is concerned.
+
+         One job: take incoming WHITE down to zero life, so that 17_damage can
+         spend the number on SP instead. Kind="Ranged" IS White — see the mapping
+         at the top of 17_damage.galaxy and docs/dev/damage-channel.md.
+
+         ModifyFraction 0 rather than a filter that stops the hit landing,
+         because the hit still has to HAPPEN: the shot, the impact actor, the
+         damage event. What must not happen is the life loss.
+
+         Applied from script (Dmg_GiveMind) rather than listed on each CUnit, so
+         a copied employee cannot arrive without one.
+
+         Black and Pale want one of these each. A Modification carries a single
+         DamageResponse and there is no counter-example anywhere in stock, so
+         they will be siblings rather than entries here — but not before this one
+         has been watched working. -->
+    <CBehaviorBuff id="Lob_Mind_White">
+        <EditorCategories value="AbilityorEffectType:Units"/>
+        <BehaviorFlags index="Permanent" value="1"/>
+        <InfoFlags index="Hidden" value="1"/>
+        <Modification>
+            <DamageResponse ModifyFraction="0">
+                <Kind value="Ranged"/>
+            </DamageResponse>
+        </Modification>
+    </CBehaviorBuff>
+    <!-- The Crimson Dawn's four defences, straight off the wiki table:
+
+             RED 0.8 (endured)   WHITE 1.3 (weak)
+             BLACK 1.3 (weak)    PALE 2.0 (vulnerable)
+
+         THIS IS THE POINT OF THE WHOLE Kind MAPPING. Every abnormality and every
+         Ordeal has one of these tables, thirty-odd of them are coming, and this
+         is what one costs: four lines, no script, and the engine applies it to
+         every weapon in the game without being told.
+
+         Pale 2.0 applies to a clown because a clown has no maximum-life
+         percentage to speak of — against a monster Pale is plain damage, and
+         this fraction is the only thing that makes it special. -->
+    <CBehaviorBuff id="Lob_Def_Ordeal_Dawn_Crimson">
+        <EditorCategories value="AbilityorEffectType:Units"/>
+        <BehaviorFlags index="Permanent" value="1"/>
+        <InfoFlags index="Hidden" value="1"/>
+        <Modification>
+            <DamageTakenFraction index="Melee" value="0.8"/>
+            <DamageTakenFraction index="Ranged" value="1.3"/>
+            <DamageTakenFraction index="Spell" value="1.3"/>
+            <DamageTakenFraction index="Splash" value="2.0"/>
+        </Modification>
+    </CBehaviorBuff>
 </Catalog>
