@@ -46,6 +46,22 @@
          made of. -->
     <CWeaponLegacy id="Lob_Ego_Mercy">
         <EditorCategories value="Race:Terran"/>
+        <!-- Hidden from the unit panel, so a White E.G.O still shows ONE damage
+             number rather than two.
+
+             This is stock's own answer to the same problem: a Hydralisk carries
+             a hidden HydraliskMelee beside its ranged weapon, a Roach carries
+             RoachMelee, and a Baneling's real VolatileBurst is hidden behind a
+             VolatileBurstDummy that exists only to be the row in the panel. A
+             unit fires whichever of its weapons can legally reach what is in
+             front of it; how many of them the panel admits to is a separate
+             question, and this is the field that answers it.
+
+             Hiding it is also the honest reading. "White mends the broken" is a
+             rule of the damage type, not a property of one E.G.O — the panel
+             should say what the weapon does to a target, and the second row
+             would be saying the same thing twice. -->
+        <Options index="Hidden" value="1"/>
         <Icon value="Assets\Textures\btn-ability-protoss-guardianshield-color.dds"/>
         <TargetFilters value="Ground,Visible,Passive;Self,Structure,Missile,Stasis,Dead,Hidden,Invulnerable"/>
         <AcquireFilters value="Ground,Visible,Passive;Self,Structure,Missile,Stasis,Dead,Hidden,Invulnerable"/>
