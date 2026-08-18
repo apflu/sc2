@@ -95,13 +95,22 @@ const string c_dmgMindWhite = "Lob_Mind_White";
 const string c_dmgMindBlack = "Lob_Mind_Black";
 const string c_dmgMindPale = "Lob_Mind_Pale";
 
-// 0 off, 1 people only, 2 everything. Two levels because a wave of zerglings
-// chewing on a turret is ten lines a second and drowns the one line you were
-// waiting for -- but "everything" is the only setting that can answer what the
-// engine does to a number before we see it.
+// How much of the fight to narrate. Nested, so each level is the one before it
+// plus something.
+//
+//   PEOPLE   employees and players. What the bridge actually arbitrates.
+//   MORE     the above plus Ordeals and abnormalities -- everything the
+//            Lobotomy layer owns, on both sides of a real fight.
+//   ALL      plus the swarm, the turrets, the debris. Honest and unreadable:
+//            a wave of zerglings chewing on a turret is ten lines a second and
+//            drowns the one line you were waiting for.
+//
+// MORE is the one to leave on while playing. ALL is for the times the question
+// is about the engine rather than about the game.
 const int c_dmgTraceOff = 0;
 const int c_dmgTracePeople = 1;
-const int c_dmgTraceAll = 2;
+const int c_dmgTraceMore = 2;
+const int c_dmgTraceAll = 3;
 
 int gv_dmgTrace;
 
@@ -176,13 +185,32 @@ string Dmg_Word (unit who) {
     return UnitGetType(who) + "/p" + IntToString(UnitGetOwner(who));
 }
 
+//--------------------------------------------------------------------------------------------------
+// Whether this hit is loud enough for the current level.
+//
+// Abnormalities are counted whether contained or breaching. A contained one
+// cannot be reached to be hit, so in practice this means the ones that got out
+// -- and if a contained one ever does take damage, that is a line worth seeing
+// rather than one worth filtering.
+//--------------------------------------------------------------------------------------------------
+bool Dmg_Loud (unit victim, bool ours) {
+    if (gv_dmgTrace == c_dmgTraceOff) {
+        return false;
+    }
+    if (gv_dmgTrace >= c_dmgTraceAll) {
+        return true;
+    }
+    if (ours) {
+        return true;
+    }
+    return gv_dmgTrace >= c_dmgTraceMore
+           && (ObjectsGen_IsOrdeal(victim) || ObjectsGen_IsAbno(victim));
+}
+
 void Dmg_Trace (string what, unit victim, unit source, bool ours) {
     string line;
 
-    if (gv_dmgTrace == c_dmgTraceOff) {
-        return;
-    }
-    if (gv_dmgTrace == c_dmgTracePeople && !ours) {
+    if (!Dmg_Loud(victim, ours)) {
         return;
     }
 

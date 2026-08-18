@@ -7987,13 +7987,22 @@ const string c_dmgMindWhite = "Lob_Mind_White";
 const string c_dmgMindBlack = "Lob_Mind_Black";
 const string c_dmgMindPale = "Lob_Mind_Pale";
 
-// 0 off, 1 people only, 2 everything. Two levels because a wave of zerglings
-// chewing on a turret is ten lines a second and drowns the one line you were
-// waiting for -- but "everything" is the only setting that can answer what the
-// engine does to a number before we see it.
+// How much of the fight to narrate. Nested, so each level is the one before it
+// plus something.
+//
+//   PEOPLE   employees and players. What the bridge actually arbitrates.
+//   MORE     the above plus Ordeals and abnormalities -- everything the
+//            Lobotomy layer owns, on both sides of a real fight.
+//   ALL      plus the swarm, the turrets, the debris. Honest and unreadable:
+//            a wave of zerglings chewing on a turret is ten lines a second and
+//            drowns the one line you were waiting for.
+//
+// MORE is the one to leave on while playing. ALL is for the times the question
+// is about the engine rather than about the game.
 const int c_dmgTraceOff = 0;
 const int c_dmgTracePeople = 1;
-const int c_dmgTraceAll = 2;
+const int c_dmgTraceMore = 2;
+const int c_dmgTraceAll = 3;
 
 int gv_dmgTrace;
 
@@ -8068,13 +8077,32 @@ string Dmg_Word (unit who) {
     return UnitGetType(who) + "/p" + IntToString(UnitGetOwner(who));
 }
 
+//--------------------------------------------------------------------------------------------------
+// Whether this hit is loud enough for the current level.
+//
+// Abnormalities are counted whether contained or breaching. A contained one
+// cannot be reached to be hit, so in practice this means the ones that got out
+// -- and if a contained one ever does take damage, that is a line worth seeing
+// rather than one worth filtering.
+//--------------------------------------------------------------------------------------------------
+bool Dmg_Loud (unit victim, bool ours) {
+    if (gv_dmgTrace == c_dmgTraceOff) {
+        return false;
+    }
+    if (gv_dmgTrace >= c_dmgTraceAll) {
+        return true;
+    }
+    if (ours) {
+        return true;
+    }
+    return gv_dmgTrace >= c_dmgTraceMore
+           && (ObjectsGen_IsOrdeal(victim) || ObjectsGen_IsAbno(victim));
+}
+
 void Dmg_Trace (string what, unit victim, unit source, bool ours) {
     string line;
 
-    if (gv_dmgTrace == c_dmgTraceOff) {
-        return;
-    }
-    if (gv_dmgTrace == c_dmgTracePeople && !ours) {
+    if (!Dmg_Loud(victim, ours)) {
         return;
     }
 
@@ -12954,9 +12982,11 @@ void Debug_BuildHelp () {
 
     Debug_Tip(
         "Damage types, and the bridge",
-        "<c val=\"ffff8a\">-dmg on</c>  echo every hit on a PERSON, with every number "
-        + "the engine exposes.  <c val=\"ffff8a\">-dmg all</c>  monsters as well.  "
-        + "<c val=\"ffff8a\">-dmg off</c>.<n/>"
+        "<c val=\"ffff8a\">-dmg on</c>  every hit on a PERSON, with every number the "
+        + "engine exposes.  <c val=\"ffff8a\">-dmg more</c>  adds Ordeals and "
+        + "abnormalities and stops there — leave this one on while playing.  "
+        + "<c val=\"ffff8a\">-dmg all</c>  the swarm and the turrets too, which is ten "
+        + "lines a second.  <c val=\"ffff8a\">-dmg off</c>.<n/>"
         + "Each line is marked <c val=\"ffff8a\">[ours]</c> or "
         + "<c val=\"ffff8a\">[engine]</c> — who actually applied the number.<n/><n/>"
         + "THE ENGINE\'S Kind FIELD IS OUR DAMAGE TYPE.  Melee = RED, Ranged = "
@@ -13111,15 +13141,25 @@ void Debug_DamageTrace (int player, string word) {
     else if (StringEqual(word, "all", false)) {
         gv_dmgTrace = c_dmgTraceAll;
     }
+    else if (StringEqual(word, "more", false)) {
+        gv_dmgTrace = c_dmgTraceMore;
+    }
     else if (StringEqual(word, "on", false) || word == "") {
         gv_dmgTrace = c_dmgTracePeople;
     }
     else {
-        Debug_Say(player, "-dmg on | all | off");
+        Debug_Say(player, "-dmg on | more | all | off");
         return;
     }
 
-    if (gv_dmgTrace == c_dmgTraceAll) {
+    if (gv_dmgTrace == c_dmgTraceMore) {
+        Debug_Say(player, "damage trace MORE -- people, Ordeals and abnormalities, and "
+                        + "nothing else. This is the one to leave on while playing. "
+                        + "Monster lines are marked [engine] because the engine applied "
+                        + "them; shoot a Crimson Dawn with the rifle and its RED defence "
+                        + "of 0.8 should turn 20 into 16 in one of the two numbers.");
+    }
+    else if (gv_dmgTrace == c_dmgTraceAll) {
         Debug_Say(player, "damage trace ALL -- monsters too, marked [engine] because "
                         + "the engine applied them and we did not. Shoot a Crimson Dawn: "
                         + "its RED defence is 0.8, so a 20 rifle should read 16 in one of "

@@ -1206,9 +1206,11 @@ void Debug_BuildHelp () {
 
     Debug_Tip(
         "Damage types, and the bridge",
-        "<c val=\"ffff8a\">-dmg on</c>  echo every hit on a PERSON, with every number "
-        + "the engine exposes.  <c val=\"ffff8a\">-dmg all</c>  monsters as well.  "
-        + "<c val=\"ffff8a\">-dmg off</c>.<n/>"
+        "<c val=\"ffff8a\">-dmg on</c>  every hit on a PERSON, with every number the "
+        + "engine exposes.  <c val=\"ffff8a\">-dmg more</c>  adds Ordeals and "
+        + "abnormalities and stops there — leave this one on while playing.  "
+        + "<c val=\"ffff8a\">-dmg all</c>  the swarm and the turrets too, which is ten "
+        + "lines a second.  <c val=\"ffff8a\">-dmg off</c>.<n/>"
         + "Each line is marked <c val=\"ffff8a\">[ours]</c> or "
         + "<c val=\"ffff8a\">[engine]</c> — who actually applied the number.<n/><n/>"
         + "THE ENGINE\'S Kind FIELD IS OUR DAMAGE TYPE.  Melee = RED, Ranged = "
@@ -1363,15 +1365,25 @@ void Debug_DamageTrace (int player, string word) {
     else if (StringEqual(word, "all", false)) {
         gv_dmgTrace = c_dmgTraceAll;
     }
+    else if (StringEqual(word, "more", false)) {
+        gv_dmgTrace = c_dmgTraceMore;
+    }
     else if (StringEqual(word, "on", false) || word == "") {
         gv_dmgTrace = c_dmgTracePeople;
     }
     else {
-        Debug_Say(player, "-dmg on | all | off");
+        Debug_Say(player, "-dmg on | more | all | off");
         return;
     }
 
-    if (gv_dmgTrace == c_dmgTraceAll) {
+    if (gv_dmgTrace == c_dmgTraceMore) {
+        Debug_Say(player, "damage trace MORE -- people, Ordeals and abnormalities, and "
+                        + "nothing else. This is the one to leave on while playing. "
+                        + "Monster lines are marked [engine] because the engine applied "
+                        + "them; shoot a Crimson Dawn with the rifle and its RED defence "
+                        + "of 0.8 should turn 20 into 16 in one of the two numbers.");
+    }
+    else if (gv_dmgTrace == c_dmgTraceAll) {
         Debug_Say(player, "damage trace ALL -- monsters too, marked [engine] because "
                         + "the engine applied them and we did not. Shoot a Crimson Dawn: "
                         + "its RED defence is 0.8, so a 20 rifle should read 16 in one of "
