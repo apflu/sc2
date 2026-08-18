@@ -58,7 +58,7 @@ Splash
 这张表现在**没有地方放**。有了 `Kind` 映射之后它就是一个隐藏 buff：
 
 ```xml
-<CBehaviorBuff id="Lob_Def_Crimson">
+<CBehaviorBuff id="Lob_Def_Ordeal_Dawn_Crimson">
     <InfoFlags index="Hidden" value="1"/>
     <Modification>
         <DamageTakenFraction index="Melee"  value="0.8"/>
@@ -171,7 +171,7 @@ native void TriggerAddEventUnitDamaged (trigger t, unitref u,
 
 **代价是：地图里不能再有不守这条规矩的武器。**目前只有一处违规——`50_waves.galaxy` 的 `c_waveUnitType = "Zergling"`，用的是原版跳虫的武器。那是个占位系统，虫群单位本来就要自己做。
 
-`Lob_Hero_Rifle` 现在是 `Kind="Ranged"`，按上表会变成白伤——**得有意识地选一次**，不能让它保持默认。
+`Lob_Hero_Rifle` 原本是 `Kind="Ranged"`，按上表会变成白伤。**已经改成 `Melee`（红）**——一发子弹收的是命，不是理智。
 
 > 我先前在 `Emp_DamageScale` 的注释里否定过这条路，理由是"一件抗 Red 的 E.G.O 会连带抗跳虫"。那个理由**在我们自己造所有武器的前提下不成立**——那正是这条路的全部意义。注释要改。
 
