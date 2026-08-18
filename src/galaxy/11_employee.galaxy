@@ -470,7 +470,15 @@ void Emp_LifeDamage (unit who, fixed amount) {
 }
 
 //--------------------------------------------------------------------------------------------------
-// How much of a given kind of work damage this employee actually takes, as a
+// Where a hit came from. Not the same axis as Red/White/Black/Pale: the type is
+// what it costs, the source is what happened, and the two vary independently --
+// a door and a clown can both charge White.
+//--------------------------------------------------------------------------------------------------
+const int c_dmgFromWork = 0;
+const int c_dmgFromCombat = 1;
+
+//--------------------------------------------------------------------------------------------------
+// How much of a given kind of damage this employee actually takes, as a
 // percent. 100 is unarmoured.
 //
 // THIS IS WHERE E.G.O ARMOUR LANDS, and it is a seam rather than a system: a
@@ -491,7 +499,7 @@ void Emp_LifeDamage (unit who, fixed amount) {
 // and which one is a question for whoever builds E.G.O -- not something to guess
 // at now, which is how this project ended up inventing a User2 attribute once.
 //--------------------------------------------------------------------------------------------------
-int Emp_DamageScale (unit who, int type) {
+int Emp_DamageScale (unit who, int type, int source) {
     return 100;
 }
 
@@ -507,25 +515,29 @@ int Emp_DamageScale (unit who, int type) {
 // cannot observe is a cost they cannot learn from, and learning which
 // abnormality charges what is the whole game.
 //
-// Called once per hit with the SCALED amount and the abnormality's type -- once
-// even for Black, whose halves are an implementation detail the player should
-// never have to reassemble.
+// Called once per hit with the SCALED amount -- once even for Black, whose
+// halves are an implementation detail the player should never have to
+// reassemble.
+//
+// It gets the source as well as the type, because the two answer different
+// questions and the display will want both: "White 12" says what it cost, and
+// "at a door" versus "from that thing over there" says what to do differently
+// next time. A number with no origin is a number you can only react to.
 //
 // Nothing here yet, and that is the point: every path that hurts a person
 // already calls it, so switching the display on is filling this function in
 // rather than finding the eleven places damage happens.
 //--------------------------------------------------------------------------------------------------
-void Emp_DamageShown (unit who, int type, int amount) {
+void Emp_DamageShown (unit who, int type, int amount, int source) {
 }
 
 //--------------------------------------------------------------------------------------------------
-// A missed box, paid in whatever coin that abnormality charges.
+// Red / White / Black / Pale, applied. The shared half of two different events.
 //
-// The type is the abnormality's, not the work's: the same badly chosen work
-// breaks the employee at one door and kills them at another, and that difference
-// is most of what distinguishes one abnormality from another at the moment a
-// player decides who to send. White alone would have made every wrong answer
-// cost the same thing.
+// This is arithmetic and nothing else: it does not know why it was called and
+// must not start caring, because the moment it does, the two callers below stop
+// being able to diverge. It is private in intent -- work and combat are the
+// doors, this is the room behind both.
 //
 // Pale is a percentage of maximum life rather than a flat amount, so it is
 // exactly as dangerous to a veteran as to a new hire. Since Fortitude IS maximum
@@ -533,13 +545,9 @@ void Emp_DamageShown (unit who, int type, int amount) {
 // employee would make them immune -- and Pale is the mechanic that says no.
 //
 // Black charges half to each, so the printed number is what the hit costs in
-// total and a player can do the arithmetic at the door.
-//
-// The name says WORK because that is where it started, but it is now the only
-// door in: Ordeals come through here too, and anything else that hurts a person
-// without a weapon has to. That is deliberate -- see Emp_DamageShown.
+// total and a player can do the arithmetic where they are standing.
 //--------------------------------------------------------------------------------------------------
-void Emp_WorkDamage (unit who, int type, int amount) {
+void Emp_ApplyDamage (unit who, int type, int amount, int source) {
     if (who == null || !UnitIsAlive(who) || amount <= 0) {
         return;
     }
@@ -547,12 +555,12 @@ void Emp_WorkDamage (unit who, int type, int amount) {
     // Scaled once, before the split, so a suit that halves Black halves both
     // halves of it and a suit that halves Pale halves the percentage. Applying
     // it inside each branch would be four chances to get that wrong.
-    amount = amount * Emp_DamageScale(who, type) / 100;
+    amount = amount * Emp_DamageScale(who, type, source) / 100;
     if (amount <= 0) {
         return;
     }
 
-    Emp_DamageShown(who, type, amount);
+    Emp_DamageShown(who, type, amount, source);
 
     if (type == c_dmgWhite) {
         SP_Damage(who, amount);
@@ -577,6 +585,53 @@ void Emp_WorkDamage (unit who, int type, int amount) {
                        UnitGetPropertyFixed(who, c_unitPropLifeMax, true)
                        * IntToFixed(amount) / 100.0);
     }
+}
+
+//--------------------------------------------------------------------------------------------------
+// A missed box, paid in whatever coin that abnormality charges.
+//
+// The type is the abnormality's, not the work's: the same badly chosen work
+// breaks the employee at one door and kills them at another, and that difference
+// is most of what distinguishes one abnormality from another at the moment a
+// player decides who to send. White alone would have made every wrong answer
+// cost the same thing.
+//
+// This is what happens INSIDE a cell, to somebody who volunteered, as the price
+// of a box. Nothing hit them. That is not a flavour note -- it is the reason
+// this is a separate function from the one below, and see that one for the rest
+// of the argument.
+//--------------------------------------------------------------------------------------------------
+void Emp_WorkDamage (unit who, int type, int amount) {
+    Emp_ApplyDamage(who, type, amount, c_dmgFromWork);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Something hostile hit them: a breaching abnormality, an Ordeal, whatever the
+// swarm turns out to be.
+//
+// SPLIT FROM WORK DAMAGE ON PURPOSE, and the two arrive at the same arithmetic
+// today only by coincidence. They are different events and they are going to
+// want different things:
+//
+//   E.G.O resistance almost certainly does not apply equally to both -- a suit
+//   is armour, and a missed box is not something armour is between you and.
+//   Emp_DamageScale takes the source for exactly this.
+//
+//   The Information Team's readout wants to tell them apart. "Your Malkuth crew
+//   is bleeding White at the doors" and "something is killing your Malkuth crew"
+//   are different problems with different answers, and a display that adds them
+//   together tells you neither.
+//
+//   Work damage is a price the player CHOSE by sending somebody. Combat damage
+//   is not. Anything that ever wants to reward or forgive one of those has to be
+//   able to name it.
+//
+// Naming the wide one after the narrow one would have made all of that
+// impossible to see: every future reader of Emp_WorkDamage would have had to
+// discover that it also meant "a clown exploded".
+//--------------------------------------------------------------------------------------------------
+void Emp_CombatDamage (unit who, int type, int amount) {
+    Emp_ApplyDamage(who, type, amount, c_dmgFromCombat);
 }
 
 //--------------------------------------------------------------------------------------------------

@@ -586,7 +586,7 @@ bool Ordeal_Rob_Func (bool testConds, bool runActions) {
 // An explosion, in two halves: the picture and the numbers.
 //
 // The picture is a detached model dropped at a point, and that is all the
-// catalog does for either of these. The numbers are Emp_WorkDamage, in script.
+// catalog does for either of these. The numbers are Emp_CombatDamage, in script.
 // That split is not a shortcut taken to avoid learning the effect system -- it
 // is forced, three times over, and it is worth writing down because a copied
 // Baneling burst looks like it would do the job:
@@ -602,8 +602,8 @@ bool Ordeal_Rob_Func (bool testConds, bool runActions) {
 //   radius wide enough to catch them all would also catch the ones it must not.
 //
 //   Crimson's blast IS Red, which the engine could deal honestly, and it still
-//   must not. Damage dealt by the engine never passes through Emp_WorkDamage, so
-//   it would skip Emp_DamageScale -- the seam E.G.O resistance lands on -- skip
+//   must not. Damage dealt by the engine never passes through Emp_CombatDamage,
+//   so it would skip Emp_DamageScale -- the seam E.G.O resistance lands on -- skip
 //   the rule that an employee at zero life dies outright rather than going to a
 //   downed state that does not exist, and skip Emp_DamageShown, which is where
 //   the Information Team's damage numbers are going to be read from. One funnel,
@@ -637,7 +637,7 @@ void Ordeal_BlastGroup (unitgroup people, point at, int amount) {
         who = UnitGroupUnit(people, j);
         if (who != null && UnitIsAlive(who)
             && DistanceBetweenPoints(UnitGetPosition(who), at) <= c_ordealBlastRadius) {
-            Emp_WorkDamage(who, c_dmgRed, amount);
+            Emp_CombatDamage(who, c_dmgRed, amount);
         }
         j = j + 1;
     }
@@ -767,8 +767,8 @@ void Ordeal_Burst (int i) {
     count = UnitGroupCount(people, c_unitCountAlive);
     j = 1;
     while (j <= count) {
-        Emp_WorkDamage(UnitGroupUnit(people, j), c_dmgWhite,
-                       RandomInt(c_ordealBurstMin, c_ordealBurstMax));
+        Emp_CombatDamage(UnitGroupUnit(people, j), c_dmgWhite,
+                         RandomInt(c_ordealBurstMin, c_ordealBurstMax));
         j = j + 1;
     }
 
