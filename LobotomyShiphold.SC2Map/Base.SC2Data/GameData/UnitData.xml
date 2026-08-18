@@ -991,10 +991,13 @@
         <Attributes index="Biological" value="1"/>
         <LifeStart value="150"/>
         <LifeMax value="150"/>
-        <LifeArmor value="1"/>
+        <LifeArmor value="0"/>
         <LifeArmorName value="Unit/LifeArmorName/ProtossArmor"/>
-        <ShieldsStart value="50"/>
-        <ShieldsMax value="50"/>
+        <!-- Zealot shields removed: Lobotomy has one bar per body, and a
+             shield pool would quietly absorb hits in front of the life the
+             four defences are computed against. -->
+        <ShieldsStart value="0"/>
+        <ShieldsMax value="0"/>
         <ShieldRegenDelay value="10"/>
         <ShieldRegenRate value="2"/>
         <ShieldArmorName value="Unit/ShieldArmorName/ProtossPlasmaShields"/>
@@ -1016,6 +1019,10 @@
         <AbilArray Link="move"/>
         <AbilArray Link="Warpable"/>
         <WeaponArray Link="Lob_Ordeal_Dawn_Green_Weapon"/>
+        <!-- Wiki: RED 0.8 / WHITE 1.3 / BLACK 2.0 / PALE 1.0. Each value is the
+             wiki number MINUS ONE, because DamageTakenFraction is additive;
+             Normal is simply left out. -->
+        <BehaviorArray Link="Lob_Def_Ordeal_Dawn_Green"/>
         <CardLayouts>
             <LayoutButtons Face="Move" Type="AbilCmd" AbilCmd="move,Move" Row="0" Column="0"/>
             <LayoutButtons Face="Stop" Type="AbilCmd" AbilCmd="stop,Stop" Row="0" Column="1"/>

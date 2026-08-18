@@ -108,10 +108,20 @@
         <ImpactEffect value="Lob_Ordeal_Dawn_Amber_Damage"/>
         <AmmoUnit value="LocustMPWeapon"/>
     </CEffectLaunchMissile>
+    <!-- The lance. RED 3-5 in the doc, and the Zealot this was copied from
+         swings twice per attack (PeriodCount 2 on the persistent below), so
+         2.5 a strike is 5 a swing: the ceiling of the range, the same
+         placeholder Amber's bite uses, and the panel prints it as 2.5 x2.
+
+         Kind is stated even though parent="DU_WEAP" already supplies Melee.
+         Kind is our damage-type channel now, and a type arriving by silent
+         inheritance from a Blizzard template is exactly how Amber spent a day
+         charging sanity instead of blood. -->
     <CEffectDamage id="Lob_Ordeal_Dawn_Green_Damage" parent="DU_WEAP">
         <ValidatorArray value="NotHidden"/>
         <EditorCategories value="Race:Protoss"/>
-        <Amount value="8"/>
+        <Kind value="Melee"/>
+        <Amount value="2.5"/>
         <Death value="Eviscerate"/>
     </CEffectDamage>
     <CEffectCreatePersistent id="Lob_Ordeal_Dawn_Green_Burst">

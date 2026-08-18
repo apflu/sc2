@@ -176,6 +176,7 @@ Lob/Msg/WorkResult=%ABNORMALITY%: %WORK% -- %BOXES% boxes, %RESULT%  (+%STAT%)
 Lob/Msg/AgentDown=Agent down. Back in %SECONDS%s.
 Lob/Msg/Wave=Wave %WAVE% -- %COUNT% incoming (%DIFFICULTY%)
 Lob/Msg/OrdealNext=%NAME% will arrive at meltdown level %LEVEL%.
+Lob/Msg/Overkill=A machine is taking its time with somebody. Get out of the room.
 Lob/Msg/OrdealBegin=%NAME% has begun.
 Lob/Msg/OrdealDone=%NAME% suppressed. +%ENERGY% energy.
 Lob/Msg/OrdealLost=%NAME% was not put down in time. Nothing was earned.

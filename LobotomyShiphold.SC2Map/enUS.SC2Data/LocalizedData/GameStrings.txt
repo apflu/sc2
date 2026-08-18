@@ -108,6 +108,7 @@ Lob/Msg/OrdealDone=%NAME% suppressed. +%ENERGY% energy.
 Lob/Msg/OrdealLost=%NAME% was not put down in time. Nothing was earned.
 Lob/Msg/OrdealNext=%NAME% will arrive at meltdown level %LEVEL%.
 Lob/Msg/OrdealRobbed=%NAME% robbed %ABNO% -- %BOXES% PE boxes taken, Qliphoth counter down one.
+Lob/Msg/Overkill=A machine is taking its time with somebody. Get out of the room.
 Lob/Msg/Suppressed=%RISK% suppressed
 Lob/Msg/Wave=Wave %WAVE% -- %COUNT% incoming (%DIFFICULTY%)
 Lob/Msg/WorkBegin=%ABNORMALITY%: %WORK% started

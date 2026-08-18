@@ -7888,354 +7888,6 @@ void Bank_Init () {
 }
 
 //--------------------------------------------------------------------------------------------------
-// src/galaxy/17_damage.galaxy
-//--------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------
-// The bridge between the engine's damage and ours.
-//
-// THE IDEA IN ONE LINE: the engine's Kind field IS our damage type.
-//
-//     RED    ->  Melee       WHITE  ->  Ranged
-//     BLACK  ->  Spell       PALE   ->  Splash
-//
-// CEffectDamage's Kind takes exactly four values across the whole of stock, and
-// we have exactly four types. That is not a coincidence we are exploiting so
-// much as the only place in the engine where "what sort of damage was that"
-// exists at all -- and it is read in every one of the places we need:
-//
-//     <DamageTakenFraction index="Ranged" value="1.3"/>   one abnormality's
-//                                                         WHITE defence, from
-//                                                         the wiki table, no
-//                                                         script whatsoever
-//     <DamageResponse Kind="Ranged" ModifyFraction="0"/>  intercept it
-//     TriggerAddEventUnitDamaged(t, u, c_unitDamageTypeRanged, ...)
-//                                                         hear it, in script
-//
-// So E.G.O weapons keep REAL numbers. No placeholder, no DisplayEffect, and the
-// unit panel shows the truth because the truth is what the weapon deals. See
-// docs/dev/damage-channel.md for the whole argument and the evidence.
-//
-// WHAT STILL NEEDS US. Only one direction, and only for people:
-//
-//     Anything into a PERSON     us, all four types. SP is not a thing
-//                                CEffectDamage can reach and Pale is a fraction
-//                                of MAXIMUM life, so two of them were never
-//                                going to be the engine's -- and Red joined them
-//                                for legibility rather than correctness. The
-//                                argument is on c_dmgMindRed below and it comes
-//                                down to this: the engine subtracts amounts that
-//                                are nowhere on screen, and a number the player
-//                                cannot derive is a number they cannot learn
-//                                from.
-//     Anything into a MONSTER     engine, for now. A monster has one pool and
-//                                one multiplier per type, which is exactly what
-//                                DamageTakenFraction is -- and that multiplier
-//                                IS Lobotomy's resistance model, not
-//                                StarCraft's armour. Pale against a monster is
-//                                plain damage, so nothing here has to know.
-//                                E.G.O GRADE will end this: a bonus that depends
-//                                on attacker and defender together is pairwise
-//                                and no catalog field is.
-//
-// The handoff is a DamageResponse that zeroes the life loss plus an event that
-// tells us what the loss WOULD have been. Nothing is applied twice and nothing
-// is estimated: EventUnitDamageAttempted is the engine's own number.
-//
-// THIS FILE IS A PROBE AS MUCH AS AN IMPLEMENTATION. Three things about the
-// engine are asserted here on strong evidence and not yet witnessed:
-//
-//     1. that the damage event still fires when a DamageResponse has already
-//        taken the number to zero. EventUnitDamageAttempted existing at all is
-//        hard to explain otherwise, but this is the load-bearing one.
-//     2. that a weapon whose filters permit Ally really does auto-acquire a
-//        friendly unit.
-//     3. what DamageTakenFraction does to the number the event reports --
-//        whether resistance is already in it or not.
-//
-// Dmg_Trace answers all three out loud rather than leaving them to be inferred
-// from a health bar. Turn it on with -dmg.
-//
-// Numbered 17 because it needs Emp_CombatDamage from 11 and is used by nobody.
-//--------------------------------------------------------------------------------------------------
-
-// The mapping, and the ONLY place it is written down. c_unitDamageType* are the
-// engine's own constants out of natives.galaxy, so this is a rename rather than
-// a translation -- there is no table to fall out of step.
-const int c_dmgKindRed = c_unitDamageTypeMelee;
-const int c_dmgKindWhite = c_unitDamageTypeRanged;
-const int c_dmgKindBlack = c_unitDamageTypeSpell;
-const int c_dmgKindPale = c_unitDamageTypeSplash;
-
-// One interceptor per type, because a behavior carries a single DamageResponse.
-// Each takes its own type to zero life so the number can be spent here instead.
-//
-// ALL FOUR, INCLUDING RED. The engine could apply Red correctly and for a while
-// it did -- the reason it no longer does is not correctness, it is legibility.
-// A live shot read 10 against a weapon whose Amount said 12, and explaining the
-// gap took a mod-dependency lookup (Void's LocustMPDamage is 10 where Swarm's is
-// 12) and a field called ArmorReduction that cancelled the armour exactly. It
-// turned out there was nothing wrong. THAT IS THE PROBLEM: a number nobody can
-// derive is indistinguishable from a bug, and this game asks the player to
-// compare four damage types across thirty abnormalities. Flat armour, attribute
-// bonuses and armour-piercing all subtract amounts that are nowhere on screen.
-//
-// So the catalog now holds two things about a hit and only two: the base number
-// and the type. Everything that modifies it is script, and there is one place to
-// read to know why a number came out the way it did.
-const string c_dmgMindRed = "Lob_Mind_Red";
-const string c_dmgMindWhite = "Lob_Mind_White";
-const string c_dmgMindBlack = "Lob_Mind_Black";
-const string c_dmgMindPale = "Lob_Mind_Pale";
-
-// How much of the fight to narrate. Nested, so each level is the one before it
-// plus something.
-//
-//   PEOPLE   employees and players. What the bridge actually arbitrates.
-//   MORE     the above plus Ordeals and abnormalities -- everything the
-//            Lobotomy layer owns, on both sides of a real fight.
-//   ALL      plus the swarm, the turrets, the debris. Honest and unreadable:
-//            a wave of zerglings chewing on a turret is ten lines a second and
-//            drowns the one line you were waiting for.
-//
-// MORE is the one to leave on while playing. ALL is for the times the question
-// is about the engine rather than about the game.
-const int c_dmgTraceOff = 0;
-const int c_dmgTracePeople = 1;
-const int c_dmgTraceMore = 2;
-const int c_dmgTraceAll = 3;
-
-int gv_dmgTrace;
-
-trigger gt_dmgRed;
-trigger gt_dmgWhite;
-trigger gt_dmgBlack;
-trigger gt_dmgPale;
-trigger gt_dmgBorn;
-
-//--------------------------------------------------------------------------------------------------
-// Whether this unit is somebody rather than something.
-//
-// Employees and players both: a player standing in front of a White weapon has a
-// mind to lose in exactly the same way, and 11_employee's SP functions already
-// treat the two alike.
-//--------------------------------------------------------------------------------------------------
-bool Dmg_IsPerson (unit who) {
-    return who != null && (ObjectsGen_IsEmp(who) || ObjectsGen_IsHero(who));
-}
-
-//--------------------------------------------------------------------------------------------------
-// Puts the interceptor on somebody.
-//
-// Applied from script rather than listed on the unit, so it reaches every
-// employee and every player without thirty CUnit entries having to remember it
-// -- and so that a unit copied from another one cannot arrive without a mind.
-//--------------------------------------------------------------------------------------------------
-void Dmg_GiveMind (unit who) {
-    if (!Dmg_IsPerson(who)) {
-        return;
-    }
-    Buffs_Set(who, c_dmgMindRed, true);
-    Buffs_Set(who, c_dmgMindWhite, true);
-    Buffs_Set(who, c_dmgMindBlack, true);
-    Buffs_Set(who, c_dmgMindPale, true);
-}
-
-//--------------------------------------------------------------------------------------------------
-// Whether this White hit is mercy rather than harm.
-//
-// THE RULE: a White weapon fired by one of the crew, at somebody who has already
-// broken, gives sanity back instead of taking it. That is the recovery path from
-// systems/sanity.md, and it lands here rather than in Emp_CombatDamage for a
-// reason worth stating -- Violet Dawn's burst is White too, and a burst that
-// healed the very people it is meant to break would be the opposite of the
-// mechanic. The difference is not the type. It is who fired.
-//
-// Panic latches at zero and only opens at FULL, so this is not one shot: it is
-// somebody standing there spending their attention on a colleague instead of on
-// the thing in the corridor. That cost is the point.
-//--------------------------------------------------------------------------------------------------
-bool Dmg_IsMercy (unit victim, unit source) {
-    if (source == null || !Emp_IsPanicked(victim)) {
-        return false;
-    }
-    return Slot_IsTablePlayer(UnitGetOwner(source));
-}
-
-//--------------------------------------------------------------------------------------------------
-// Says out loud what the engine just did. -dmg.
-//
-// Every number the event exposes, because the three open questions about this
-// system are all questions about which of these numbers is which. Attempted
-// against actual says whether the DamageResponse fired AND whether the event
-// still arrives once it has; either of them against the weapon's own Amount says
-// where DamageTakenFraction was applied.
-//--------------------------------------------------------------------------------------------------
-string Dmg_Word (unit who) {
-    if (who == null) {
-        return "nobody";
-    }
-    return UnitGetType(who) + "/p" + IntToString(UnitGetOwner(who));
-}
-
-//--------------------------------------------------------------------------------------------------
-// Whether this hit is loud enough for the current level.
-//
-// Abnormalities are counted whether contained or breaching. A contained one
-// cannot be reached to be hit, so in practice this means the ones that got out
-// -- and if a contained one ever does take damage, that is a line worth seeing
-// rather than one worth filtering.
-//--------------------------------------------------------------------------------------------------
-bool Dmg_Loud (unit victim, bool ours) {
-    if (gv_dmgTrace == c_dmgTraceOff) {
-        return false;
-    }
-    if (gv_dmgTrace >= c_dmgTraceAll) {
-        return true;
-    }
-    if (ours) {
-        return true;
-    }
-    return gv_dmgTrace >= c_dmgTraceMore
-           && (ObjectsGen_IsOrdeal(victim) || ObjectsGen_IsAbno(victim));
-}
-
-void Dmg_Trace (string what, unit victim, unit source, bool ours) {
-    string line;
-
-    if (!Dmg_Loud(victim, ours)) {
-        return;
-    }
-
-    line = what + " " + Dmg_Word(victim) + " <- " + Dmg_Word(source)
-           + " attempted=" + FixedToString(EventUnitDamageAttempted(), 2)
-           + " actual=" + FixedToString(EventUnitDamageAmount(), 2)
-           + " effect=" + EventUnitDamageEffect();
-
-    // WHO APPLIED IT, which is the whole question on the monster side. [engine]
-    // means the number in "actual" is what the target really lost, after its
-    // DamageTakenFraction -- so [engine] with attempted != actual is the engine
-    // showing its working, and attempted already carrying the resistance would
-    // show up as attempted being lower than the weapon's own Amount.
-    if (ours) {
-        line = line + " [ours]";
-    }
-    else {
-        line = line + " [engine]";
-    }
-    if (Emp_IsPanicked(victim)) {
-        line = line + " [panicked]";
-    }
-    UIDisplayMessage(PlayerGroupAll(), c_messageAreaDebug, StringToText(line));
-}
-
-//--------------------------------------------------------------------------------------------------
-// Every White hit that lands on anything.
-//
-// Monsters fall straight through: the engine already dealt it, their
-// DamageTakenFraction already scaled it, and there is nothing about an
-// abnormality that our arithmetic knows better.
-//--------------------------------------------------------------------------------------------------
-void Dmg_Hit (int type) {
-    unit victim;
-    unit source;
-    int amount;
-    bool ours;
-
-    victim = EventUnit();
-    source = EventUnitDamageSourceUnit();
-
-    // A monster is not ours to arbitrate: it has one pool and one multiplier per
-    // type, and DamageTakenFraction already did that. But it IS traced, because
-    // "nothing printed" and "the trigger never fired" look identical from the
-    // outside, and this readout is the only way to see where the engine applies
-    // a resistance.
-    ours = Dmg_IsPerson(victim);
-    Dmg_Trace(AbnoGen_DmgName(type), victim, source, ours);
-    if (!ours) {
-        return;
-    }
-
-    // Attempted, not actual: actual is what survived the DamageResponse, and the
-    // whole point of that response is that it is zero.
-    amount = FixedToInt(EventUnitDamageAttempted());
-    if (amount <= 0) {
-        return;
-    }
-
-    if (type == c_dmgWhite && Dmg_IsMercy(victim, source)) {
-        SP_Restore(victim, amount);
-        return;
-    }
-
-    Emp_CombatDamage(victim, type, amount);
-}
-
-bool Dmg_Red_Func (bool testConds, bool runActions) {
-    if (runActions) { Dmg_Hit(c_dmgRed); }
-    return true;
-}
-
-bool Dmg_White_Func (bool testConds, bool runActions) {
-    if (runActions) { Dmg_Hit(c_dmgWhite); }
-    return true;
-}
-
-bool Dmg_Black_Func (bool testConds, bool runActions) {
-    if (runActions) { Dmg_Hit(c_dmgBlack); }
-    return true;
-}
-
-bool Dmg_Pale_Func (bool testConds, bool runActions) {
-    if (runActions) { Dmg_Hit(c_dmgPale); }
-    return true;
-}
-
-bool Dmg_Born_Func (bool testConds, bool runActions) {
-    if (!runActions) {
-        return true;
-    }
-    Dmg_GiveMind(EventUnitCreatedUnit());
-    return true;
-}
-
-void Damage_Init () {
-    unitgroup people;
-    int count;
-    int i;
-
-    gv_dmgTrace = c_dmgTraceOff;
-
-    // Everybody already standing on the map when it loads. The created event
-    // below only ever hears about the future.
-    people = ObjectsGen_ScanEmp();
-    UnitGroupAddUnitGroup(people, ObjectsGen_ScanHero());
-    count = UnitGroupCount(people, c_unitCountAlive);
-    i = 1;
-    while (i <= count) {
-        Dmg_GiveMind(UnitGroupUnit(people, i));
-        i = i + 1;
-    }
-
-    gt_dmgBorn = TriggerCreate("Dmg_Born_Func");
-    TriggerAddEventUnitCreated(gt_dmgBorn, null, null, null);
-
-    // One trigger per kind rather than one on c_unitDamageTypeAny, because the
-    // event exposes no "which kind was that" function -- the registration IS the
-    // answer, and a single trigger would have to guess.
-    gt_dmgRed = TriggerCreate("Dmg_Red_Func");
-    TriggerAddEventUnitDamaged(gt_dmgRed, null, c_dmgKindRed, c_unitDamageEither, null);
-
-    gt_dmgWhite = TriggerCreate("Dmg_White_Func");
-    TriggerAddEventUnitDamaged(gt_dmgWhite, null, c_dmgKindWhite, c_unitDamageEither, null);
-
-    gt_dmgBlack = TriggerCreate("Dmg_Black_Func");
-    TriggerAddEventUnitDamaged(gt_dmgBlack, null, c_dmgKindBlack, c_unitDamageEither, null);
-
-    gt_dmgPale = TriggerCreate("Dmg_Pale_Func");
-    TriggerAddEventUnitDamaged(gt_dmgPale, null, c_dmgKindPale, c_unitDamageEither, null);
-}
-
-//--------------------------------------------------------------------------------------------------
 // src/galaxy/20_devices.galaxy
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
@@ -10334,6 +9986,440 @@ void Ordeals_Init () {
 
     gt_ordealDeath = TriggerCreate("Ordeal_Died_Func");
     TriggerAddEventUnitDied(gt_ordealDeath, null);
+}
+
+//--------------------------------------------------------------------------------------------------
+// src/galaxy/28_damage.galaxy
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// The bridge between the engine's damage and ours.
+//
+// THE IDEA IN ONE LINE: the engine's Kind field IS our damage type.
+//
+//     RED    ->  Melee       WHITE  ->  Ranged
+//     BLACK  ->  Spell       PALE   ->  Splash
+//
+// CEffectDamage's Kind takes exactly four values across the whole of stock, and
+// we have exactly four types. That is not a coincidence we are exploiting so
+// much as the only place in the engine where "what sort of damage was that"
+// exists at all -- and it is read in every one of the places we need:
+//
+//     <DamageTakenFraction index="Ranged" value="1.3"/>   one abnormality's
+//                                                         WHITE defence, from
+//                                                         the wiki table, no
+//                                                         script whatsoever
+//     <DamageResponse Kind="Ranged" ModifyFraction="0"/>  intercept it
+//     TriggerAddEventUnitDamaged(t, u, c_unitDamageTypeRanged, ...)
+//                                                         hear it, in script
+//
+// So E.G.O weapons keep REAL numbers. No placeholder, no DisplayEffect, and the
+// unit panel shows the truth because the truth is what the weapon deals. See
+// docs/dev/damage-channel.md for the whole argument and the evidence.
+//
+// WHAT STILL NEEDS US. Only one direction, and only for people:
+//
+//     Anything into a PERSON     us, all four types. SP is not a thing
+//                                CEffectDamage can reach and Pale is a fraction
+//                                of MAXIMUM life, so two of them were never
+//                                going to be the engine's -- and Red joined them
+//                                for legibility rather than correctness. The
+//                                argument is on c_dmgMindRed below and it comes
+//                                down to this: the engine subtracts amounts that
+//                                are nowhere on screen, and a number the player
+//                                cannot derive is a number they cannot learn
+//                                from.
+//     Anything into a MONSTER     engine, for now. A monster has one pool and
+//                                one multiplier per type, which is exactly what
+//                                DamageTakenFraction is -- and that multiplier
+//                                IS Lobotomy's resistance model, not
+//                                StarCraft's armour. Pale against a monster is
+//                                plain damage, so nothing here has to know.
+//                                E.G.O GRADE will end this: a bonus that depends
+//                                on attacker and defender together is pairwise
+//                                and no catalog field is.
+//
+// The handoff is a DamageResponse that zeroes the life loss plus an event that
+// tells us what the loss WOULD have been. Nothing is applied twice and nothing
+// is estimated: EventUnitDamageAttempted is the engine's own number.
+//
+// THIS FILE IS A PROBE AS MUCH AS AN IMPLEMENTATION. Three things about the
+// engine are asserted here on strong evidence and not yet witnessed:
+//
+//     1. that the damage event still fires when a DamageResponse has already
+//        taken the number to zero. EventUnitDamageAttempted existing at all is
+//        hard to explain otherwise, but this is the load-bearing one.
+//     2. that a weapon whose filters permit Ally really does auto-acquire a
+//        friendly unit.
+//     3. what DamageTakenFraction does to the number the event reports --
+//        whether resistance is already in it or not.
+//
+// Dmg_Trace answers all three out loud rather than leaving them to be inferred
+// from a health bar. Turn it on with -dmg.
+//
+// Numbered 28 because it needs Emp_CombatDamage from 11 and Fort_LocOfPoint from
+// 26, and is called by nobody. It was 17 until Green Dawn's overkill needed to
+// know which ROOM somebody died in.
+//--------------------------------------------------------------------------------------------------
+
+// The mapping, and the ONLY place it is written down. c_unitDamageType* are the
+// engine's own constants out of natives.galaxy, so this is a rename rather than
+// a translation -- there is no table to fall out of step.
+const int c_dmgKindRed = c_unitDamageTypeMelee;
+const int c_dmgKindWhite = c_unitDamageTypeRanged;
+const int c_dmgKindBlack = c_unitDamageTypeSpell;
+const int c_dmgKindPale = c_unitDamageTypeSplash;
+
+// One interceptor per type, because a behavior carries a single DamageResponse.
+// Each takes its own type to zero life so the number can be spent here instead.
+//
+// ALL FOUR, INCLUDING RED. The engine could apply Red correctly and for a while
+// it did -- the reason it no longer does is not correctness, it is legibility.
+// A live shot read 10 against a weapon whose Amount said 12, and explaining the
+// gap took a mod-dependency lookup (Void's LocustMPDamage is 10 where Swarm's is
+// 12) and a field called ArmorReduction that cancelled the armour exactly. It
+// turned out there was nothing wrong. THAT IS THE PROBLEM: a number nobody can
+// derive is indistinguishable from a bug, and this game asks the player to
+// compare four damage types across thirty abnormalities. Flat armour, attribute
+// bonuses and armour-piercing all subtract amounts that are nowhere on screen.
+//
+// So the catalog now holds two things about a hit and only two: the base number
+// and the type. Everything that modifies it is script, and there is one place to
+// read to know why a number came out the way it did.
+// Green Dawn's overkill. Five stabs, three White each, at everybody else in the
+// room; the doc's "in quick succession", which here means all at once because
+// nothing between the five could change the answer.
+const int c_dmgOverkillHits = 5;
+const int c_dmgOverkillEach = 3;
+
+// Used only when a room has no region drawn around it yet. Generous, because the
+// alternative is an execution that lands on nobody and looks broken.
+const fixed c_dmgOverkillReach = 8.0;
+
+const string c_dmgMindRed = "Lob_Mind_Red";
+const string c_dmgMindWhite = "Lob_Mind_White";
+const string c_dmgMindBlack = "Lob_Mind_Black";
+const string c_dmgMindPale = "Lob_Mind_Pale";
+
+// How much of the fight to narrate. Nested, so each level is the one before it
+// plus something.
+//
+//   PEOPLE   employees and players. What the bridge actually arbitrates.
+//   MORE     the above plus Ordeals and abnormalities -- everything the
+//            Lobotomy layer owns, on both sides of a real fight.
+//   ALL      plus the swarm, the turrets, the debris. Honest and unreadable:
+//            a wave of zerglings chewing on a turret is ten lines a second and
+//            drowns the one line you were waiting for.
+//
+// MORE is the one to leave on while playing. ALL is for the times the question
+// is about the engine rather than about the game.
+const int c_dmgTraceOff = 0;
+const int c_dmgTracePeople = 1;
+const int c_dmgTraceMore = 2;
+const int c_dmgTraceAll = 3;
+
+int gv_dmgTrace;
+
+trigger gt_dmgRed;
+trigger gt_dmgWhite;
+trigger gt_dmgBlack;
+trigger gt_dmgPale;
+trigger gt_dmgBorn;
+
+//--------------------------------------------------------------------------------------------------
+// Whether this unit is somebody rather than something.
+//
+// Employees and players both: a player standing in front of a White weapon has a
+// mind to lose in exactly the same way, and 11_employee's SP functions already
+// treat the two alike.
+//--------------------------------------------------------------------------------------------------
+bool Dmg_IsPerson (unit who) {
+    return who != null && (ObjectsGen_IsEmp(who) || ObjectsGen_IsHero(who));
+}
+
+//--------------------------------------------------------------------------------------------------
+// Puts the interceptor on somebody.
+//
+// Applied from script rather than listed on the unit, so it reaches every
+// employee and every player without thirty CUnit entries having to remember it
+// -- and so that a unit copied from another one cannot arrive without a mind.
+//--------------------------------------------------------------------------------------------------
+void Dmg_GiveMind (unit who) {
+    if (!Dmg_IsPerson(who)) {
+        return;
+    }
+    Buffs_Set(who, c_dmgMindRed, true);
+    Buffs_Set(who, c_dmgMindWhite, true);
+    Buffs_Set(who, c_dmgMindBlack, true);
+    Buffs_Set(who, c_dmgMindPale, true);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether this White hit is mercy rather than harm.
+//
+// THE RULE: a White weapon fired by one of the crew, at somebody who has already
+// broken, gives sanity back instead of taking it. That is the recovery path from
+// systems/sanity.md, and it lands here rather than in Emp_CombatDamage for a
+// reason worth stating -- Violet Dawn's burst is White too, and a burst that
+// healed the very people it is meant to break would be the opposite of the
+// mechanic. The difference is not the type. It is who fired.
+//
+// Panic latches at zero and only opens at FULL, so this is not one shot: it is
+// somebody standing there spending their attention on a colleague instead of on
+// the thing in the corridor. That cost is the point.
+//--------------------------------------------------------------------------------------------------
+bool Dmg_IsMercy (unit victim, unit source) {
+    if (source == null || !Emp_IsPanicked(victim)) {
+        return false;
+    }
+    return Slot_IsTablePlayer(UnitGetOwner(source));
+}
+
+//--------------------------------------------------------------------------------------------------
+// Says out loud what the engine just did. -dmg.
+//
+// Every number the event exposes, because the three open questions about this
+// system are all questions about which of these numbers is which. Attempted
+// against actual says whether the DamageResponse fired AND whether the event
+// still arrives once it has; either of them against the weapon's own Amount says
+// where DamageTakenFraction was applied.
+//--------------------------------------------------------------------------------------------------
+string Dmg_Word (unit who) {
+    if (who == null) {
+        return "nobody";
+    }
+    return UnitGetType(who) + "/p" + IntToString(UnitGetOwner(who));
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether this hit is loud enough for the current level.
+//
+// Abnormalities are counted whether contained or breaching. A contained one
+// cannot be reached to be hit, so in practice this means the ones that got out
+// -- and if a contained one ever does take damage, that is a line worth seeing
+// rather than one worth filtering.
+//--------------------------------------------------------------------------------------------------
+bool Dmg_Loud (unit victim, bool ours) {
+    if (gv_dmgTrace == c_dmgTraceOff) {
+        return false;
+    }
+    if (gv_dmgTrace >= c_dmgTraceAll) {
+        return true;
+    }
+    if (ours) {
+        return true;
+    }
+    return gv_dmgTrace >= c_dmgTraceMore
+           && (ObjectsGen_IsOrdeal(victim) || ObjectsGen_IsAbno(victim));
+}
+
+void Dmg_Trace (string what, unit victim, unit source, bool ours) {
+    string line;
+
+    if (!Dmg_Loud(victim, ours)) {
+        return;
+    }
+
+    line = what + " " + Dmg_Word(victim) + " <- " + Dmg_Word(source)
+           + " attempted=" + FixedToString(EventUnitDamageAttempted(), 2)
+           + " actual=" + FixedToString(EventUnitDamageAmount(), 2)
+           + " effect=" + EventUnitDamageEffect();
+
+    // WHO APPLIED IT, which is the whole question on the monster side. [engine]
+    // means the number in "actual" is what the target really lost, after its
+    // DamageTakenFraction -- so [engine] with attempted != actual is the engine
+    // showing its working, and attempted already carrying the resistance would
+    // show up as attempted being lower than the weapon's own Amount.
+    if (ours) {
+        line = line + " [ours]";
+    }
+    else {
+        line = line + " [engine]";
+    }
+    if (Emp_IsPanicked(victim)) {
+        line = line + " [panicked]";
+    }
+    UIDisplayMessage(PlayerGroupAll(), c_messageAreaDebug, StringToText(line));
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every White hit that lands on anything.
+//
+// Monsters fall straight through: the engine already dealt it, their
+// DamageTakenFraction already scaled it, and there is nothing about an
+// abnormality that our arithmetic knows better.
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// Everybody of one kind who has to watch.
+//
+// The room the body is in, or a radius around it when that stretch of corridor
+// has no region drawn yet. The fallback matters: most of the map has no regions
+// on it, and an execution that hits nobody reads as a mechanic that does not
+// work rather than as a map that is unfinished.
+//--------------------------------------------------------------------------------------------------
+void Dmg_OverkillGroup (unitgroup people, unit dead, point at, int loc) {
+    unit who;
+    int count;
+    int j;
+    int hit;
+
+    count = UnitGroupCount(people, c_unitCountAlive);
+    j = 1;
+    while (j <= count) {
+        who = UnitGroupUnit(people, j);
+        if (who != null && who != dead && UnitIsAlive(who)
+            && ((loc >= 0 && RegionContainsPoint(gvg_locRegion[loc], UnitGetPosition(who)))
+                || (loc < 0 && DistanceBetweenPoints(UnitGetPosition(who), at)
+                               <= c_dmgOverkillReach))) {
+            hit = 0;
+            while (hit < c_dmgOverkillHits) {
+                Emp_CombatDamage(who, c_dmgWhite, c_dmgOverkillEach);
+                hit = hit + 1;
+            }
+        }
+        j = j + 1;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// What a Green Dawn does after it has already won.
+//
+// It stabs the corpse five more times, and the cost lands on EVERYONE ELSE IN
+// THE ROOM: three White apiece, five times. The victim pays nothing, being
+// dead. That inversion is the whole mechanic; the doc's advice is not to send
+// help while a robot is finishing somebody, because arriving is what puts you
+// in the room.
+//
+// It hangs off a HIT rather than off a death, and that is why it lives in this
+// file. The killing blow goes through Emp_CombatDamage, which calls UnitKill
+// itself, so by the time anything hears a death event the attacker is no longer
+// on the record. Asking "did that hit finish them" where the hit lands needs no
+// bookkeeping at all.
+//
+// Fifteen White is enormous next to a work-damage tick, and it is meant to be.
+// Watching a colleague taken apart is the fastest way to lose a room.
+//--------------------------------------------------------------------------------------------------
+void Dmg_Overkill (unit dead, unit killer) {
+    point at;
+    int loc;
+
+    if (killer == null || !ObjectsGen_IsOrdeal_Dawn_Green(killer)) {
+        return;
+    }
+
+    at = UnitGetPosition(dead);
+    loc = Fort_LocOfPoint(at);
+
+    Dmg_OverkillGroup(ObjectsGen_ScanEmp(), dead, at, loc);
+    Dmg_OverkillGroup(ObjectsGen_ScanHero(), dead, at, loc);
+
+    UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle,
+                     StringExternal("Lob/Msg/Overkill"));
+}
+
+void Dmg_Hit (int type) {
+    unit victim;
+    unit source;
+    int amount;
+    bool ours;
+
+    victim = EventUnit();
+    source = EventUnitDamageSourceUnit();
+
+    // A monster is not ours to arbitrate: it has one pool and one multiplier per
+    // type, and DamageTakenFraction already did that. But it IS traced, because
+    // "nothing printed" and "the trigger never fired" look identical from the
+    // outside, and this readout is the only way to see where the engine applies
+    // a resistance.
+    ours = Dmg_IsPerson(victim);
+    Dmg_Trace(AbnoGen_DmgName(type), victim, source, ours);
+    if (!ours) {
+        return;
+    }
+
+    // Attempted, not actual: actual is what survived the DamageResponse, and the
+    // whole point of that response is that it is zero.
+    amount = FixedToInt(EventUnitDamageAttempted());
+    if (amount <= 0) {
+        return;
+    }
+
+    if (type == c_dmgWhite && Dmg_IsMercy(victim, source)) {
+        SP_Restore(victim, amount);
+        return;
+    }
+
+    Emp_CombatDamage(victim, type, amount);
+
+    // Asked here because this is the only place that knows both who died and
+    // who did it.
+    if (!UnitIsAlive(victim)) {
+        Dmg_Overkill(victim, source);
+    }
+}
+
+bool Dmg_Red_Func (bool testConds, bool runActions) {
+    if (runActions) { Dmg_Hit(c_dmgRed); }
+    return true;
+}
+
+bool Dmg_White_Func (bool testConds, bool runActions) {
+    if (runActions) { Dmg_Hit(c_dmgWhite); }
+    return true;
+}
+
+bool Dmg_Black_Func (bool testConds, bool runActions) {
+    if (runActions) { Dmg_Hit(c_dmgBlack); }
+    return true;
+}
+
+bool Dmg_Pale_Func (bool testConds, bool runActions) {
+    if (runActions) { Dmg_Hit(c_dmgPale); }
+    return true;
+}
+
+bool Dmg_Born_Func (bool testConds, bool runActions) {
+    if (!runActions) {
+        return true;
+    }
+    Dmg_GiveMind(EventUnitCreatedUnit());
+    return true;
+}
+
+void Damage_Init () {
+    unitgroup people;
+    int count;
+    int i;
+
+    gv_dmgTrace = c_dmgTraceOff;
+
+    // Everybody already standing on the map when it loads. The created event
+    // below only ever hears about the future.
+    people = ObjectsGen_ScanEmp();
+    UnitGroupAddUnitGroup(people, ObjectsGen_ScanHero());
+    count = UnitGroupCount(people, c_unitCountAlive);
+    i = 1;
+    while (i <= count) {
+        Dmg_GiveMind(UnitGroupUnit(people, i));
+        i = i + 1;
+    }
+
+    gt_dmgBorn = TriggerCreate("Dmg_Born_Func");
+    TriggerAddEventUnitCreated(gt_dmgBorn, null, null, null);
+
+    // One trigger per kind rather than one on c_unitDamageTypeAny, because the
+    // event exposes no "which kind was that" function -- the registration IS the
+    // answer, and a single trigger would have to guess.
+    gt_dmgRed = TriggerCreate("Dmg_Red_Func");
+    TriggerAddEventUnitDamaged(gt_dmgRed, null, c_dmgKindRed, c_unitDamageEither, null);
+
+    gt_dmgWhite = TriggerCreate("Dmg_White_Func");
+    TriggerAddEventUnitDamaged(gt_dmgWhite, null, c_dmgKindWhite, c_unitDamageEither, null);
+
+    gt_dmgBlack = TriggerCreate("Dmg_Black_Func");
+    TriggerAddEventUnitDamaged(gt_dmgBlack, null, c_dmgKindBlack, c_unitDamageEither, null);
+
+    gt_dmgPale = TriggerCreate("Dmg_Pale_Func");
+    TriggerAddEventUnitDamaged(gt_dmgPale, null, c_dmgKindPale, c_unitDamageEither, null);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -13305,11 +13391,11 @@ void InitMap () {
     Work_Init();
     Hero_Init();
     Bank_Init();
-    Damage_Init();
     Devices_Init();
     Clearing_Init();
     Fortify_Init();
     Ordeals_Init();
+    Damage_Init();
     Workers_Init();
     Economy_Init();
     Waves_Init();

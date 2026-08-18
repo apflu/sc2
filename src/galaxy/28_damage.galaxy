@@ -63,7 +63,9 @@
 // Dmg_Trace answers all three out loud rather than leaving them to be inferred
 // from a health bar. Turn it on with -dmg.
 //
-// Numbered 17 because it needs Emp_CombatDamage from 11 and is used by nobody.
+// Numbered 28 because it needs Emp_CombatDamage from 11 and Fort_LocOfPoint from
+// 26, and is called by nobody. It was 17 until Green Dawn's overkill needed to
+// know which ROOM somebody died in.
 //--------------------------------------------------------------------------------------------------
 
 // The mapping, and the ONLY place it is written down. c_unitDamageType* are the
@@ -90,6 +92,16 @@ const int c_dmgKindPale = c_unitDamageTypeSplash;
 // So the catalog now holds two things about a hit and only two: the base number
 // and the type. Everything that modifies it is script, and there is one place to
 // read to know why a number came out the way it did.
+// Green Dawn's overkill. Five stabs, three White each, at everybody else in the
+// room; the doc's "in quick succession", which here means all at once because
+// nothing between the five could change the answer.
+const int c_dmgOverkillHits = 5;
+const int c_dmgOverkillEach = 3;
+
+// Used only when a room has no region drawn around it yet. Generous, because the
+// alternative is an execution that lands on nobody and looks broken.
+const fixed c_dmgOverkillReach = 8.0;
+
 const string c_dmgMindRed = "Lob_Mind_Red";
 const string c_dmgMindWhite = "Lob_Mind_White";
 const string c_dmgMindBlack = "Lob_Mind_Black";
@@ -243,6 +255,74 @@ void Dmg_Trace (string what, unit victim, unit source, bool ours) {
 // DamageTakenFraction already scaled it, and there is nothing about an
 // abnormality that our arithmetic knows better.
 //--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// Everybody of one kind who has to watch.
+//
+// The room the body is in, or a radius around it when that stretch of corridor
+// has no region drawn yet. The fallback matters: most of the map has no regions
+// on it, and an execution that hits nobody reads as a mechanic that does not
+// work rather than as a map that is unfinished.
+//--------------------------------------------------------------------------------------------------
+void Dmg_OverkillGroup (unitgroup people, unit dead, point at, int loc) {
+    unit who;
+    int count;
+    int j;
+    int hit;
+
+    count = UnitGroupCount(people, c_unitCountAlive);
+    j = 1;
+    while (j <= count) {
+        who = UnitGroupUnit(people, j);
+        if (who != null && who != dead && UnitIsAlive(who)
+            && ((loc >= 0 && RegionContainsPoint(gvg_locRegion[loc], UnitGetPosition(who)))
+                || (loc < 0 && DistanceBetweenPoints(UnitGetPosition(who), at)
+                               <= c_dmgOverkillReach))) {
+            hit = 0;
+            while (hit < c_dmgOverkillHits) {
+                Emp_CombatDamage(who, c_dmgWhite, c_dmgOverkillEach);
+                hit = hit + 1;
+            }
+        }
+        j = j + 1;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// What a Green Dawn does after it has already won.
+//
+// It stabs the corpse five more times, and the cost lands on EVERYONE ELSE IN
+// THE ROOM: three White apiece, five times. The victim pays nothing, being
+// dead. That inversion is the whole mechanic; the doc's advice is not to send
+// help while a robot is finishing somebody, because arriving is what puts you
+// in the room.
+//
+// It hangs off a HIT rather than off a death, and that is why it lives in this
+// file. The killing blow goes through Emp_CombatDamage, which calls UnitKill
+// itself, so by the time anything hears a death event the attacker is no longer
+// on the record. Asking "did that hit finish them" where the hit lands needs no
+// bookkeeping at all.
+//
+// Fifteen White is enormous next to a work-damage tick, and it is meant to be.
+// Watching a colleague taken apart is the fastest way to lose a room.
+//--------------------------------------------------------------------------------------------------
+void Dmg_Overkill (unit dead, unit killer) {
+    point at;
+    int loc;
+
+    if (killer == null || !ObjectsGen_IsOrdeal_Dawn_Green(killer)) {
+        return;
+    }
+
+    at = UnitGetPosition(dead);
+    loc = Fort_LocOfPoint(at);
+
+    Dmg_OverkillGroup(ObjectsGen_ScanEmp(), dead, at, loc);
+    Dmg_OverkillGroup(ObjectsGen_ScanHero(), dead, at, loc);
+
+    UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle,
+                     StringExternal("Lob/Msg/Overkill"));
+}
+
 void Dmg_Hit (int type) {
     unit victim;
     unit source;
@@ -276,6 +356,12 @@ void Dmg_Hit (int type) {
     }
 
     Emp_CombatDamage(victim, type, amount);
+
+    // Asked here because this is the only place that knows both who died and
+    // who did it.
+    if (!UnitIsAlive(victim)) {
+        Dmg_Overkill(victim, source);
+    }
 }
 
 bool Dmg_Red_Func (bool testConds, bool runActions) {
