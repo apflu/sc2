@@ -38,7 +38,6 @@
         <AbilArray Link="stop"/>
         <AbilArray Link="attack"/>
         <AbilArray Link="move"/>
-        <BehaviorArray Link="BanelingExplode"/>
         <CardLayouts>
             <LayoutButtons Face="Move" Type="AbilCmd" AbilCmd="move,Move" Row="0" Column="0"/>
             <LayoutButtons Row="0" Column="0"/>
@@ -46,7 +45,6 @@
             <LayoutButtons Face="MoveHoldPosition" Type="AbilCmd" AbilCmd="move,HoldPos" Row="0" Column="2"/>
             <LayoutButtons Face="Attack" Type="AbilCmd" AbilCmd="attack,Execute" Row="0" Column="4"/>
             <LayoutButtons Face="MovePatrol" Type="AbilCmd" AbilCmd="move,Patrol" Row="0" Column="3"/>
-            <LayoutButtons Face="Explode" Type="AbilCmd" AbilCmd="Explode,Execute" Row="2" Column="0"/>
         </CardLayouts>
         <Radius value="0.375"/>
         <SeparationRadius value="0.375"/>
@@ -62,7 +60,6 @@
         <TacticalAI value="Baneling"/>
         <TacticalAIThink value="AIThinkBaneling"/>
         <AIEvalFactor value="3"/>
-        <EquipmentArray Weapon="VolatileBurstDummy"/>
         <GlossaryCategory value="Unit/Category/ZergUnits"/>
         <GlossaryPriority value="60"/>
         <GlossaryStrongArray value="Marine"/>

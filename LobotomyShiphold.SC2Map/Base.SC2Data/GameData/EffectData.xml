@@ -57,17 +57,4 @@
         <Abil value="Lob_Turret_Fire_Burrow"/>
         <CmdFlags index="Preempt" value="1"/>
     </CEffectIssueOrder>
-    <CEffectDamage id="Burst" parent="DU_WEAP">
-        <EditorCategories value="Race:Zerg"/>
-        <AINotifyFlags index="HurtEnemy" value="1"/>
-        <ImpactLocation Value="CasterUnit"/>
-        <AttributeBonus index="Light" value="15"/>
-        <Kind value="Splash"/>
-        <KindSplash value="Splash"/>
-        <Amount value="20"/>
-        <Death value="Disintegrate"/>
-        <AreaArray Radius="2.2" Fraction="1"/>
-        <ExcludeArray Value="Outer"/>
-        <SearchFilters value="Ground;Player,Ally,Structure,Missile,Stasis,Dead,Hidden,Invulnerable"/>
-    </CEffectDamage>
 </Catalog>

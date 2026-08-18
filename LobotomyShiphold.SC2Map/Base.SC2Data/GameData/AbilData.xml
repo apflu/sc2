@@ -1,15 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Catalog>
-    <CAbilEffectInstant id="Dawn_Violet_Explode">
-        <EditorCategories value="Race:Zerg,AbilityorEffectType:Units"/>
-        <Effect index="0" value="VolatileBurst"/>
-        <CmdButtonArray index="Execute" DefaultButtonFace="Explode"/>
-    </CAbilEffectInstant>
-    <CAbilEffectInstant id="Dawn_Crimson_Explode">
-        <EditorCategories value="Race:Zerg,AbilityorEffectType:Units"/>
-        <Effect index="0" value="VolatileBurst"/>
-        <CmdButtonArray index="Execute" DefaultButtonFace="Explode"/>
-    </CAbilEffectInstant>
     <!-- Sending an employee to work.-->
     <!--         Effect-Target rather than Interact, and the whole of it is PrepTime:-->
     <!--         the ability does nothing, it just takes a moment and can be aimed at a-->

@@ -496,6 +496,29 @@ int Emp_DamageScale (unit who, int type) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// Where a number becomes something the player can see. Inert on purpose.
+//
+// THIS IS THE HOOK THE INFORMATION TEAM'S DAMAGE DISPLAY GOES ON, and it exists
+// now rather than later because the failure it prevents is silent. Red damage
+// announces itself -- a life bar moves, and every player has been reading that
+// bar since the tutorial. White does not: SP is ours, it has no bar the engine
+// draws, and an employee who took 14 White at a door looks exactly like an
+// employee who took nothing until the moment they freeze. A cost the player
+// cannot observe is a cost they cannot learn from, and learning which
+// abnormality charges what is the whole game.
+//
+// Called once per hit with the SCALED amount and the abnormality's type -- once
+// even for Black, whose halves are an implementation detail the player should
+// never have to reassemble.
+//
+// Nothing here yet, and that is the point: every path that hurts a person
+// already calls it, so switching the display on is filling this function in
+// rather than finding the eleven places damage happens.
+//--------------------------------------------------------------------------------------------------
+void Emp_DamageShown (unit who, int type, int amount) {
+}
+
+//--------------------------------------------------------------------------------------------------
 // A missed box, paid in whatever coin that abnormality charges.
 //
 // The type is the abnormality's, not the work's: the same badly chosen work
@@ -509,8 +532,12 @@ int Emp_DamageScale (unit who, int type) {
 // life, a flat amount would already have scaled the wrong way -- growing an
 // employee would make them immune -- and Pale is the mechanic that says no.
 //
-// Black charges the full amount to both, which is why it is worse than its
-// numbers look.
+// Black charges half to each, so the printed number is what the hit costs in
+// total and a player can do the arithmetic at the door.
+//
+// The name says WORK because that is where it started, but it is now the only
+// door in: Ordeals come through here too, and anything else that hurts a person
+// without a weapon has to. That is deliberate -- see Emp_DamageShown.
 //--------------------------------------------------------------------------------------------------
 void Emp_WorkDamage (unit who, int type, int amount) {
     if (who == null || !UnitIsAlive(who) || amount <= 0) {
@@ -524,6 +551,8 @@ void Emp_WorkDamage (unit who, int type, int amount) {
     if (amount <= 0) {
         return;
     }
+
+    Emp_DamageShown(who, type, amount);
 
     if (type == c_dmgWhite) {
         SP_Damage(who, amount);

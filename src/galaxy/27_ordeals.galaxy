@@ -14,10 +14,12 @@
 //   meltdown 8 and up -> Midnight
 //
 // Difficulty is a CEILING on the tier, not a schedule (Diff_OrdealCap, and the
-// reasoning is in systems/difficulty.md). It clamps rather than skips: on Casual
-// the Dawns keep coming and never get worse, which keeps both the rhythm and the
-// energy reward intact. Skipping would have made Casual a game with exactly one
-// Ordeal in it, which is a different game rather than an easier one.
+// reasoning is in systems/difficulty.md). It SKIPS rather than clamps: on Casual
+// the Dawn arrives and nothing after it does, because one Ordeal per tier per
+// game is the schedule and a capped tier is a tier that does not happen. Clamping
+// would have kept handing out Dawns at meltdown 3, 6 and 8 -- the same fight
+// four times for four different rewards, which reads as padding rather than as
+// an easier night.
 //
 // WHICH Ordeal is drawn from the units that exist. Lob_Ordeal_Dawn_Amber lands
 // in the generated Ordeal_Dawn table, so the pool for a tier is whatever has
@@ -100,6 +102,18 @@ const fixed c_ordealFuseMax = 70.0;
 const int c_ordealBurstMin = 10;
 const int c_ordealBurstMax = 14;
 
+// What a thief's corpse does. Red, in a radius, and it is the ONLY damage a
+// Crimson Dawn ever deals -- they walk past employees without touching them,
+// which is what makes ignoring one until it is convenient a real temptation.
+// The doc measures the radius in spear lengths.
+const int c_ordealBlastMin = 10;
+const int c_ordealBlastMax = 15;
+const fixed c_ordealBlastRadius = 2.0;
+
+// The two explosions, as pictures. See Ordeal_Boom for why they are only that.
+const string c_ordealBlastModel = "DOM_Explosion_Sm";
+const string c_ordealGlowModel = "ArchonMergeExplosion";
+
 // Close enough to a door to start casting at it. The same number as the
 // ability's Range and as Interact's, and it has to be: a door is a wall
 // footprint, so range is measured from a centre nothing can stand on.
@@ -136,6 +150,7 @@ int[4] gvg_ordealBeaten;
 
 trigger gt_ordealTick;
 trigger gt_ordealRob;
+trigger gt_ordealDeath;
 
 //--------------------------------------------------------------------------------------------------
 // How many Ordeals of at least this tier have been put down.
@@ -568,6 +583,154 @@ bool Ordeal_Rob_Func (bool testConds, bool runActions) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// An explosion, in two halves: the picture and the numbers.
+//
+// The picture is a detached model dropped at a point, and that is all the
+// catalog does for either of these. The numbers are Emp_WorkDamage, in script.
+// That split is not a shortcut taken to avoid learning the effect system -- it
+// is forced, three times over, and it is worth writing down because a copied
+// Baneling burst looks like it would do the job:
+//
+//   CEffectDamage cannot say White. The engine has Amount and Kind
+//   (Melee / Ranged / Splash / Ability) and no field anywhere that means "spend
+//   sanity", because sanity is ours and nothing in the catalog has heard of it.
+//   Violet's burst is White, so a catalog effect cannot deal even part of it.
+//
+//   CEffectDamage cannot say "the department". AreaArray is a radius, and
+//   Violet's burst is scoped to the employees ASSIGNED to a sector -- who may be
+//   standing anywhere on the map, including next to somebody else's cells. A
+//   radius wide enough to catch them all would also catch the ones it must not.
+//
+//   Crimson's blast IS Red, which the engine could deal honestly, and it still
+//   must not. Damage dealt by the engine never passes through Emp_WorkDamage, so
+//   it would skip Emp_DamageScale -- the seam E.G.O resistance lands on -- skip
+//   the rule that an employee at zero life dies outright rather than going to a
+//   downed state that does not exist, and skip Emp_DamageShown, which is where
+//   the Information Team's damage numbers are going to be read from. One funnel,
+//   or half the damage in this game is invisible.
+//
+// So: no CAbilEffectInstant, no CEffectDamage, no suicide effect. A model and a
+// function call.
+//--------------------------------------------------------------------------------------------------
+void Ordeal_Boom (point at, string model) {
+    if (at == null) {
+        return;
+    }
+    libNtve_gf_CreateModelAtPoint(model, at);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Everybody of one kind close enough to the corpse.
+//
+// Split out because employees and players are two scans and the same rule, and
+// because a player standing over the thing they just killed should eat the blast
+// -- being the one holding the weapon is not cover.
+//--------------------------------------------------------------------------------------------------
+void Ordeal_BlastGroup (unitgroup people, point at, int amount) {
+    unit who;
+    int count;
+    int j;
+
+    count = UnitGroupCount(people, c_unitCountAlive);
+    j = 1;
+    while (j <= count) {
+        who = UnitGroupUnit(people, j);
+        if (who != null && UnitIsAlive(who)
+            && DistanceBetweenPoints(UnitGetPosition(who), at) <= c_ordealBlastRadius) {
+            Emp_WorkDamage(who, c_dmgRed, amount);
+        }
+        j = j + 1;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// A thief's death.
+//
+// Rolled once and applied to everyone, rather than rolled per victim: it is one
+// explosion, and two people standing shoulder to shoulder taking 10 and 15 from
+// the same bang would read as a bug.
+//--------------------------------------------------------------------------------------------------
+void Ordeal_Blast (unit who) {
+    point at;
+    int amount;
+
+    if (who == null) {
+        return;
+    }
+
+    at = UnitGetPosition(who);
+    amount = RandomInt(c_ordealBlastMin, c_ordealBlastMax);
+
+    Ordeal_Boom(at, c_ordealBlastModel);
+    Ordeal_BlastGroup(ObjectsGen_ScanEmp(), at, amount);
+    Ordeal_BlastGroup(ObjectsGen_ScanHero(), at, amount);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Which types go off when killed.
+//
+// A second hardcoded list rather than another value on Ordeal_ActOf's enum,
+// because robbing and exploding are two separate facts about a Crimson Dawn and
+// only one of them is about to be shared: Green Dawn's overkill splash wants
+// this hook and wants nothing to do with containment doors. Folding them into
+// one enum would mean Green had to pretend to be a thief to get a death event.
+//--------------------------------------------------------------------------------------------------
+bool Ordeal_BlastsOnDeath (string type) {
+    return type == "Lob_Ordeal_Dawn_Crimson";
+}
+
+//--------------------------------------------------------------------------------------------------
+// Which spawned entity a unit is, or -1.
+//--------------------------------------------------------------------------------------------------
+int Ordeal_IndexOf (unit who) {
+    int i;
+
+    if (who == null) {
+        return -1;
+    }
+    i = 0;
+    while (i < gv_ordealCount) {
+        if (gvg_ordealUnit[i] == who) {
+            return i;
+        }
+        i = i + 1;
+    }
+    return -1;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every death on the map, filtered down to ours.
+//
+// Registered on no unit in particular rather than per spawned entity, because
+// the alternative accumulates event registrations on one trigger for the whole
+// game -- sixty-four of them by the fourth Ordeal, all pointed at units that
+// were removed. The filter is two comparisons and a short walk of an array that
+// is at most the size of the table.
+//
+// Ordeal_End removes survivors with UnitRemove rather than killing them, which
+// is what keeps a Violet burst from also setting off every clown still standing
+// somewhere else: removal is not death and this never hears about it.
+//--------------------------------------------------------------------------------------------------
+bool Ordeal_Died_Func (bool testConds, bool runActions) {
+    unit who;
+
+    if (!runActions || !gv_ordealActive) {
+        return true;
+    }
+    if (!Ordeal_BlastsOnDeath(gv_ordealType)) {
+        return true;
+    }
+
+    who = EventUnit();
+    if (Ordeal_IndexOf(who) < 0) {
+        return true;
+    }
+
+    Ordeal_Blast(who);
+    return true;
+}
+
+//--------------------------------------------------------------------------------------------------
 // What a bomb does when nobody dealt with it.
 //
 // Every counter in that department to zero and White damage to everyone in it.
@@ -584,6 +747,12 @@ void Ordeal_Burst (int i) {
     int j;
 
     player = gvg_ordealHome[i];
+
+    // The doc's "large glow", and it goes off before the counters do so the
+    // flash and the alarm arrive in that order.
+    if (gvg_ordealUnit[i] != null) {
+        Ordeal_Boom(UnitGetPosition(gvg_ordealUnit[i]), c_ordealGlowModel);
+    }
 
     slot = 0;
     while (slot < gv_cellCount) {
@@ -841,4 +1010,7 @@ void Ordeals_Init () {
     gt_ordealRob = TriggerCreate("Ordeal_Rob_Func");
     TriggerAddEventUnitAbility(gt_ordealRob, null, AbilityCommand(c_ordealRobAbil, 0),
                                c_unitAbilStageAll, true);
+
+    gt_ordealDeath = TriggerCreate("Ordeal_Died_Func");
+    TriggerAddEventUnitDied(gt_ordealDeath, null);
 }
