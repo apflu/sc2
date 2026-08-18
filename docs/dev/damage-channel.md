@@ -61,15 +61,32 @@ Splash
 <CBehaviorBuff id="Lob_Def_Ordeal_Dawn_Crimson">
     <InfoFlags index="Hidden" value="1"/>
     <Modification>
-        <DamageTakenFraction index="Melee"  value="0.8"/>
-        <DamageTakenFraction index="Ranged" value="1.3"/>
-        <DamageTakenFraction index="Spell"  value="1.3"/>
-        <DamageTakenFraction index="Splash" value="2.0"/>
+        <DamageTakenFraction index="Melee"  value="-0.2"/>
+        <DamageTakenFraction index="Ranged" value="0.3"/>
+        <DamageTakenFraction index="Spell"  value="0.3"/>
+        <DamageTakenFraction index="Splash" value="1.0"/>
     </Modification>
 </CBehaviorBuff>
 ```
 
 **一张维基表格 = 一个 buff，一行都不用写脚本。**这是整件事里最大的一笔收益，因为这张表每个异想体都有一份，而异想体是要有三十个的。
+
+#### 但填进去的不是维基上的数字
+
+**`DamageTakenFraction` 是加法，不是乘数。**引擎算的是 `base * (1 + value)`。
+
+填的是**维基数字减一**，而**照抄维基数字会得到方向完全相反的结果**：
+
+| 维基 | 意思 | 填 |
+|---|---|---|
+| 0.8（耐受） | ×0.8 | **-0.2** |
+| 1.0（普通） | ×1.0 | **0**（或者不写） |
+| 1.3（脆弱） | ×1.3 | **0.3** |
+| 2.0（易伤） | ×2.0 | **1.0** |
+
+这是**量出来的**：20 点红伤的步枪打 `value="0.8"` 的绯红，读数是 **36 = 20 × 1.8**。原版全库只用过这个字段两次，两次都同意——`FlashBangGrenade` 给一个刚被震晕的单位挂 `0.15`，那是**多吃 15%**，不是少吃 85%。
+
+> 把「耐受 0.8」写成 `0.8` 会变成「多吃八成」。**这个错误是静默的、方向相反的、而且看上去完全合理**，正是应该由生成器算一次、而不是手抄三十次的东西。
 
 ### 三、SP 就是 Energy —— 我之前说错了
 
@@ -203,21 +220,12 @@ native void TriggerAddEventUnitDamaged (trigger t, unitref u,
 |---|---|
 | **`ModifyFraction="0"` 之后伤害事件还触发吗？** | **会。**`-dmg` 印出 `attempted=12 actual=0`。这是整个方案的承重点，现在它立住了 |
 | **`AcquireFilters` 允许 Ally，引擎真的会主动选中友军吗？** | **会。**玩家会自己走过去打崩溃的员工，不用下命令。而健康的同事两把武器都够不着，报 "只能以 passive 单位为目标"——那正是两个过滤器该有的样子 |
+| **`DamageTakenFraction` 在事件之前还是之后？** | **之前。**步枪打绯红读到 `attempted = actual = 36`，而 36 里已经含了那条抗性——**引擎在我们看见这个数之前就算完了**。抗性因此是白送的，而 `Emp_DamageScale` **绝对不能再乘一次** |
 
 ### 还没验的
 
-1. **`DamageTakenFraction` 在事件之前还是之后？**它决定抗性是引擎白送的还是得由 `Emp_DamageScale` 自己算。
-
-   **`-dmg more` 就是这个实验。**用步枪（20 点，`Kind="Melee"` 即红伤）打绯红，它的红防是 0.8：
-
-   | 读到 | 结论 |
-   |---|---|
-   | `attempted=16` | 抗性在事件**之前**就算完了——`attempted` 已经含抗性 |
-   | `attempted=20 actual=16` | 抗性在**之后**，脚本拿到的是原始值 |
-
-   两种都能用，但**必须知道是哪一种**，否则把 `Emp_DamageScale` 接上的那天会把抗性算两遍。
-2. **`Kind` 除了伤害响应之外还影响什么？**比如 AI 的近战/远程判断、`KindSplash` 的配合。看上去不影响，但没验过。
-3. **面板能不能显示伤害类型？**一个数字是够的，但"12（白）"更好。武器名和提示文本是本地化字符串而不是 UI 布局，所以应该能写——**这一条不碰 layout 文件**。
+1. **`Kind` 除了伤害响应之外还影响什么？**比如 AI 的近战/远程判断、`KindSplash` 的配合。看上去不影响，但没验过。
+2. **面板能不能显示伤害类型？**一个数字是够的，但"12（白）"更好。武器名和提示文本是本地化字符串而不是 UI 布局，所以应该能写——**这一条不碰 layout 文件**。
 
 ### 还没决定的
 
