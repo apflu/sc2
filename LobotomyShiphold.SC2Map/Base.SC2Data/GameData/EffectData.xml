@@ -8,10 +8,7 @@
         <Kind value="Ranged"/>
         <Amount value="20"/>
     </CEffectDamage>
-
-    <CEffectApplyBehavior id="Lob_Debug_Haste">
-        <Behavior value="Lob_Debug_Haste"/>
-    </CEffectApplyBehavior>
+    <CEffectApplyBehavior id="Lob_Debug_Haste"/>
     <!-- Deliberately empty. An ability has to point at an effect; this one's
          whole job is to be pressable so a trigger can hear it. -->
     <CEffectSet id="Lob_Nothing"/>
@@ -36,7 +33,6 @@
     <CEffectApplyBehavior id="Lob_WorkCheck">
         <Behavior value="Lob_Worked"/>
     </CEffectApplyBehavior>
-
     <!-- The far end of Lob_Ordeal_Rob. It does nothing to the door; the theft
          itself is 27_ordeals' business. This exists because an Effect-Target
          ability needs an effect that unambiguously acts on a unit or the
@@ -45,7 +41,6 @@
     <CEffectApplyBehavior id="Lob_Ordeal_RobHit">
         <Behavior value="Lob_Worked"/>
     </CEffectApplyBehavior>
-
     <!-- Retracting is not something the turret decides. Nothing in the morph
          ability makes it happen; a hidden behavior tries once a second and the
          ability's NotAttacking validator is what turns "there are no enemies"
@@ -62,4 +57,17 @@
         <Abil value="Lob_Turret_Fire_Burrow"/>
         <CmdFlags index="Preempt" value="1"/>
     </CEffectIssueOrder>
+    <CEffectDamage id="Burst" parent="DU_WEAP">
+        <EditorCategories value="Race:Zerg"/>
+        <AINotifyFlags index="HurtEnemy" value="1"/>
+        <ImpactLocation Value="CasterUnit"/>
+        <AttributeBonus index="Light" value="15"/>
+        <Kind value="Splash"/>
+        <KindSplash value="Splash"/>
+        <Amount value="20"/>
+        <Death value="Disintegrate"/>
+        <AreaArray Radius="2.2" Fraction="1"/>
+        <ExcludeArray Value="Outer"/>
+        <SearchFilters value="Ground;Player,Ally,Structure,Missile,Stasis,Dead,Hidden,Invulnerable"/>
+    </CEffectDamage>
 </Catalog>

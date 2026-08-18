@@ -1,4 +1,6 @@
-﻿Abil/Name/Interact=Work
+﻿Abil/Name/Dawn_Crimson_Explode=Dawn_Crimson_Explode
+Abil/Name/Dawn_Violet_Explode=Dawn_Violet_Explode
+Abil/Name/Interact=Work
 Abil/Name/Lob_Build=Worker fort build
 Abil/Name/Lob_Obs_1=Basic Information
 Abil/Name/Lob_Obs_2=Work Preferences
@@ -46,7 +48,7 @@ Button/Tooltip/Lob_Obs_3=Not yet observed.
 Button/Tooltip/Lob_Obs_4=Not yet observed.
 Button/Tooltip/Lob_Ordeal_Dawn_Amber=The Perfect Food.<n/><n/>A perfect meal, an excellent substitute.
 Button/Tooltip/Lob_Ordeal_Dawn_Crimson=Cheers for the Beginning.<n/><n/>Let us light a flame yet more radiant in our lives; for life is a candlelight, destined to snuff out one day.
-Button/Tooltip/Lob_Ordeal_Dawn_Green=Doubt.<n/><n/>One day, a question crossed through my mind. Where do we come from? We were given life and left in this world against our own volition.
+Button/Tooltip/Lob_Ordeal_Dawn_Green=<c val="008000">Doubt.<n/><n/>One day, a question crossed through my mind. Where do we come from? We were given life and left in this world against our own volition.</c>
 Button/Tooltip/Lob_Ordeal_Dawn_Violet=The Fruit of Understanding.<n/><n/>To gain an understanding of what is incomprehensible, they dream, staring.
 Button/Tooltip/Lob_Ordeal_Noon_Amber=The Perfect Food.<n/><n/>A perfect meal, an excellent substitute.
 Button/Tooltip/Lob_Recycler_Basic=
@@ -59,6 +61,7 @@ Button/Tooltip/O_03_03=O-03-03<n/><n/><c val="FFE303">Detector</c>
 DocInfo/DescLong=Completely devoid of any description whatsoever.
 DocInfo/DescShort=Any
 DocInfo/Name=Just Another StarCraft II Map
+Effect/Name/Burst=Burst
 Lob/Abno/Lore/0_00_00/0=Its special ability activates when its  Qliphoth Counter reaches 0. It will decrease by 1 when Repression.png Repression is used on it.<n/>When the counter is depleted, the Abnormality will breach but will remain immobile outside the Containment Unit's door. It possesses low  HP at 100 and doesn't have any other special abilities. It is easy to suppress and will flip upside down when defeated.
 Lob/Abno/Lore/0_00_00/1=No preference data.
 Lob/Abno/Lore/0_00_00/2=

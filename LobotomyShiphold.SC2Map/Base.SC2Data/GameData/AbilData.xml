@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Catalog>
+    <CAbilEffectInstant id="Dawn_Violet_Explode">
+        <EditorCategories value="Race:Zerg,AbilityorEffectType:Units"/>
+        <Effect index="0" value="VolatileBurst"/>
+        <CmdButtonArray index="Execute" DefaultButtonFace="Explode"/>
+    </CAbilEffectInstant>
+    <CAbilEffectInstant id="Dawn_Crimson_Explode">
+        <EditorCategories value="Race:Zerg,AbilityorEffectType:Units"/>
+        <Effect index="0" value="VolatileBurst"/>
+        <CmdButtonArray index="Execute" DefaultButtonFace="Explode"/>
+    </CAbilEffectInstant>
     <!-- Sending an employee to work.-->
     <!--         Effect-Target rather than Interact, and the whole of it is PrepTime:-->
     <!--         the ability does nothing, it just takes a moment and can be aimed at a-->
@@ -97,68 +107,9 @@
         <EditorCategories value="Race:Terran,AbilityorEffectType:Units"/>
         <FlagArray index="Interruptible" value="1"/>
         <FlagArray index="PeonDisableCollision" value="1"/>
-        <InfoArray index="Build1" Unit="Lob_Turret_Fire" Time="25">
-            <Charge Link="Abil/##id##"/>
-            <Cooldown Link="Abil/##id##"/>
-        </InfoArray>
-        <InfoArray index="Build2">
-            <Charge Link="Abil/##id##"/>
-            <Cooldown Link="Abil/##id##"/>
-        </InfoArray>
-        <InfoArray index="Build3">
-            <Charge Link="Abil/##id##"/>
-            <Cooldown Link="Abil/##id##"/>
-        </InfoArray>
-        <InfoArray index="Build4">
-            <Charge Link="Abil/##id##"/>
-            <Cooldown Link="Abil/##id##"/>
-        </InfoArray>
-        <InfoArray index="Build5">
-            <Charge Link="Abil/##id##"/>
-            <Cooldown Link="Abil/##id##"/>
-        </InfoArray>
-        <InfoArray index="Build6">
-            <Charge Link="Abil/##id##"/>
-            <Cooldown Link="Abil/##id##"/>
-        </InfoArray>
-        <InfoArray index="Build7">
-            <Charge Link="Abil/##id##"/>
-            <Cooldown Link="Abil/##id##"/>
-        </InfoArray>
-        <InfoArray index="Build8">
-            <Charge Link="Abil/##id##"/>
-            <Cooldown Link="Abil/##id##"/>
-        </InfoArray>
-        <InfoArray index="Build9">
-            <Charge Link="Abil/##id##"/>
-            <Cooldown Link="Abil/##id##"/>
-        </InfoArray>
-        <InfoArray index="Build10">
-            <Charge Link="Abil/##id##"/>
-            <Cooldown Link="Abil/##id##"/>
-        </InfoArray>
-        <InfoArray index="Build11">
-            <Charge Link="Abil/##id##"/>
-            <Cooldown Link="Abil/##id##"/>
-        </InfoArray>
-        <InfoArray index="Build12">
-            <Charge Link="Abil/##id##"/>
-            <Cooldown Link="Abil/##id##"/>
-        </InfoArray>
+        <InfoArray index="Build1" Unit="Lob_Turret_Fire" Time="25"/>
         <InfoArray index="Build13" Time="50">
             <Button State="Suppressed" Requirements="HaveBarracks"/>
-        </InfoArray>
-        <InfoArray index="Build14">
-            <Charge Link="Abil/##id##"/>
-            <Cooldown Link="Abil/##id##"/>
-        </InfoArray>
-        <InfoArray index="Build16">
-            <Charge Link="Abil/##id##"/>
-            <Cooldown Link="Abil/##id##"/>
-        </InfoArray>
-        <InfoArray index="Build30">
-            <Charge Link="Abil/##id##"/>
-            <Cooldown Link="Abil/##id##"/>
         </InfoArray>
         <FidgetDelayMin value="5"/>
         <FidgetDelayMax value="10"/>

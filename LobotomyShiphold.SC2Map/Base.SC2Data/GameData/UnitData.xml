@@ -16,8 +16,8 @@
         <Collide index="ForceField" value="1"/>
         <Collide index="Small" value="1"/>
         <Attributes index="Biological" value="1"/>
-        <LifeStart value="30"/>
-        <LifeMax value="30"/>
+        <LifeStart value="190"/>
+        <LifeMax value="190"/>
         <LifeRegenRate value="0.2734"/>
         <LifeArmorName value="Unit/LifeArmorName/ZergGroundArmor"/>
         <Speed value="2.5"/>
@@ -938,8 +938,8 @@
         <Collide index="Ground" value="1"/>
         <Collide index="Small" value="1"/>
         <Attributes index="Biological" value="1"/>
-        <LifeStart value="10"/>
-        <LifeMax value="10"/>
+        <LifeStart value="80"/>
+        <LifeMax value="80"/>
         <LifeArmorName value="Unit/LifeArmorName/CritterGroundArmor"/>
         <Speed value="2"/>
         <Acceleration value="1000"/>
@@ -969,6 +969,7 @@
             <ChanceArray index="Idle" value="33"/>
             <ChanceArray index="Turn" value="33"/>
         </Fidget>
+        <LifeRegenRate value="0.5"/>
     </CUnit>
     <CUnit id="Lob_Ordeal_Dawn_Green">
         <DeathRevealRadius value="3"/>
@@ -983,8 +984,8 @@
         <Collide index="Small" value="1"/>
         <Attributes index="Light" value="1"/>
         <Attributes index="Biological" value="1"/>
-        <LifeStart value="100"/>
-        <LifeMax value="100"/>
+        <LifeStart value="150"/>
+        <LifeMax value="150"/>
         <LifeArmor value="1"/>
         <LifeArmorName value="Unit/LifeArmorName/ProtossArmor"/>
         <ShieldsStart value="50"/>
@@ -1063,8 +1064,8 @@
         <Collide index="Small" value="1"/>
         <Attributes index="Armored" value="1"/>
         <Attributes index="Biological" value="1"/>
-        <LifeStart value="160"/>
-        <LifeMax value="160"/>
+        <LifeStart value="35"/>
+        <LifeMax value="35"/>
         <LifeArmor value="1"/>
         <LifeRegenRate value="0.2734"/>
         <LifeArmorName value="Unit/LifeArmorName/ZergGroundArmor"/>
