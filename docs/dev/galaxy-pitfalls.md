@@ -146,7 +146,7 @@ scan: hero=N debris=N worker=N miner=N device=N | group(debris)=N
 > 如果三个数字全是 0，说明预放单位在 `InitMap()` 执行时还没创建完。届时把扫描挪到 0 秒定时触发器里即可，代码侧改一行。
 
 ## 一条通用的
-每当一类 bug 花掉不止一轮调试，**加一个构建期检查，而不是修那一个实例**。现在有七个，全是这么来的：
+每当一类 bug 花掉不止一轮调试，**加一个构建期检查，而不是修那一个实例**。现在有八个，全是这么来的：
 
 | | 挡什么 |
 |---|---|
@@ -157,6 +157,7 @@ scan: hero=N debris=N worker=N miner=N device=N | group(debris)=N
 | `check_calls` | 调用了哪儿都没定义的函数 |
 | `check_catalogs` | catalog XML 解析不了（含注释里的 `--`） |
 | `check_catalog_fields` | **字段名是真的，但放错了地方** |
+| `check_weapons` | 武器丢了 `Effect` 或 `Range`（编辑器覆盖过 catalog） |
 
 中间四个挡的是**同一件事的四张面孔**，见上面那张表。
 

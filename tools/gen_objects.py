@@ -116,6 +116,39 @@ def check_catalogs() -> None:
         except ET.ParseError as exc:
             raise SystemExit(f"{path.name}: {exc}") from exc
     check_catalog_fields(roots)
+    check_weapons(roots)
+
+
+def check_weapons(roots: dict) -> None:
+    """Refuse a weapon with no Effect or no Range.
+
+    Neither is a thing anybody writes and then forgets. They go missing another
+    way: THE EDITOR REWRITES OUR CATALOGS WHEN IT SAVES, and if it failed to
+    load one it will happily save over it with whatever it managed to keep.
+    That is how both weapons on the map lost Range, Backswing and Effect at
+    once, which reads in game as a player character that simply cannot attack —
+    no error, no missing button, just a unit that walks up to things and stands
+    there.
+
+    Two fields rather than a full schema because these two are the ones whose
+    absence is silent. A weapon with no Effect fires and does nothing; a weapon
+    with range 0 never fires at all.
+    """
+    bad = []
+    for name, root in sorted(roots.items()):
+        for w in root:
+            if not isinstance(w.tag, str) or not w.tag.startswith("CWeapon"):
+                continue
+            have = {c.tag for c in w}
+            for field in ("Effect", "Range"):
+                if field not in have:
+                    bad.append(f"  {name}: <{w.tag} id=\"{w.get('id', '?')}\"> has no <{field}>")
+
+    if bad:
+        raise SystemExit(
+            "a weapon that cannot work. Usually the editor saved over a catalog\n"
+            "it had failed to load; in game this is a unit that will not attack\n"
+            "and says nothing about why:\n" + "\n".join(bad))
 
 
 def family(cls: str) -> str:

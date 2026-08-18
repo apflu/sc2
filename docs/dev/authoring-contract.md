@@ -279,6 +279,27 @@ Structure  Hover  Heroic  Summoned  User1  MapBoss
 
 > 注意：核对只看该 `CUnit` 上**显式写出**的 attribute，不看从 `parent` 继承来的。`parent="Critter"` 这类要把继承来的等级显式置 0。
 
+### 编辑器会覆盖我们手写的 catalog，而且它会在失败之后覆盖
+
+**这已经毁过一次数据了。**日志里是这样：
+
+```
+Error: Error (XML: not well-formed (invalid token)) occurred while loading Weapon
+       from game data file 'GameData/WeaponData.xml'
+```
+
+编辑器**没能加载** `WeaponData.xml`，然后照样保存了——把它当时手上那点东西写了回去。结果是两把武器同时丢了 `Range`、`Backswing`、`Effect`，而且我写的多行注释被拆成了一行一个 `<!-- -->`。
+
+游戏里的表现是：**玩家角色走到敌人面前站着不动。**没有报错，没有少按钮，只是不会打。一个没有 `Effect` 的武器开火而什么都不做，一个没有 `Range` 的武器根本不开火。
+
+所以：
+
+- **看见 `Error ... occurred while loading X from game data file` 就立刻停下**，别保存。那一行的意思是"接下来我保存的东西会比现在少"。
+- `check_weapons` 现在会拦住没有 `Effect` 或 `Range` 的武器。它只查这两个字段，因为**只有这两个的缺席是无声的**。
+- 手写 catalog 之后如果在编辑器里存过盘，`git diff` 值得扫一眼——编辑器的重排（`1.0` → `1`、注释拆行）本身无害，**跟着一起消失的字段才是**。
+
+> 那次解析失败的**根本原因没有查明**。破折号和中文都排除了（`BehaviorData.xml` 两样都有，加载正常）。如果再遇到，把日志和当时的文件一起留下。
+
 #### 工作伤害：**四种，逐异想体**
 
 `## Abnormality Basic Info` 里那行 `Work Damage / WhiteDamageTypeIcon.png White 1-2` 是被解析的。**失败一箱扣什么，是异想体的属性，不是工作的属性**：
