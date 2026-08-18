@@ -85,4 +85,20 @@
         <ImpactEffect value="Dawn_Ember_Damage"/>
         <AmmoUnit value="LocustMPWeapon"/>
     </CEffectLaunchMissile>
+    <CEffectDamage id="Lob_Ordeal_Dawn_Green_Damage" parent="DU_WEAP">
+        <ValidatorArray value="NotHidden"/>
+        <EditorCategories value="Race:Protoss"/>
+        <Amount value="8"/>
+        <Death value="Eviscerate"/>
+    </CEffectDamage>
+    <CEffectCreatePersistent id="Lob_Ordeal_Dawn_Green_Burst">
+        <EditorCategories value="Race:Protoss"/>
+        <WhichLocation Value="TargetUnit"/>
+        <TimeScaleSource Value="Caster"/>
+        <Flags index="Channeled" value="1"/>
+        <PeriodCount value="2"/>
+        <PeriodicEffectArray value="Lob_Ordeal_Dawn_Green_Damage"/>
+        <PeriodicPeriodArray value="0"/>
+        <PeriodicPeriodArray value="0.28"/>
+    </CEffectCreatePersistent>
 </Catalog>

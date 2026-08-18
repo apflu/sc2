@@ -3,6 +3,7 @@ Actor/Name/0_00_00=0_00_00
 Actor/Name/Baneling2=Baneling
 Actor/Name/ContainGateStraightHorizontal=Gate Straight Horizontal
 Actor/Name/GateControlUnit2=Gate Control Unit
+Actor/Name/Green_Attack=Green_Attack
 Actor/Name/Lob_CoreDown_Basic=Lob_CoreDown_Basic
 Actor/Name/Lob_Core_Basic=Lob_Core_Basic
 Actor/Name/Lob_Debris_4x4=Lob_Debris_4x4

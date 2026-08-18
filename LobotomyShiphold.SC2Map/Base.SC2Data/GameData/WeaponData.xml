@@ -72,4 +72,16 @@
         <DamagePoint value="0.2666"/>
         <Effect value="Dawn_Ember_LM"/>
     </CWeaponLegacy>
+    <CWeaponLegacy id="Lob_Ordeal_Dawn_Green_Weapon">
+        <EditorCategories value="Race:Protoss"/>
+        <Options index="Melee" value="1"/>
+        <Icon value="Assets\Textures\btn-upgrade-protoss-groundweaponslevel0.dds"/>
+        <DisplayEffect value="Lob_Ordeal_Dawn_Green_Damage"/>
+        <DisplayAttackCount value="2"/>
+        <TargetFilters value="Ground,Visible;Missile,Stasis,Dead,Hidden,Invulnerable"/>
+        <Range value="0.1"/>
+        <Period value="1.2"/>
+        <DamagePoint value="0"/>
+        <Effect value="Lob_Ordeal_Dawn_Green_Burst"/>
+    </CWeaponLegacy>
 </Catalog>
