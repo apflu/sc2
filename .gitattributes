@@ -1,0 +1,8 @@
+# The SC2 editor owns the bytes of everything under the map. Git must not guess
+# at line endings on top of that: the editor rewrites every file it saves to
+# CRLF, and a checkout that converts them again turns one changed field into a
+# whole-file diff, which is what made every pull a conflict.
+#
+# -text means "store and check out these bytes exactly", so the only diffs left
+# are the ones somebody actually made.
+LobotomyShiphold.SC2Map/** -text

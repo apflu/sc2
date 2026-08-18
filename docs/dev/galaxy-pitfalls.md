@@ -146,7 +146,7 @@ scan: hero=N debris=N worker=N miner=N device=N | group(debris)=N
 > 如果三个数字全是 0，说明预放单位在 `InitMap()` 执行时还没创建完。届时把扫描挪到 0 秒定时触发器里即可，代码侧改一行。
 
 ## 一条通用的
-每当一类 bug 花掉不止一轮调试，**加一个构建期检查，而不是修那一个实例**。现在有八个，全是这么来的：
+每当一类 bug 花掉不止一轮调试，**加一个构建期检查，而不是修那一个实例**。现在有九个，全是这么来的：
 
 | | 挡什么 |
 |---|---|
@@ -158,8 +158,21 @@ scan: hero=N debris=N worker=N miner=N device=N | group(debris)=N
 | `check_catalogs` | catalog XML 解析不了（含注释里的 `--`） |
 | `check_catalog_fields` | **字段名是真的，但放错了地方** |
 | `check_weapons` | 武器丢了 `Effect` 或 `Range`（编辑器覆盖过 catalog） |
+| `check_eol` | 地图里出现了 LF 换行（编辑器只写 CRLF） |
 
 中间四个挡的是**同一件事的四张面孔**，见上面那张表。
+
+## 地图里的换行符一律 CRLF
+
+**编辑器把它保存过的每一个文件都重写成 CRLF。**我们这边任何一次 `open(p, 'w')` 都会读进 CRLF、写出 LF，一声不吭。
+
+于是：我改一个字段 → 整个文件翻成 LF；你在编辑器里存一次 → 整个文件翻回 CRLF。**每一次改动的 diff 都覆盖全文件，每一次 pull 都是全文件冲突。**这件事花掉了一天，代价是一次"merge 地狱"和两次被编辑器吃掉的武器字段。
+
+两种换行都不算错，而两个写入方里**只有一个能被教会**，所以规矩就是编辑器的规矩：**地图目录下全部 CRLF**。
+
+- `.gitattributes` 里 `LobotomyShiphold.SC2Map/** -text`，git 不再在 Windows 侧自作主张转换
+- 往地图里写的两个生成器（`MapScript.galaxy`、`GameStrings.txt`）走 `write_map_file()`
+- **手改 catalog 时别用 `open(p, 'w')`**，它就是那个无声的破坏者。`check_eol` 会当场拦下来
 
 ## catalog 字段放错地方，游戏里没有任何声音
 

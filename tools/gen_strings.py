@@ -118,9 +118,8 @@ def main() -> int:
     merged.update(ours)
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(
-        BOM + "".join(f"{k}={merged[k]}\n" for k in sorted(merged)),
-        encoding="utf-8")
+    from build_galaxy import write_map_file
+    write_map_file(OUT, BOM + "".join(f"{k}={merged[k]}\n" for k in sorted(merged)))
 
     print(f"generated {OUT.relative_to(ROOT)}")
     print(f"  {len(ours)} Lob/ strings, {len(theirs)} left to the editor")

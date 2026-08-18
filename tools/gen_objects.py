@@ -119,6 +119,44 @@ def check_catalogs() -> None:
     check_weapons(roots)
 
 
+def check_eol() -> None:
+    """Refuse to leave a bare LF anywhere the editor is going to save.
+
+    THE EDITOR REWRITES EVERY FILE IT SAVES TO CRLF. Anything of ours that
+    writes LF therefore flips the whole file, the editor flips it back, and one
+    changed field arrives as a diff touching every line -- so every pull is a
+    conflict across the entire map. That cost a day.
+
+    Neither ending is right and only one of the two writers can be taught, so
+    the rule is simply the editor's: CRLF everywhere under the map. This guard
+    exists because the way to break it is an ordinary open(p, 'w') in Python,
+    which reads CRLF and writes LF without mentioning it.
+
+    Text is "decodes as UTF-8 and holds no NUL". The map is full of real binary
+    and none of it is being checked here.
+    """
+    bad = []
+    for path in sorted(MAP.rglob("*")):
+        if not path.is_file():
+            continue
+        raw = path.read_bytes()
+        if b"\0" in raw:
+            continue
+        try:
+            raw.decode("utf-8")
+        except UnicodeDecodeError:
+            continue
+        lone = raw.replace(b"\r\n", b"").count(b"\n")
+        if lone:
+            bad.append(f"  {path.relative_to(ROOT)}: {lone} bare LF")
+
+    if bad:
+        raise SystemExit(
+            "LF line endings under the map. The editor saves CRLF, so these\n"
+            "will flip back on its next save and the diff will cover every\n"
+            "line of the file:\n" + "\n".join(bad))
+
+
 def check_weapons(roots: dict) -> None:
     """Refuse a weapon with no Effect or no Range.
 
@@ -649,6 +687,7 @@ def build() -> str:
 
 def generate():
     check_catalogs()
+    check_eol()
     categories = read_categories()
     groups = read_groups()
     regions = read_regions()

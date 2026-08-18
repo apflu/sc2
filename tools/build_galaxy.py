@@ -61,6 +61,23 @@ DEF_RE = re.compile(
 CALL_RE = re.compile(r"\b(\w+)\s*\(")
 
 
+
+def write_map_file(path, text: str) -> None:
+    """Write into the .SC2Map with CRLF, because the editor does.
+
+    THE EDITOR REWRITES EVERY FILE IT SAVES TO CRLF. Anything of ours that
+    writes LF into the map therefore flips the whole file back on the next
+    build, and the editor flips it again on the next save. Neither side is
+    wrong and both diffs are total: one changed field shows up as every line
+    replaced, and every pull is a conflict across the whole file.
+
+    That churn is what made this repo unmergeable for a day. There is no
+    argument about which ending is correct -- only one of the two writers can
+    be taught, and it is this one.
+    """
+    path.write_bytes(text.replace("\r\n", "\n").replace("\n", "\r\n").encode("utf-8"))
+
+
 def check_forward_refs(text: str) -> None:
     """Refuse to emit a script that calls one of our functions before defining it.
 
@@ -318,7 +335,7 @@ def main() -> int:
     check_globals("".join(parts))
     check_calls("".join(parts))
     check_forward_refs("".join(parts))
-    OUT.write_text("".join(parts), encoding="utf-8")
+    write_map_file(OUT, "".join(parts))
 
     print(f"built {OUT.relative_to(ROOT)}")
     print(f"  modules: {', '.join(p.name for p in modules)}")

@@ -1,4 +1,4 @@
-Abil/Name/Dawn_Crimson_Explode=Dawn_Crimson_Explode
+﻿Abil/Name/Dawn_Crimson_Explode=Dawn_Crimson_Explode
 Abil/Name/Dawn_Violet_Explode=Dawn_Violet_Explode
 Abil/Name/Interact=Work
 Abil/Name/Lob_Build=Worker fort build
