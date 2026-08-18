@@ -444,4 +444,13 @@
             <DamageTakenFraction index="Splash" value="1.0"/>
         </Modification>
     </CBehaviorBuff>
+    <CBehaviorBuff id="Lob_Def_Ordeal_Dawn_Amber">
+        <EditorCategories value="AbilityorEffectType:Units"/>
+        <BehaviorFlags index="Permanent" value="1"/>
+        <InfoFlags index="Hidden" value="1"/>
+        <Modification>
+            <DamageTakenFraction index="Melee" value="1.0"/>
+            <DamageTakenFraction index="Splash" value="1.0"/>
+        </Modification>
+    </CBehaviorBuff>
 </Catalog>

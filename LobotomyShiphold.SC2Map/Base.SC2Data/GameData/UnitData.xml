@@ -730,7 +730,11 @@
         <AbilArray Link="stop"/>
         <AbilArray Link="attack"/>
         <AbilArray Link="move"/>
-        <WeaponArray Link="Dawn_Ember_Weapon"/>
+        <WeaponArray Link="Lob_Ordeal_Dawn_Amber_Weapon"/>
+        <!-- Wiki: RED 2.0 / WHITE 1.0 / BLACK 1.0 / PALE 2.0. DamageTakenFraction
+             is ADDITIVE, so each value is the wiki number MINUS ONE and the two
+             Normals are simply left out. -->
+        <BehaviorArray Link="Lob_Def_Ordeal_Dawn_Amber"/>
         <CardLayouts>
             <LayoutButtons Face="Move" Type="AbilCmd" AbilCmd="move,Move" Row="0" Column="0"/>
             <LayoutButtons Face="Stop" Type="AbilCmd" AbilCmd="stop,Stop" Row="0" Column="1"/>
