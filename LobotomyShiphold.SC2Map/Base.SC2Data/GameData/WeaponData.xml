@@ -62,7 +62,7 @@
              should say what the weapon does to a target, and the second row
              would be saying the same thing twice. -->
         <Options index="Hidden" value="1"/>
-        <Icon value="Assets\Textures\btn-ability-protoss-guardianshield-color.dds"/>
+        <Icon value="Assets\Textures\btn-ability-terran-heal.dds"/>
         <TargetFilters value="Ground,Visible,Passive;Self,Structure,Missile,Stasis,Dead,Hidden,Invulnerable"/>
         <AcquireFilters value="Ground,Visible,Passive;Self,Structure,Missile,Stasis,Dead,Hidden,Invulnerable"/>
         <Range value="5"/>

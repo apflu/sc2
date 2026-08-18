@@ -25,20 +25,25 @@
 //
 // WHAT STILL NEEDS US. Only one direction, and only for people:
 //
-//     Red into anything          engine. Life damage is what the engine's
-//                                entire pipeline is FOR, and routing it through
-//                                script would reimplement armour and death to
-//                                gain nothing.
-//     White/Black/Pale into a
-//     monster                    engine. An abnormality has no SP, so every
-//                                type is just damage to it, scaled by its own
-//                                DamageTakenFraction. Pale included -- against a
-//                                monster it is plain damage, and only against a
-//                                person is it a percentage.
-//     White/Black/Pale into a
-//     PERSON                     us. SP is not a thing CEffectDamage can reach,
-//                                and Pale is a fraction of MAXIMUM life, which
-//                                nothing in the catalog measures.
+//     Anything into a PERSON     us, all four types. SP is not a thing
+//                                CEffectDamage can reach and Pale is a fraction
+//                                of MAXIMUM life, so two of them were never
+//                                going to be the engine's -- and Red joined them
+//                                for legibility rather than correctness. The
+//                                argument is on c_dmgMindRed below and it comes
+//                                down to this: the engine subtracts amounts that
+//                                are nowhere on screen, and a number the player
+//                                cannot derive is a number they cannot learn
+//                                from.
+//     Anything into a MONSTER     engine, for now. A monster has one pool and
+//                                one multiplier per type, which is exactly what
+//                                DamageTakenFraction is -- and that multiplier
+//                                IS Lobotomy's resistance model, not
+//                                StarCraft's armour. Pale against a monster is
+//                                plain damage, so nothing here has to know.
+//                                E.G.O GRADE will end this: a bonus that depends
+//                                on attacker and defender together is pairwise
+//                                and no catalog field is.
 //
 // The handoff is a DamageResponse that zeroes the life loss plus an event that
 // tells us what the loss WOULD have been. Nothing is applied twice and nothing
@@ -69,19 +74,33 @@ const int c_dmgKindWhite = c_unitDamageTypeRanged;
 const int c_dmgKindBlack = c_unitDamageTypeSpell;
 const int c_dmgKindPale = c_unitDamageTypeSplash;
 
-// The buff that makes a person's mind exist as far as the engine is concerned.
-// It does one thing: takes incoming White down to zero life so the number can be
-// spent somewhere the engine cannot see.
+// One interceptor per type, because a behavior carries a single DamageResponse.
+// Each takes its own type to zero life so the number can be spent here instead.
 //
-// Only White for now, on purpose. Black and Pale want the same treatment and one
-// behavior EACH: a behavior carries a single DamageResponse and nothing in stock
-// carries two, so they cannot share this one. No sense authoring three
-// interceptors before the first has been seen to work.
+// ALL FOUR, INCLUDING RED. The engine could apply Red correctly and for a while
+// it did -- the reason it no longer does is not correctness, it is legibility.
+// A live shot read 10 against a weapon whose Amount said 12, and explaining the
+// gap took a mod-dependency lookup (Void's LocustMPDamage is 10 where Swarm's is
+// 12) and a field called ArmorReduction that cancelled the armour exactly. It
+// turned out there was nothing wrong. THAT IS THE PROBLEM: a number nobody can
+// derive is indistinguishable from a bug, and this game asks the player to
+// compare four damage types across thirty abnormalities. Flat armour, attribute
+// bonuses and armour-piercing all subtract amounts that are nowhere on screen.
+//
+// So the catalog now holds two things about a hit and only two: the base number
+// and the type. Everything that modifies it is script, and there is one place to
+// read to know why a number came out the way it did.
+const string c_dmgMindRed = "Lob_Mind_Red";
 const string c_dmgMindWhite = "Lob_Mind_White";
+const string c_dmgMindBlack = "Lob_Mind_Black";
+const string c_dmgMindPale = "Lob_Mind_Pale";
 
 bool gv_dmgTrace;
 
+trigger gt_dmgRed;
 trigger gt_dmgWhite;
+trigger gt_dmgBlack;
+trigger gt_dmgPale;
 trigger gt_dmgBorn;
 
 //--------------------------------------------------------------------------------------------------
@@ -106,7 +125,10 @@ void Dmg_GiveMind (unit who) {
     if (!Dmg_IsPerson(who)) {
         return;
     }
+    Buffs_Set(who, c_dmgMindRed, true);
     Buffs_Set(who, c_dmgMindWhite, true);
+    Buffs_Set(who, c_dmgMindBlack, true);
+    Buffs_Set(who, c_dmgMindPale, true);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -170,36 +192,51 @@ void Dmg_Trace (string what, unit victim, unit source) {
 // DamageTakenFraction already scaled it, and there is nothing about an
 // abnormality that our arithmetic knows better.
 //--------------------------------------------------------------------------------------------------
-bool Dmg_White_Func (bool testConds, bool runActions) {
+void Dmg_Hit (int type) {
     unit victim;
     unit source;
     int amount;
 
-    if (!runActions) {
-        return true;
-    }
-
     victim = EventUnit();
     if (!Dmg_IsPerson(victim)) {
-        return true;
+        return;
     }
 
     source = EventUnitDamageSourceUnit();
-    Dmg_Trace("white", victim, source);
+    Dmg_Trace(AbnoGen_DmgName(type), victim, source);
 
     // Attempted, not actual: actual is what survived the DamageResponse, and the
     // whole point of that response is that it is zero.
     amount = FixedToInt(EventUnitDamageAttempted());
     if (amount <= 0) {
-        return true;
+        return;
     }
 
-    if (Dmg_IsMercy(victim, source)) {
+    if (type == c_dmgWhite && Dmg_IsMercy(victim, source)) {
         SP_Restore(victim, amount);
-        return true;
+        return;
     }
 
-    Emp_CombatDamage(victim, c_dmgWhite, amount);
+    Emp_CombatDamage(victim, type, amount);
+}
+
+bool Dmg_Red_Func (bool testConds, bool runActions) {
+    if (runActions) { Dmg_Hit(c_dmgRed); }
+    return true;
+}
+
+bool Dmg_White_Func (bool testConds, bool runActions) {
+    if (runActions) { Dmg_Hit(c_dmgWhite); }
+    return true;
+}
+
+bool Dmg_Black_Func (bool testConds, bool runActions) {
+    if (runActions) { Dmg_Hit(c_dmgBlack); }
+    return true;
+}
+
+bool Dmg_Pale_Func (bool testConds, bool runActions) {
+    if (runActions) { Dmg_Hit(c_dmgPale); }
     return true;
 }
 
@@ -232,6 +269,18 @@ void Damage_Init () {
     gt_dmgBorn = TriggerCreate("Dmg_Born_Func");
     TriggerAddEventUnitCreated(gt_dmgBorn, null, null, null);
 
+    // One trigger per kind rather than one on c_unitDamageTypeAny, because the
+    // event exposes no "which kind was that" function -- the registration IS the
+    // answer, and a single trigger would have to guess.
+    gt_dmgRed = TriggerCreate("Dmg_Red_Func");
+    TriggerAddEventUnitDamaged(gt_dmgRed, null, c_dmgKindRed, c_unitDamageEither, null);
+
     gt_dmgWhite = TriggerCreate("Dmg_White_Func");
     TriggerAddEventUnitDamaged(gt_dmgWhite, null, c_dmgKindWhite, c_unitDamageEither, null);
+
+    gt_dmgBlack = TriggerCreate("Dmg_Black_Func");
+    TriggerAddEventUnitDamaged(gt_dmgBlack, null, c_dmgKindBlack, c_unitDamageEither, null);
+
+    gt_dmgPale = TriggerCreate("Dmg_Pale_Func");
+    TriggerAddEventUnitDamaged(gt_dmgPale, null, c_dmgKindPale, c_unitDamageEither, null);
 }

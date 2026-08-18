@@ -324,56 +324,81 @@
         <Period value="1"/>
         <PeriodicEffect value="Lob_Turret_Fire_BurrowOrder"/>
     </CBehaviorBuff>
-    <!-- A mind, as far as the engine is concerned.
+    <!-- A mind and a body, as far as the engine is concerned. One per damage
+         type, because a behavior carries a single DamageResponse and nothing in
+         stock carries two.
 
-         One job: take incoming WHITE down to zero life, so that 17_damage can
-         spend the number on SP instead. Kind="Ranged" IS White — see the mapping
-         at the top of 17_damage.galaxy and docs/dev/damage-channel.md.
+         Each takes its own type down to zero life so that 17_damage can work
+         out what the hit really costs. ALL FOUR, including Red — which the
+         engine could apply correctly — because the arithmetic has to live in
+         one place to be readable. See docs/dev/damage-channel.md.
 
-         ModifyFraction 0 rather than a filter that stops the hit landing,
-         because the hit still has to HAPPEN: the shot, the impact actor, the
-         damage event. What must not happen is the life loss.
+         THE SHAPE OF DamageResponse IS NOT GUESSABLE and the editor only says
+         "Unable to find field", so it is written out once here.
 
-         Applied from script (Dmg_GiveMind) rather than listed on each CUnit, so
-         a copied employee cannot arrive without one.
+         It is a field of the BEHAVIOR, not of Modification. Modification is the
+         "what does carrying this change about you" half — speed, armour,
+         DamageTakenFraction; a response is a thing that happens when you are
+         hit, and it sits beside Modification rather than inside it.
+         DeathResponse, confusingly, IS inside.
 
-         Black and Pale want one of these each. A Modification carries a single
-         DamageResponse and there is no counter-example anywhere in stock, so
-         they will be siblings rather than entries here — but not before this one
-         has been watched working. -->
+         Kind is an opt-OUT array, not a value. Every kind responds by default
+         and you switch off the ones you do not want, which is why each of these
+         lists the three it ignores rather than the one it catches.
+         GuardianShield and HardenedShield are the stock models. NoProc is off
+         everywhere: it is what damage with no Kind at all counts as, and our
+         mapping has no meaning for it.
+
+         ModifyFraction is a MULTIPLIER — stock uses 2 for a vulnerability and
+         0.5 for a resistance — so 0 is "none of it lands", which is what
+         DamageTakenNone, SpectreShield and ProtectiveBarrier all do.
+         ModifyMinimumDamage rides along in every one of those, because the
+         engine otherwise insists a hit takes at least a point, and one leaked
+         point of life is a slow death by mercy. -->
+    <CBehaviorBuff id="Lob_Mind_Red">
+        <EditorCategories value="AbilityorEffectType:Units"/>
+        <BehaviorFlags index="Permanent" value="1"/>
+        <InfoFlags index="Hidden" value="1"/>
+        <DamageResponse ModifyFraction="0" ModifyMinimumDamage="1">
+            <Kind index="Ranged" value="0"/>
+            <Kind index="Spell" value="0"/>
+            <Kind index="Splash" value="0"/>
+            <Kind index="NoProc" value="0"/>
+            <Chance value="1"/>
+        </DamageResponse>
+    </CBehaviorBuff>
     <CBehaviorBuff id="Lob_Mind_White">
         <EditorCategories value="AbilityorEffectType:Units"/>
         <BehaviorFlags index="Permanent" value="1"/>
         <InfoFlags index="Hidden" value="1"/>
-        <!-- THE SHAPE OF THIS IS NOT GUESSABLE and the editor only says
-             "Unable to find field", so it is written out here.
-
-             DamageResponse is a field of the BEHAVIOR, not of Modification.
-             Modification is the "what does carrying this change about you" half
-             — speed, armour, DamageTakenFraction; a response is a thing that
-             happens when you are hit, and it sits beside Modification rather
-             than inside it. DeathResponse, confusingly, IS inside.
-
-             Kind is an opt-OUT array, not a value. Every kind responds by
-             default and you switch off the ones you do not want, which is why
-             this lists the three we ignore rather than the one we catch.
-             GuardianShield and HardenedShield are the stock models. NoProc is
-             off too: it is what damage with no Kind at all counts as, and our
-             mapping has no meaning for it.
-
-             ModifyFraction is a MULTIPLIER — stock uses 2 for a vulnerability
-             and 0.5 for a resistance — so 0 is "none of it lands", which is
-             what DamageTakenNone, SpectreShield and ProtectiveBarrier all do.
-             ModifyMinimumDamage rides along with it in every one of those,
-             because the engine otherwise insists a hit takes at least a point,
-             and one leaked point of life is a slow death by mercy.
-
-             Chance is stated because stock states it everywhere and an unset
-             chance is not a thing worth finding out about at runtime. -->
         <DamageResponse ModifyFraction="0" ModifyMinimumDamage="1">
             <Kind index="Melee" value="0"/>
             <Kind index="Spell" value="0"/>
             <Kind index="Splash" value="0"/>
+            <Kind index="NoProc" value="0"/>
+            <Chance value="1"/>
+        </DamageResponse>
+    </CBehaviorBuff>
+    <CBehaviorBuff id="Lob_Mind_Black">
+        <EditorCategories value="AbilityorEffectType:Units"/>
+        <BehaviorFlags index="Permanent" value="1"/>
+        <InfoFlags index="Hidden" value="1"/>
+        <DamageResponse ModifyFraction="0" ModifyMinimumDamage="1">
+            <Kind index="Melee" value="0"/>
+            <Kind index="Ranged" value="0"/>
+            <Kind index="Splash" value="0"/>
+            <Kind index="NoProc" value="0"/>
+            <Chance value="1"/>
+        </DamageResponse>
+    </CBehaviorBuff>
+    <CBehaviorBuff id="Lob_Mind_Pale">
+        <EditorCategories value="AbilityorEffectType:Units"/>
+        <BehaviorFlags index="Permanent" value="1"/>
+        <InfoFlags index="Hidden" value="1"/>
+        <DamageResponse ModifyFraction="0" ModifyMinimumDamage="1">
+            <Kind index="Melee" value="0"/>
+            <Kind index="Ranged" value="0"/>
+            <Kind index="Spell" value="0"/>
             <Kind index="NoProc" value="0"/>
             <Chance value="1"/>
         </DamageResponse>

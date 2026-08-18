@@ -260,6 +260,44 @@ native void TriggerAddEventUnitDamaged (trigger t, unitref u,
 - **`attempted` 不等于 12** → `DamageTakenFraction` 在事件之前就算过了。那是好事（护甲免费），但要写进文档。
 - **走过去不自动开枪** → `AcquireFilters` 允许 Ally 并不足以让引擎主动选中友军，慈悲得改成主动技能。
 
+## 决定：算术全部收进脚本
+
+起因是一次读数对不上：琥珀打玩家，`-dmg` 报 `attempted=10`，而 `LocustMPDamage` 的 `Amount` 写着 12，玩家有 1 点护甲。
+
+**查下来没有任何东西出错。**
+
+| | |
+|---|---|
+| 12 从哪来 | `swarm.sc2mod` 里是 12。**我们依赖的是 Void**，`voidmulti.sc2mod` 把它覆盖成了 **10** |
+| 那 1 点护甲呢 | `LocustMPDamage` 带着 `<ArmorReduction value="1"/>`，正好抵消 |
+
+10 − 1 + 1 = 10。一分不差。
+
+**而这正是问题。**解释一个两点的差额用掉了一次跨 mod 依赖查询和一个多数人没听说过的字段，结论还是"本来就没差"。**一个玩家推不出来的数字，和一个 bug 无法区分**——而这个游戏要求玩家在三十个异想体之间横向比较四种伤害。平砍护甲、属性加成、破甲，全都在减一些屏幕上没有的量。
+
+所以：
+
+> **目录只保留关于一次命中的两件事：基础数值，和类型。**其余全部是脚本。
+
+落实：
+
+- 四种伤害**全部**拦截，红伤也不例外——`Lob_Mind_Red` / `_White` / `_Black` / `_Pale`，一种一个行为（一个行为只能带一个 `DamageResponse`）
+- `Lob_Hero_Agent` 的 `LifeArmor` 归 0
+- 抗性落在 `Emp_DamageScale(who, type, source)`，现在恒为 100，等数据到位
+- **E.G.O 等级的增伤/压制也在那里**——它依赖攻方和守方两边，是成对的，没有任何目录字段是成对的
+
+### 怪物那边暂时还是原生的
+
+一个怪物只有一个池子、每种伤害一个乘数，那**正好就是 `DamageTakenFraction`**——而那个乘数本来就是 Lobotomy 的抗性模型，不是星际的护甲。绯红那张表照挂不误。
+
+**等级机制会终结这个例外**：成对的关系目录表达不了，到那时怪物这边也得进脚本，`UnitDamage(attacker, effect, victim, bonus)` 是现成的路。
+
+### 顺带发现：琥珀的伤害类型是错的
+
+`Lob_Ordeal_Dawn_Amber` 挂的是原版的 `LocustMP` 和 `LocustMPMelee`。`LocustMPDamage` 的 `Kind` 是 `Ranged`——**按映射那是白伤**，所以它才会被白伤拦截器接住。而资料上琥珀是**红伤 1-2**。
+
+这是"地图里每一把武器都得守规矩"那条代价的第一个实例，而且它**安静地生效了**：琥珀一直在扣玩家的理智，看起来完全正常。
+
 ## 相关
 
 - `docs/dev/authoring-contract.md` —— 工作伤害 / 战斗伤害的分工，`Emp_DamageScale` 的位置
