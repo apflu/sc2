@@ -10,6 +10,7 @@
 |---|---|---|
 | 决定下一个做什么 | [`design/build-order.md`](design/build-order.md) | 系统文档，除非你选中了它 |
 | 写 Galaxy | [`dev/galaxy-pitfalls.md`](dev/galaxy-pitfalls.md) | — |
+| 决定四种伤害怎么落到引擎上 | [`dev/damage-channel.md`](dev/damage-channel.md) | — |
 | 在编辑器里摆东西 / 建单位 / 写 catalog | [`dev/authoring-contract.md`](dev/authoring-contract.md) | — |
 | 改工作循环、PE-Box、能源、胜利 | [`design/systems/energy.md`](design/systems/energy.md) | |
 | 改融毁 | [`design/systems/meltdown.md`](design/systems/meltdown.md) | |

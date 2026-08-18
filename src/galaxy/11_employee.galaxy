@@ -492,12 +492,18 @@ const int c_dmgFromCombat = 1;
 //
 //     <DamageTakenFraction index="Melee" value="3"/>
 //
-// -- real, native, and 3 proves that going ABOVE one is supported. But its index
-// is a closed set of damage KINDS (Melee, Ranged, Splash, Ability, Basic) that
-// real weapons already speak, so a suit that resisted "Red" by claiming one of
-// them would also resist zerg. Red/White/Black/Pale need a channel of their own,
-// and which one is a question for whoever builds E.G.O -- not something to guess
-// at now, which is how this project ended up inventing a User2 attribute once.
+// -- real, native, and 3 proves that going ABOVE one is supported. Its index is a
+// closed set of damage KINDS, and the objection used to be that a suit resisting
+// "Red" by claiming one of them would also resist zerg.
+//
+// THAT OBJECTION HAS SINCE BEEN CHECKED AND IT DOES NOT HOLD. The set is exactly
+// Melee / Ranged / Spell / Splash -- four, against our four -- and the overlap
+// with real weapons is only a problem in a map that contains weapons we did not
+// write. See docs/dev/damage-channel.md: Kind is very likely the channel, and if
+// it is, this function is replaced by DamageTakenFraction rather than filled in.
+// Left as a percent until that is decided, because the shape it becomes depends
+// on the decision and guessing is how this project once invented a User2
+// attribute.
 //--------------------------------------------------------------------------------------------------
 int Emp_DamageScale (unit who, int type, int source) {
     return 100;
@@ -506,14 +512,17 @@ int Emp_DamageScale (unit who, int type, int source) {
 //--------------------------------------------------------------------------------------------------
 // Where a number becomes something the player can see. Inert on purpose.
 //
-// THIS IS THE HOOK THE INFORMATION TEAM'S DAMAGE DISPLAY GOES ON, and it exists
-// now rather than later because the failure it prevents is silent. Red damage
-// announces itself -- a life bar moves, and every player has been reading that
-// bar since the tutorial. White does not: SP is ours, it has no bar the engine
-// draws, and an employee who took 14 White at a door looks exactly like an
-// employee who took nothing until the moment they freeze. A cost the player
-// cannot observe is a cost they cannot learn from, and learning which
-// abnormality charges what is the whole game.
+// THIS IS THE HOOK THE INFORMATION TEAM'S DAMAGE DISPLAY GOES ON.
+//
+// SP is unit Energy -- Prudence supplies it through VitalMaxArray -- so there IS
+// a bar and the engine does draw it. What there is not is a NUMBER, a colour, or
+// any hint of which of the four types just charged you; and a blue bar under a
+// health bar is a thing most players have been trained by every other RTS to
+// read as mana. An employee who took 14 White at a door and an employee who took
+// nothing look nearly alike until the moment one of them freezes.
+//
+// A cost the player cannot attribute is a cost they cannot learn from, and
+// learning which abnormality charges what is the whole game.
 //
 // Called once per hit with the SCALED amount -- once even for Black, whose
 // halves are an implementation detail the player should never have to
