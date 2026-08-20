@@ -1,4 +1,5 @@
-﻿Abil/Name/Dawn_Crimson_Explode=Dawn_Crimson_Explode
+﻿Abil/Name/Burrow_Dawn_Amber_Down=Burrow (DawnAmber)
+Abil/Name/Dawn_Crimson_Explode=Dawn_Crimson_Explode
 Abil/Name/Dawn_Violet_Explode=Dawn_Violet_Explode
 Abil/Name/Interact=Work
 Abil/Name/Lob_Build=Worker fort build
@@ -229,6 +230,7 @@ Unit/Name/Lob_SCV_Worker=Lob_SCV_Worker
 Unit/Name/Lob_Turret_Fire=Flame Emplacement
 Unit/Name/Lob_Turret_Fire_Underground=Flame Emplacement
 Unit/Name/O_03_03=One Sin and Hundreds of Good Deeds
+Unit/Name/Zergling=Lob_Ordeal_Dawn_Amber_Underground
 Upgrade/Name/Malkuth_Upg2_1=Malkuth_Recall_1
 Upgrade/Name/Malkuth_Upg2_1_Ally=Malkuth_Recall_1_Ally
 Weapon/Name/Lob_Hero_Rifle=Service Rifle

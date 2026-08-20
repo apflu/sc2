@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Catalog>
-    <CActorUnit id="Baneling2" parent="GenericBurrowerStandard" unitName="Lob_Ordeal_Dawn_Violet">
+    <CActorUnit id="DawnViolet" parent="GenericBurrowerStandard" unitName="Lob_Ordeal_Dawn_Violet">
         <Aliases value="_UnitSmall"/>
         <Macros value="UnloadDropAnim"/>
         <Macros value="ZergBurrowStandardAnimMacro"/>
@@ -51,7 +51,7 @@
             <Image value="Assets\Textures\Wireframe-Zerg-Baneling.dds"/>
         </GroupIcon>
         <HeroIcon value="Assets\Textures\btn-unit-zerg-baneling.dds"/>
-        <HighlightTooltip value="Unit/Name/Baneling2"/>
+        <HighlightTooltip value="Unit/Name/DawnViolet"/>
         <LifeArmorIcon value="Assets\Textures\btn-upgrade-zerg-groundcarapace-level0.dds"/>
         <SoundArray index="Ready" value="Baneling_Ready"/>
         <SoundArray index="Help" value="Baneling_Help"/>
