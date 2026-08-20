@@ -251,8 +251,10 @@ string Debug_CellStateName (int state) {
 void Debug_ReportCells (int player) {
     unit abno;
     unit door;
+    unit panel;
     string line;
     int slot;
+    int near;
 
     if (gv_cellCount == 0) {
         Debug_Say(player, "cont: no abnormality placed ("
@@ -285,6 +287,26 @@ void Debug_ReportCells (int player) {
         }
         else {
             line = line + " door=DOWN";
+        }
+
+        // Who this cell answers to, and WHERE THAT ANSWER CAME FROM. Cont_OwnerOf
+        // reads the panel's owner first and only falls back to the nearest core,
+        // and those two disagreeing is the signature of a pasted cell: the editor
+        // pastes a unit with the player it was copied FROM, so a cell duplicated
+        // out of one department and dropped into another keeps answering to the
+        // first one. Nothing else in the game would ever mention it -- the cell
+        // simply belongs to somebody across the map, and their meltdowns name it.
+        panel = Cont_PanelAt(gvg_cellHome[slot]);
+        near = Sector_OwnerNear(gvg_cellHome[slot]);
+        line = line + " own=" + Dept_NameOf(Cont_OwnerOf(slot));
+        if (panel == null) {
+            line = line + "(NO PANEL, by core)";
+        }
+        else if (!Slot_IsTablePlayer(UnitGetOwner(panel))) {
+            line = line + "(panel unowned, by core)";
+        }
+        else if (UnitGetOwner(panel) != near) {
+            line = line + "(PANEL SAYS SO, nearest core is " + Dept_NameOf(near) + ")";
         }
 
         if (Melt_IsHeld(slot)) {
