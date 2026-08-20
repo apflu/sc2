@@ -326,7 +326,6 @@ int Debug_OrdealTierFromWord (string word) {
 
 void Debug_Ordeal (int player, string word) {
     string line;
-    string abil;
     int tier;
     int loc;
 
@@ -415,32 +414,24 @@ void Debug_Ordeal (int player, string word) {
             }
             else if (gv_ordealAct == c_ordealActDigger) {
                 loc = Fort_LocOfPoint(UnitGetPosition(gvg_ordealUnit[tier]));
-                if (UnitTestState(gvg_ordealUnit[tier], c_unitStateBuried)) {
-                    line = line + " UNDER";
-                }
-                else if (loc >= 0) {
+                if (loc >= 0) {
                     line = line + " in " + gvg_locName[loc];
                 }
                 else {
                     line = line + " in no drawn region";
                 }
-                line = line + " digs in "
-                       + IntToString(FixedToInt(gvg_ordealAt[tier] - GameGetMissionTime()))
-                       + "s";
 
-                // A worm carries exactly one half of the burrow pair at a time --
-                // Down while it is up, Up while it is down -- so joining the two
-                // reads out whichever it has. Empty means the unit was never
-                // given a burrow, which is the failure this readout exists for:
-                // a worm that cannot dig just stands in a hallway all night and
-                // looks exactly like a worm that has not dug YET.
-                abil = Ordeal_DigAbil(gvg_ordealUnit[tier], c_ordealDigDown)
-                       + Ordeal_DigAbil(gvg_ordealUnit[tier], c_ordealDigUp);
-                if (abil == "") {
-                    line = line + "  NO BURROW ABILITY";
+                // Digging and about-to-dig are two seconds apart and look the
+                // same from outside, which is the whole reason the cast has a
+                // bar. The countdown going negative and no DIGGING beside it
+                // means the order is not landing.
+                if (UnitOrderHasAbil(gvg_ordealUnit[tier], c_ordealDigAbil)) {
+                    line = line + " DIGGING";
                 }
                 else {
-                    line = line + "  " + abil;
+                    line = line + " digs in "
+                           + IntToString(FixedToInt(gvg_ordealAt[tier]
+                                                    - GameGetMissionTime())) + "s";
                 }
             }
             else {

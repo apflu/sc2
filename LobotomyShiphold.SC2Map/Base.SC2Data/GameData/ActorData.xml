@@ -905,4 +905,18 @@
         <AcquisitionPitchHalfArc value="25.000000"/>
         <ShieldFlashType value="Header"/>
     </CActorAction>
+    <!-- The dirt coming back up, minus the host.
+
+         Stock has this already as SmallBurrowUpEffects, and it cannot be used:
+         it carries Host _Selectable, because in stock the puff belongs to the
+         unit climbing out of the ground. Ours is dropped at a POINT by
+         libNtve_gf_CreateModelAtPoint, with nothing to be hosted by.
+
+         The down half needs no copy: stock SmallBurrowDownEffects has no
+         host, being the puff a unit leaves behind. -->
+    <CActorModel id="Lob_Dig_Up">
+        <Model value="BurrowFXSmall"/>
+        <On Terms="ActorCreation" Send="AnimPlay Unburrow Unburrow"/>
+        <On Terms="AnimDone; AnimName Unburrow" Send="Destroy"/>
+    </CActorModel>
 </Catalog>

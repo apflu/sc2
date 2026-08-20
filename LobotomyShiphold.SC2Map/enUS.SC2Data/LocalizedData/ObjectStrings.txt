@@ -1,4 +1,3 @@
-﻿Abil/EditorPrefix/Burrow_Dawn_Amber_Down=DawnAmber -
 Abil/EditorPrefix/Lob_Build=SCV -
 Actor/Name/0_00_00=0_00_00
 Actor/Name/ContainGateStraightHorizontal=Gate Straight Horizontal
@@ -34,6 +33,5 @@ Unit/EditorPrefix/O_03_03=Abn -
 Unit/EditorSuffix/ContainGateHorizontal=(Straight Horizontal)
 Unit/EditorSuffix/Lob_Debris_Normal=- 4x4
 Unit/EditorSuffix/Lob_Marker_Spawn=(Terran Large)
-Unit/EditorSuffix/Lob_Ordeal_Dawn_Amber_Underground=(Burrowed)
 Unit/EditorSuffix/Lob_Turret_Fire_Underground=(Underground)
 Validator/Name/IsContainmentGate=IsContainmentGate

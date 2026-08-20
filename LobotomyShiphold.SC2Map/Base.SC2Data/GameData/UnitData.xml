@@ -730,6 +730,7 @@
         <AbilArray Link="stop"/>
         <AbilArray Link="attack"/>
         <AbilArray Link="move"/>
+        <AbilArray Link="Lob_Ordeal_Dig"/>
         <WeaponArray Link="Lob_Ordeal_Dawn_Amber_Weapon"/>
         <!-- Wiki: RED 2.0 / WHITE 1.0 / BLACK 1.0 / PALE 2.0. DamageTakenFraction
              is ADDITIVE, so each value is the wiki number MINUS ONE and the two
@@ -1121,51 +1122,5 @@
         <HotkeyCategory value="Unit/Category/ZergUnits"/>
         <KillDisplay value="Always"/>
         <RankDisplay value="Always"/>
-    </CUnit>
-    <CUnit id="Lob_Ordeal_Dawn_Amber_Underground">
-        <Name value="Unit/Name/Lob_Ordeal_Dawn_Amber"/>
-        <DeathRevealRadius value="3"/>
-        <Race value="Zerg"/>
-        <Mob value="Multiplayer"/>
-        <FlagArray index="PreventDestroy" value="1"/>
-        <FlagArray index="UseLineOfSight" value="1"/>
-        <FlagArray index="Cloaked" value="1"/>
-        <FlagArray index="Buried" value="1"/>
-        <FlagArray index="AIThreatGround" value="1"/>
-        <FlagArray index="ArmySelect" value="1"/>
-        <PlaneArray index="Ground" value="1"/>
-        <Collide index="Burrow" value="1"/>
-        <Attributes index="Light" value="1"/>
-        <Attributes index="Biological" value="1"/>
-        <LifeStart value="35"/>
-        <LifeMax value="35"/>
-        <LifeRegenRate value="0.2734"/>
-        <LifeArmorName value="Unit/LifeArmorName/ZergGroundArmor"/>
-        <Mover value="Burrowed"/>
-        <Sight value="4"/>
-        <Food value="-0.5"/>
-        <CostCategory value="Army"/>
-        <CostResource index="Minerals" value="25"/>
-        <AttackTargetPriority value="20"/>
-        <DamageDealtXP value="1"/>
-        <DamageTakenXP value="1"/>
-        <KillXP value="5"/>
-        <AbilArray Link="BurrowZerglingUp"/>
-        <CardLayouts>
-            <LayoutButtons Face="Attack" Type="AbilCmd" AbilCmd="attack,Execute" Row="0" Column="4"/>
-            <LayoutButtons Face="BurrowUp" Type="AbilCmd" AbilCmd="BurrowZerglingUp,Execute" Row="2" Column="4"/>
-        </CardLayouts>
-        <Radius value="0.375"/>
-        <SeparationRadius value="0"/>
-        <ScoreKill value="25"/>
-        <SubgroupPriority value="8"/>
-        <MinimapRadius value="0.375"/>
-        <EditorCategories value="ObjectType:Unit,ObjectFamily:Melee"/>
-        <TacticalAI value="ZerglingBurrowed"/>
-        <LeaderAlias value="Zergling"/>
-        <HotkeyAlias value="Zergling"/>
-        <KillDisplay value="Always"/>
-        <RankDisplay value="Always"/>
-        <AIEvaluateAlias value="Zergling"/>
     </CUnit>
 </Catalog>

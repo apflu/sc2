@@ -149,55 +149,32 @@ Casual 的一晚就是**一场 Dawn，然后没有了**。钳制成"永远只来
 
 「房间」优先用画好的区域（`Fort_LocOfPoint`），没画区域的走廊退回半径 8。**退路是必要的**：地图上大部分地方还没有区域，而一次谁也没打到的处决看起来是机制坏了，不是地图没画完。
 
-### 琥珀：不会待在你找到它的那条走廊里（**写完了，但关掉了——等模型**）
+### 琥珀：不会待在你找到它的那条走廊里
 
-**每 40-60 秒（逐个抽）钻进地里，换到本部门另一条走廊，冒头时对那个房间里所有人 1-2 红伤。**平时的攻击是红伤近战，那是单位数据，这里不管。
-
-> **`Ordeal_ActOf` 里那一条被注释掉了，只有那一条。**下面所有东西都在，也都进了 build。
->
-> 原因是**没有蛆虫模型**，而顶替它的 Locust **没有 `Burrow` 动画可以沉下去**。这一点值得写清楚，因为 actor 看起来完全是接好的：stock 自己的 `LocustMP` actor 就是 `parent="GenericBurrowerStandard"`，就带着 `ZergBurrowMobileAnimMacro` 和 `ZergSmallBurrowEffects`——**而它一次都没跑过，因为 Locust 根本不会钻地。**暴雪是按模板给虫族地面 actor 挂这些宏的，挂着不等于模型里有那两段动画。
->
-> 打开它之前，数据侧还欠三处接线：
->
-> 1. **`Burrow_Dawn_Amber_Down` 的 `InfoArray Unit=` 现在指着 `BanelingBurrowed`**，不是 `Lob_Ordeal_Dawn_Amber_Underground`。写好的那个地下单位根本走不到。
-> 2. **`Lob_Ordeal_Dawn_Amber` 的 `AbilArray` 里没有 `Burrow_Dawn_Amber_Down`。**没人能施放它。
-> 3. **地下单位没挂 `Lob_Def_Ordeal_Dawn_Amber`**，还带着 `PreventDestroy`（打不死）和一串 Zergling 的残留（`Food`、`CostResource`、`LeaderAlias`）。它也没有 actor——**这一条反而是对的**，stock 的 `RoachBurrowed` 屏幕上也只有一块土痕。
-
-**地下只待大约一秒。**四十到六十秒是在走廊里过的，资料也是这么写的，而且必须这么写：**地下的虫子打不到**，一只把半条命花在地下的虫子不是烦人，是无敌。
+**每 40-60 秒（逐个抽）读一条 2 秒的条，然后换到本部门另一条走廊，落地时对那个房间里所有人 1-2 红伤。**平时的攻击是红伤近战，那是单位数据，这里不管。
 
 「房间」和翠绿共用一个答案（`Fort_InRoom`）：优先用画好的区域，没画区域退回半径 4。
 
-> 冒头伤害是在下达"升起"命令的那一刻结算的，比它真正破土早约半秒。四十秒的周期里的半秒玩家感觉不到，而另一条路——像小丑那样听 `c_unitAbilStageComplete`——要求把"升起"技能的 id 写进一个触发器注册里，**而那正是 `Ordeal_DigAbil` 存在的理由。**
+#### 是读条瞬移，不是钻地
 
-#### 三个状态，一个标志位都没有
+**真正的钻地写完了，然后扔了**，理由和脚本无关：**没有蛆虫模型**，顶替它的 Locust **没有 `Burrow` 动画可以沉下去**。
 
-- **在上面吗？**问引擎（`c_unitStateBuried`）
-- **在忙吗？**问引擎（`UnitOrderCount`——一个没做完的 morph 从外面看就是一条命令）
-- **这一轮挪过窝了吗？**问那个它本来就有的截止时间
+这一点值得写清楚，因为 actor 看起来完全是接好的：stock 自己的 `LocustMP` actor 就是 `parent="GenericBurrowerStandard"`，本来就带着 `ZergBurrowMobileAnimMacro` 和 `ZergSmallBurrowEffects`——**而它一次都没跑过，因为 Locust 根本不会钻地。**暴雪是按模板给虫族地面 actor 批量挂的。挂着不等于模型里有那两段动画。
 
-最后一条是故意让一个变量兼两职的。在地面上它的意思是"该下去了"；在地下、而且仍然读作已过期，它的意思是"这只还没挪窝"，因为**设定下一个截止时间和抵达是同一个动作**。单开一个 has-moved 标志位，就是第四个可以和前三个吵架的东西。
+所以老老实实问一句这个机制到底需要什么：**一段玩家看得见、也打得断的延迟，加一次位移。**读条两样都是，代价是一个带 `PrepTime`、没有 `Effect` 的技能。土花是两个脱离模型，和这个文件里两场爆炸同一条路。
 
-#### 数据侧：钻地是 morph，不是标志位
+跟着 morph 一起消失的东西：**第二个 `CUnit`、抄一份的抗性表、要去猜的技能 id、以及一段虫子在地下打不到的窗口。**
 
-这三条都不是可选项，因为 `CAbilMorph` **换的是单位类型**：
+> `PrepTime` **就是**那两秒，和小丑那二十秒一样。读到一半被打死＝没挪窝，而这件事**这个文件里一行都不用写**：被打断就是「`Ordeal_Dug_Func` 没有被触发」。
 
-- **地下形态是第二个 `CUnit`。**它得挂**同一张 `Lob_Def_` 抗性表**，否则虫子每藏一次身，四抗就换一套。
-- **它必须叫 `Lob_Ordeal_Dawn_Amber_Underground`。**和 `Lob_Turret_Fire_Underground` 同一个后缀约定——落在正确的生成表里，`ObjectsGen_ScanOrdeal_Dawn_Amber` 才找得到它。**掉出 `Lob_Ordeal_` 命名空间的单位，也会掉出每一个必须找到它的扫描。**
-- **而正因为它落在那张表里，它也落进了黎明的抽签池。**所以 `Ordeal_IsForm` 按 `_Underground` 后缀把它挡在抽签之外。不挡的话，**五分之一的夜晚会开出一场生成在地下、而且永远不会上来的黎明**——因为地面上没有任何东西会去命令它上来。
+#### 两个坑，都不在脚本里
 
-> 26_fortify 已经在这件事的另一头栽过一次：一座钻了地的炮塔不再回应自己的单位类型，每一次搜索都读作空，工人就在同一格上一座接一座地堆炮塔。
-
-#### 技能 id 不写死，是找出来的
-
-`Ordeal_DigAbil` 从单位身上翻 `Burrow<某某>Down` / `Burrow<某某>Up`。stock 里三十多个钻地全叫这个名字，所以这是一条真的约定，不是猜。
-
-必须**每次现读**而不是记下来：**morph 会把技能表整个换掉**，Down 只在地面上存在，Up 只在地下存在，一只虫子从来不同时拥有两半。
-
-找不到就喊：开场一次字幕，`-ordeal` 里每只虫子一行 `NO BURROW ABILITY`。**一只不会钻地的虫子会在一条走廊里站一整夜，而那和这套机制根本没写看起来一模一样。**
+- **不能用「它有没有命令」当门闩。**小丑可以，因为小丑连 `attack` 技能都没有，有命令就一定是它自己的；**虫子是会打架的**，绝大多数时候都挂着攻击命令，那样它一辈子都不会钻——而不钻和机制没写看起来一模一样。问的是窄的那一句：**它是不是已经在钻了**（`UnitOrderHasAbil`）。下达时用 `c_orderQueueReplace` 顶掉攻击也是对的：**会先打完这一下的虫子，等于玩家可以用喂目标来拖延它的位移。**
+- **土花要创建的是 actor，不是 model。**两场爆炸给的是 `CModel`（`DOM_Explosion_Sm`、`ArchonMergeExplosion`），`CreateModelAtPoint` 把模型套进一个通用 actor 里播默认动画就够了。**土花不是**：下钻和上冒是**同一个模型 `BurrowFXSmall` 的两段动画**，知道该播哪一段的是 actor。所以走 `Ordeal_Puff` / `libNtve_gf_CreateActorAtPoint`。
+  - 下钻直接用 stock 的 `SmallBurrowDownEffects`——它没有 `Host`，因为它本来就是一个单位**留在原地**的那团土。
+  - 上冒得自己抄一份（`Lob_Dig_Up`），因为 stock 的 `SmallBurrowUpEffects` 带 `Host _Selectable`：**它属于那个正在爬出来的单位**，而我们这团土没有可归属的东西。
 
 ### 还没做的
-
-**琥珀的模型。**上面那一节整个卡在这儿。
 
 一件更大的：**考验的普通攻击也走不了引擎。**紫罗兰的资料是黑伤 1-3，而黑伤和白伤一样在目录里不存在；绯红没有攻击所以暂时不痛不痒。`CWeapon` 没有 `ValidatorArray`，也没有任何一个字段能说"这一下扣理智"。等到某个考验真的要在活着的时候伤人，它得和爆炸走同一条路——武器只负责节奏和动作，数字仍然从 `Emp_CombatDamage` 出去。**这和 E.G.O 武器是同一个问题的两面**，值得一起解决而不是各修一次。
 
@@ -225,12 +202,13 @@ ordeal RUNNING Lob_Ordeal_Dawn_Crimson (Dawn)  standing 1/1  pays 30
   ent 0 p1 on O_03_03
 
 ordeal RUNNING Lob_Ordeal_Dawn_Amber (Dawn)  standing 1/1  pays 30
-  ent 0 p1 in corridor_a digs in 37s  BurrowRoachDown
+  ent 0 p1 in corridor_a digs in 37s
+  ent 0 p1 in corridor_a DIGGING
 ```
 
 `idle -- no cell to rob` 表示它找不到可抢的单元；`marked X but not ordered` 表示命令没下出去，那是真的坏了。
 
-虫子那行末尾是它**此刻拥有的那半个钻地技能**（在地面上是 Down，在地下是 Up）。`NO BURROW ABILITY` 表示单位上根本没有钻地——那一夜它会站着不动。
+虫子那行要么在倒数、要么在 `DIGGING`。**倒数读成负数、旁边又没有 `DIGGING`，就是命令没落地。**
 
 两条不一样，而且都需要：`now` 走的是**系统里真实的那条路**（消耗排期、重新排下一场）；点名档次是**旁路**，用来在没走到熔毁 8 级的时候看一眼午夜，或者在 Casual 上测一个本该被跳过的档次。
 

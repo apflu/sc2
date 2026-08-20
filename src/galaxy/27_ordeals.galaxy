@@ -124,22 +124,39 @@ const int c_ordealSproutMin = 1;
 const int c_ordealSproutMax = 2;
 const fixed c_ordealSproutReach = 4.0;
 
-// The two halves of a burrow, FOUND rather than named.
+// The dig, which is a CAST rather than a burrow.
 //
-// Burrowing is a CAbilMorph pair -- BurrowRoachDown turns a Roach into a
-// RoachBurrowed and BurrowRoachUp turns it back -- so which two ids a worm
-// carries depends entirely on which stock unit it was copied from, and the
-// data side of this map is not this file's to know. Every burrow in stock is
-// named Burrow<something>Down / Burrow<something>Up, across thirty-odd of them,
-// so the convention is a real one and Ordeal_DigAbil reads it off the unit.
+// A real burrow is a CAbilMorph pair and it was written and thrown away, for a
+// reason that had nothing to do with the script: THERE IS NO WORM MODEL. The
+// Locust standing in for one has no Burrow animation to sink with -- stock's
+// own LocustMP actor carries the burrow macros by template and has never once
+// run them, because a Locust cannot burrow -- so the honest version of a
+// morph would have been a Locust popping out of existence.
 //
-// It also has to be read off the unit rather than remembered, because the Down
-// half only exists while the worm is above ground and the Up half only exists
-// while it is under: a morph swaps the unit's whole ability list along with its
-// type.
-const string c_ordealDigPrefix = "Burrow";
-const string c_ordealDigDown = "Down";
-const string c_ordealDigUp = "Up";
+// What the mechanic actually needs is: a delay the player can see and
+// interrupt, and a relocation. A cast is both, and it costs one ability with a
+// PrepTime and no effect. The dirt is two detached models, the same way both
+// explosions in this file are.
+//
+// Everything the morph forced is gone with it: no second CUnit, no duplicated
+// defence table, no ability ids to discover, no window in which the worm is
+// underground and unkillable.
+const string c_ordealDigAbil = "Lob_Ordeal_Dig";
+
+// The puffs, and these are ACTORS rather than models -- the difference matters
+// and it is the one thing about this that cannot be guessed. Both explosions in
+// this file name a CModel (DOM_Explosion_Sm, ArchonMergeExplosion) and get
+// dropped with CreateModelAtPoint, which wraps the model in a generic actor
+// that plays whatever the model does by default. The dirt is not that: the
+// model is BurrowFXSmall for BOTH directions, and which of them you see is
+// which ANIMATION the actor plays. So the actor is the thing to create.
+//
+// Down is stock's own, which has no host and can therefore be dropped at a
+// point. Up is a copy of stock's minus the host, because stock's belongs to the
+// unit climbing out of the ground and ours has nothing to belong to. See
+// Lob_Dig_Up in ActorData.
+const string c_ordealDigDownActor = "SmallBurrowDownEffects";
+const string c_ordealDigUpActor = "Lob_Dig_Up";
 
 // The two explosions, as pictures. See Ordeal_Boom for why they are only that.
 const string c_ordealBlastModel = "DOM_Explosion_Sm";
@@ -170,16 +187,9 @@ int Ordeal_ActOf (string type) {
     if (type == "Lob_Ordeal_Dawn_Violet") {
         return c_ordealActBomb;
     }
-    // SHELVED, one line from working: there is no worm model, and the Locust
-    // standing in for one has no Burrow animation to sink with -- stock's own
-    // LocustMP actor carries the burrow macros by template and has never once
-    // run them, because a Locust cannot burrow. Uncomment when a model turns up;
-    // everything below Ordeal_DigStep is written and built. The data side still
-    // owes the three wirings listed in systems/ordeal.md.
-    //
-    // if (type == "Lob_Ordeal_Dawn_Amber") {
-    //     return c_ordealActDigger;
-    // }
+    if (type == "Lob_Ordeal_Dawn_Amber") {
+        return c_ordealActDigger;
+    }
     return c_ordealActPlain;
 }
 
@@ -194,6 +204,7 @@ int[4] gvg_ordealBeaten;
 trigger gt_ordealTick;
 trigger gt_ordealRob;
 trigger gt_ordealDeath;
+trigger gt_ordealDug;
 
 //--------------------------------------------------------------------------------------------------
 // How many Ordeals of at least this tier have been put down.
@@ -278,18 +289,19 @@ string Ordeal_TierAt (int tier, int i) {
 //--------------------------------------------------------------------------------------------------
 // A unit that is the OTHER SHAPE of an Ordeal rather than an Ordeal.
 //
-// Burrowing is a morph, so a worm that can hide needs a second CUnit for the
-// hidden form, and the id convention that puts it in the right generated table
-// -- Lob_Ordeal_Dawn_Amber_Underground, exactly as Lob_Turret_Fire_Underground
-// is the buried half of a turret -- also drops it into the Dawn DRAW POOL. One
-// night in five would then open with an Ordeal that spawns underground and
-// never comes up, because nothing above ground would ever order it to.
+// NOTHING CURRENTLY MATCHES THIS, and it is kept anyway. It was written for a
+// burrowed worm that no longer exists -- Amber changes hallways by casting, not
+// by morphing -- but the trap it caught is not hypothetical and is not about
+// worms: a morph needs a second CUnit, the id convention that puts that CUnit
+// in the right generated table (Lob_Turret_Fire_Underground is the map's, and
+// the turret is a live example) ALSO drops it into the tier's DRAW POOL, and
+// then one night in N opens with an Ordeal in a shape nothing will ever order
+// out of. Silently: it spawns, and the night simply never starts.
 //
-// The suffix is load-bearing in both directions and it is already the map's
-// convention for this exact thing, which is why it is read here rather than
-// worked around by naming the burrowed form something unrelated: a unit that
-// falls out of the Ordeal_ namespace also falls out of every scan that has to
-// find it.
+// Naming such a form outside the Ordeal_ namespace would dodge the pool and
+// break every scan that has to find it, so the suffix is load-bearing in both
+// directions. Deleting this because the one thing it protected went away is
+// how the bug comes back.
 //--------------------------------------------------------------------------------------------------
 const string c_ordealFormSuffix = "_Underground";
 
@@ -753,6 +765,22 @@ void Ordeal_Boom (point at, string model) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// The same idea one level up: an ACTOR at a point, not a model.
+//
+// A model gets wrapped in a generic actor that plays the model's default, which
+// is all an explosion needs. The dirt needs more than that -- down and up are
+// one model and two animations -- so what has to be created is the actor that
+// knows which animation to play. Both of the ones used here destroy themselves
+// when their animation finishes, so nothing owns them afterwards.
+//--------------------------------------------------------------------------------------------------
+void Ordeal_Puff (point at, string actorId) {
+    if (at == null) {
+        return;
+    }
+    libNtve_gf_CreateActorAtPoint(actorId, at);
+}
+
+//--------------------------------------------------------------------------------------------------
 // Everybody of one kind close enough to the corpse.
 //
 // Split out because employees and players are two scans and the same rule, and
@@ -910,42 +938,6 @@ void Ordeal_Burst (int i) {
 }
 
 //--------------------------------------------------------------------------------------------------
-// Which ability on this unit is the half of a burrow we want.
-//
-// Read off the unit every time rather than looked up once, because a burrow is
-// a MORPH: BurrowRoachDown does not toggle a flag on a Roach, it turns it into
-// a RoachBurrowed, and the two unit types carry one half of the pair each. There
-// is no moment at which a worm has both.
-//
-// The same fact is a trap on the data side and it is worth writing here because
-// this is where somebody will be standing when it bites: the burrowed form is a
-// SECOND CUnit, so it needs the same Lob_Def_ table as the form above ground or
-// the worm's four defences change every time it hides. 26_fortify already lost
-// an afternoon to the other end of this -- a turret that burrows stops answering
-// to its own unit type, and every search for it reads empty.
-//--------------------------------------------------------------------------------------------------
-string Ordeal_DigAbil (unit who, string tail) {
-    string abil;
-    int count;
-    int i;
-
-    if (who == null) {
-        return "";
-    }
-    count = UnitAbilityCount(who);
-    i = 1;
-    while (i <= count) {
-        abil = UnitAbilityGet(who, i);
-        if (StringContains(abil, c_ordealDigPrefix, c_stringBegin, c_stringNoCase)
-            && StringContains(abil, tail, c_stringEnd, c_stringNoCase)) {
-            return abil;
-        }
-        i = i + 1;
-    }
-    return "";
-}
-
-//--------------------------------------------------------------------------------------------------
 // Everyone standing where a worm comes up.
 //
 // The room if there is one drawn and a radius if there is not, which is
@@ -988,79 +980,80 @@ void Ordeal_Sprout (unit who) {
 }
 
 //--------------------------------------------------------------------------------------------------
-// One worm, once a tick.
+// One worm, once a tick, and there is only one thing it can decide.
 //
-// Three states again, and again none of them is a bit somebody has to remember
-// to clear. Two of the three questions are asked of the engine -- is it under
-// (c_unitStateBuried), is it busy (an order, which is what a half-finished morph
-// looks like from out here) -- and the third is the deadline it already had.
+// NOT guarded on "has any order", the way a thief is. A thief has no attack
+// ability at all, so an order is always one of its own; a worm is a fighter and
+// would have an attack order most of the time, which would mean it never dug at
+// all -- and never digging looks exactly like the mechanic being unwritten.
+// The question is the narrow one: is it already digging.
 //
-// The deadline does double duty on purpose. Above ground it means "time to go
-// under". Under, still reading as expired, it means "this one has not moved
-// yet", because SETTING THE NEXT DEADLINE IS THE SAME ACT AS ARRIVING. A
-// separate has-moved flag would be a fourth thing that can disagree with the
-// other three.
-//
-// A worm is only under for about a second of that -- the tick that orders it
-// down and the tick that moves it and sends it back up. The forty to sixty
-// seconds are spent in the hallway, which is where the wiki spends them and
-// where it has to be spent for the mechanic to mean anything: a worm underground
-// is a worm that cannot be shot, and one that hid for half its life would be
-// unkillable rather than annoying.
-//
-// The sprout lands when the worm is ORDERED up rather than when it finishes
-// surfacing, which is about half a second early. Half a second inside a
-// forty-second cycle is not a thing a player can perceive, and the alternative
-// -- an ability-completed event, the way Ordeal_Rob_Func hears a robbery -- would
-// mean naming the Up ability in a trigger registration, which is exactly the
-// thing Ordeal_DigAbil exists to avoid having to know.
+// The order replaces whatever it was attacking. That is correct rather than
+// merely convenient: a worm that would finish its swing first would be a worm
+// whose relocation the players could delay by feeding it a target.
 //--------------------------------------------------------------------------------------------------
 void Ordeal_DigStep (int i) {
     unit who;
-    string abil;
-    fixed now;
-    int loc;
 
     who = gvg_ordealUnit[i];
     if (who == null || !UnitIsAlive(who)) {
         return;
     }
-
-    // Mid-morph. The engine is holding an order for as long as the animation
-    // runs, and an entity with an order is an entity with nothing to decide.
-    if (UnitOrderCount(who) > 0) {
+    if (GameGetMissionTime() < gvg_ordealAt[i]) {
+        return;
+    }
+    if (UnitOrderHasAbil(who, c_ordealDigAbil)) {
         return;
     }
 
-    now = GameGetMissionTime();
+    UnitIssueOrder(who, Order(AbilityCommand(c_ordealDigAbil, 0)), c_orderQueueReplace);
+}
 
-    if (!UnitTestState(who, c_unitStateBuried)) {
-        if (now < gvg_ordealAt[i]) {
-            return;
-        }
-        abil = Ordeal_DigAbil(who, c_ordealDigDown);
-        if (abil != "") {
-            UnitIssueOrder(who, Order(AbilityCommand(abil, 0)), c_orderQueueReplace);
-        }
-        return;
+//--------------------------------------------------------------------------------------------------
+// A dig finished.
+//
+// Heard rather than counted, the same as a robbery and for the same reason: the
+// ability's PrepTime IS the two seconds, so a worm killed partway through never
+// gets here and never moves. Nothing in this file has to notice that it was
+// interrupted, because being interrupted is simply this not happening.
+//
+// The two puffs and the move are one frame: dirt where it left, dirt where it
+// arrived, and the worm in between. Nobody ever sees the Locust fail to have a
+// burrow animation, which is the entire reason this is a cast and not a morph.
+//
+// Registered on every stage and filtered here, matching Ordeal_Rob_Func.
+//--------------------------------------------------------------------------------------------------
+bool Ordeal_Dug_Func (bool testConds, bool runActions) {
+    unit who;
+    point from;
+    int i;
+    int loc;
+
+    if (!runActions || !gv_ordealActive) {
+        return true;
+    }
+    if (EventUnitAbilityStage() != c_unitAbilStageComplete) {
+        return true;
     }
 
-    if (now >= gvg_ordealAt[i]) {
-        loc = Ordeal_HallFor(gvg_ordealHome[i], Fort_LocOfPoint(UnitGetPosition(who)));
-        if (loc >= 0) {
-            UnitSetPosition(who, gvg_locCenter[loc], false);
-        }
-        gvg_ordealAt[i] = now + RandomFixed(c_ordealDigMin, c_ordealDigMax);
-        Ordeal_Sprout(who);
+    who = EventUnit();
+    i = Ordeal_IndexOf(who);
+    if (i < 0) {
+        return true;
     }
 
-    // Re-issued every tick until it takes, rather than once and hoped for. A
-    // worm that failed to come up is a worm that is gone from the fight, and
-    // nothing else on the map would ever notice.
-    abil = Ordeal_DigAbil(who, c_ordealDigUp);
-    if (abil != "") {
-        UnitIssueOrder(who, Order(AbilityCommand(abil, 0)), c_orderQueueReplace);
+    from = UnitGetPosition(who);
+    loc = Ordeal_HallFor(gvg_ordealHome[i], Fort_LocOfPoint(from));
+
+    Ordeal_Puff(from, c_ordealDigDownActor);
+    if (loc >= 0) {
+        UnitSetPosition(who, gvg_locCenter[loc], false);
     }
+    Ordeal_Puff(UnitGetPosition(who), c_ordealDigUpActor);
+
+    gvg_ordealAt[i] = GameGetMissionTime() + RandomFixed(c_ordealDigMin, c_ordealDigMax);
+    Ordeal_Sprout(who);
+    return true;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -1126,17 +1119,6 @@ void Ordeal_Begin (int tier, string type) {
 
     UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle,
                      Msg1("Lob/Msg/OrdealBegin", "%NAME%", Ordeal_NameOf(type)));
-
-    // Scaffolding, and it should never fire in a finished map: a worm whose unit
-    // was never given a burrow will simply stand in one hallway for the rest of
-    // the night, which is indistinguishable from the whole mechanic being
-    // unwritten. Asked once, of one entity, at the moment somebody would
-    // otherwise start wondering.
-    if (gv_ordealAct == c_ordealActDigger
-        && Ordeal_DigAbil(gvg_ordealUnit[0], c_ordealDigDown) == "") {
-        UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle,
-                         Msg1("Lob/Msg/OrdealNoDig", "%NAME%", Ordeal_NameOf(type)));
-    }
 
     Ordeal_Refresh();
 }
@@ -1316,6 +1298,10 @@ void Ordeals_Init () {
 
     gt_ordealRob = TriggerCreate("Ordeal_Rob_Func");
     TriggerAddEventUnitAbility(gt_ordealRob, null, AbilityCommand(c_ordealRobAbil, 0),
+                               c_unitAbilStageAll, true);
+
+    gt_ordealDug = TriggerCreate("Ordeal_Dug_Func");
+    TriggerAddEventUnitAbility(gt_ordealDug, null, AbilityCommand(c_ordealDigAbil, 0),
                                c_unitAbilStageAll, true);
 
     gt_ordealDeath = TriggerCreate("Ordeal_Died_Func");

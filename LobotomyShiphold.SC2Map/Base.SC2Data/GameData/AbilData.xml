@@ -1,29 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Catalog>
-    <CAbilMorph id="Burrow_Dawn_Amber_Down">
-        <AbilSetId value="BrwD"/>
-        <EditorCategories value="Race:Zerg,AbilityorEffectType:MorphsandBurrows"/>
-        <CmdButtonArray index="Execute" DefaultButtonFace="BurrowDown" Requirements="UseBurrow">
-            <Flags index="ToSelection" value="1"/>
-        </CmdButtonArray>
-        <CmdButtonArray index="Cancel" DefaultButtonFace="Cancel"/>
-        <ActorKey value="BurrowDown"/>
-        <Flags index="Interruptible" value="1"/>
-        <Flags index="IgnoreFacing" value="1"/>
-        <Flags index="IgnorePlacement" value="0"/>
-        <Flags index="SuppressMovement" value="1"/>
-        <InfoArray Unit="BanelingBurrowed" RandomDelayMax="0.3703">
-            <SectionArray index="Actor">
-                <DurationArray index="Duration" value="1"/>
-            </SectionArray>
-            <SectionArray index="Collide">
-                <DurationArray index="Delay" value="0.5556"/>
-            </SectionArray>
-            <SectionArray index="Stats">
-                <DurationArray index="Delay" value="1"/>
-            </SectionArray>
-        </InfoArray>
-    </CAbilMorph>
+    <!-- A worm changing hallways, and the whole ability is the cast time.
+
+         No morph, no burrowed unit, no second CUnit. There is no worm model,
+         and the Locust standing in for one has no Burrow animation to sink
+         with, so a real burrow would have shown a Locust popping out of
+         existence. A cast bar and two dirt puffs say the same thing and ask
+         nothing of the model.
+
+         PrepTime IS the dig, the same way Lob_Ordeal_Rob's twenty seconds are
+         the robbery: the engine draws the bar and killing the worm partway
+         through cancels the relocation, which nothing here has to check for.
+
+         No Effect: 27_ordeals does the moving off c_unitAbilStageComplete.
+         An Instant ability needs no effect to become a valid order, which is
+         the one thing Lob_Ordeal_Rob's Effect-Target shape did need.
+
+         No CmdButtonArray: nothing presses this, 27_ordeals orders it. -->
+    <CAbilEffectInstant id="Lob_Ordeal_Dig">
+        <EditorCategories value="AbilityorEffectType:Units"/>
+        <PrepTime value="2"/>
+        <ShowProgressArray index="Prep" value="1"/>
+        <ProgressButtonArray index="Prep" value="BurrowDown"/>
+    </CAbilEffectInstant>
     <!-- Sending an employee to work.-->
     <!--         Effect-Target rather than Interact, and the whole of it is PrepTime:-->
     <!--         the ability does nothing, it just takes a moment and can be aimed at a-->
