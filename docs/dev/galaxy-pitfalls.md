@@ -146,7 +146,7 @@ scan: hero=N debris=N worker=N miner=N device=N | group(debris)=N
 > 如果三个数字全是 0，说明预放单位在 `InitMap()` 执行时还没创建完。届时把扫描挪到 0 秒定时触发器里即可，代码侧改一行。
 
 ## 一条通用的
-每当一类 bug 花掉不止一轮调试，**加一个构建期检查，而不是修那一个实例**。现在有九个，全是这么来的：
+每当一类 bug 花掉不止一轮调试，**加一个构建期检查，而不是修那一个实例**。现在有十个，全是这么来的：
 
 | | 挡什么 |
 |---|---|
@@ -159,8 +159,17 @@ scan: hero=N debris=N worker=N miner=N device=N | group(debris)=N
 | `check_catalog_fields` | **字段名是真的，但放错了地方** |
 | `check_weapons` | 武器丢了 `Effect` 或 `Range`（编辑器覆盖过 catalog） |
 | `check_eol` | 地图里出现了 LF 换行（编辑器只写 CRLF） |
+| `check_shadow` | **显示名的值是另一个对象的 id**——地图在悄悄顶掉一个原版名字 |
 
 中间四个挡的是**同一件事的四张面孔**，见上面那张表。
+
+### `check_shadow`：一个作用域大得离谱的小错
+
+复制一个 Zergling 建新单位，忘了改 `<Name>`，它就还指着 `Unit/Name/Zergling`。编辑器**很热心地把这个 key 写进地图自己的 `GameStrings.txt`**，值填成新单位的 id。
+
+从那一刻起，**地图的这一行盖过了暴雪的那一行，对局里每一只小狗都改了名**——而 `50_waves` 正在刷小狗。没有任何报错。而且它出现的那个文件，恰好是构建唯一原样抄过去、从来不看一眼的那个。
+
+规则收得很紧：值必须是**这张地图自己定义过的 id**，而且不等于 key 自己那一段。**故意改原版对象的名字仍然合法**（`ContainGate`、`DestructibleGateDiagonalBLUR` 都是改过名的原版，右边写的是人话）；`Unit/Name/Lob_SCV_Worker=Lob_SCV_Worker` 这种自己指自己的占位也放过。
 
 ## 地图里的换行符一律 CRLF
 

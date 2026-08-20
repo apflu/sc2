@@ -149,9 +149,19 @@ Casual 的一晚就是**一场 Dawn，然后没有了**。钳制成"永远只来
 
 「房间」优先用画好的区域（`Fort_LocOfPoint`），没画区域的走廊退回半径 8。**退路是必要的**：地图上大部分地方还没有区域，而一次谁也没打到的处决看起来是机制坏了，不是地图没画完。
 
-### 琥珀：不会待在你找到它的那条走廊里
+### 琥珀：不会待在你找到它的那条走廊里（**写完了，但关掉了——等模型**）
 
 **每 40-60 秒（逐个抽）钻进地里，换到本部门另一条走廊，冒头时对那个房间里所有人 1-2 红伤。**平时的攻击是红伤近战，那是单位数据，这里不管。
+
+> **`Ordeal_ActOf` 里那一条被注释掉了，只有那一条。**下面所有东西都在，也都进了 build。
+>
+> 原因是**没有蛆虫模型**，而顶替它的 Locust **没有 `Burrow` 动画可以沉下去**。这一点值得写清楚，因为 actor 看起来完全是接好的：stock 自己的 `LocustMP` actor 就是 `parent="GenericBurrowerStandard"`，就带着 `ZergBurrowMobileAnimMacro` 和 `ZergSmallBurrowEffects`——**而它一次都没跑过，因为 Locust 根本不会钻地。**暴雪是按模板给虫族地面 actor 挂这些宏的，挂着不等于模型里有那两段动画。
+>
+> 打开它之前，数据侧还欠三处接线：
+>
+> 1. **`Burrow_Dawn_Amber_Down` 的 `InfoArray Unit=` 现在指着 `BanelingBurrowed`**，不是 `Lob_Ordeal_Dawn_Amber_Underground`。写好的那个地下单位根本走不到。
+> 2. **`Lob_Ordeal_Dawn_Amber` 的 `AbilArray` 里没有 `Burrow_Dawn_Amber_Down`。**没人能施放它。
+> 3. **地下单位没挂 `Lob_Def_Ordeal_Dawn_Amber`**，还带着 `PreventDestroy`（打不死）和一串 Zergling 的残留（`Food`、`CostResource`、`LeaderAlias`）。它也没有 actor——**这一条反而是对的**，stock 的 `RoachBurrowed` 屏幕上也只有一块土痕。
 
 **地下只待大约一秒。**四十到六十秒是在走廊里过的，资料也是这么写的，而且必须这么写：**地下的虫子打不到**，一只把半条命花在地下的虫子不是烦人，是无敌。
 
@@ -186,6 +196,8 @@ Casual 的一晚就是**一场 Dawn，然后没有了**。钳制成"永远只来
 找不到就喊：开场一次字幕，`-ordeal` 里每只虫子一行 `NO BURROW ABILITY`。**一只不会钻地的虫子会在一条走廊里站一整夜，而那和这套机制根本没写看起来一模一样。**
 
 ### 还没做的
+
+**琥珀的模型。**上面那一节整个卡在这儿。
 
 一件更大的：**考验的普通攻击也走不了引擎。**紫罗兰的资料是黑伤 1-3，而黑伤和白伤一样在目录里不存在；绯红没有攻击所以暂时不痛不痒。`CWeapon` 没有 `ValidatorArray`，也没有任何一个字段能说"这一下扣理智"。等到某个考验真的要在活着的时候伤人，它得和爆炸走同一条路——武器只负责节奏和动作，数字仍然从 `Emp_CombatDamage` 出去。**这和 E.G.O 武器是同一个问题的两面**，值得一起解决而不是各修一次。
 

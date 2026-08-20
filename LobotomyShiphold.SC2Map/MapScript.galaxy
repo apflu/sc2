@@ -1452,12 +1452,14 @@ const int c_typesMarkerCount = 1;
 string[1] gvg_typesMarker;
 const int c_typesMarker_SpawnCount = 1;
 string[1] gvg_typesMarker_Spawn;
-const int c_typesOrdealCount = 5;
-string[5] gvg_typesOrdeal;
-const int c_typesOrdeal_DawnCount = 4;
-string[4] gvg_typesOrdeal_Dawn;
-const int c_typesOrdeal_Dawn_AmberCount = 1;
-string[1] gvg_typesOrdeal_Dawn_Amber;
+const int c_typesOrdealCount = 6;
+string[6] gvg_typesOrdeal;
+const int c_typesOrdeal_DawnCount = 5;
+string[5] gvg_typesOrdeal_Dawn;
+const int c_typesOrdeal_Dawn_AmberCount = 2;
+string[2] gvg_typesOrdeal_Dawn_Amber;
+const int c_typesOrdeal_Dawn_Amber_UndergroundCount = 1;
+string[1] gvg_typesOrdeal_Dawn_Amber_Underground;
 const int c_typesOrdeal_Dawn_CrimsonCount = 1;
 string[1] gvg_typesOrdeal_Dawn_Crimson;
 const int c_typesOrdeal_Dawn_GreenCount = 1;
@@ -2376,6 +2378,44 @@ bool ObjectsGen_IsOrdeal_Dawn_Amber (unit target) {
     i = 0;
     while (i < c_typesOrdeal_Dawn_AmberCount) {
         if (UnitGetType(target) == gvg_typesOrdeal_Dawn_Amber[i]) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Every live Ordeal_Dawn_Amber_Underground unit on the map, whichever variant and whoever owns it.
+// Works for runtime-spawned units too, unlike anything keyed on placed ids.
+//--------------------------------------------------------------------------------------------------
+unitgroup ObjectsGen_ScanOrdeal_Dawn_Amber_Underground () {
+    unitgroup found;
+    int i;
+
+    found = UnitGroupEmpty();
+    i = 0;
+    while (i < c_typesOrdeal_Dawn_Amber_UndergroundCount) {
+        UnitGroupAddUnitGroup(found, UnitGroup(gvg_typesOrdeal_Dawn_Amber_Underground[i], c_playerAny,
+                                               RegionEntireMap(), null, 0));
+        i = i + 1;
+    }
+    return found;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Whether a unit is a Ordeal_Dawn_Amber_Underground, whatever variant. False for an empty
+// category, so code can be written ahead of the units existing.
+//--------------------------------------------------------------------------------------------------
+bool ObjectsGen_IsOrdeal_Dawn_Amber_Underground (unit target) {
+    int i;
+
+    if (target == null) {
+        return false;
+    }
+    i = 0;
+    while (i < c_typesOrdeal_Dawn_Amber_UndergroundCount) {
+        if (UnitGetType(target) == gvg_typesOrdeal_Dawn_Amber_Underground[i]) {
             return true;
         }
         i = i + 1;
@@ -3304,15 +3344,19 @@ void ObjectsGen_Init () {
     gvg_typesMarker[0] = "Lob_Marker_Spawn";
     gvg_typesMarker_Spawn[0] = "Lob_Marker_Spawn";
     gvg_typesOrdeal[0] = "Lob_Ordeal_Dawn_Amber";
-    gvg_typesOrdeal[1] = "Lob_Ordeal_Dawn_Crimson";
-    gvg_typesOrdeal[2] = "Lob_Ordeal_Dawn_Green";
-    gvg_typesOrdeal[3] = "Lob_Ordeal_Dawn_Violet";
-    gvg_typesOrdeal[4] = "Lob_Ordeal_Noon_Amber";
+    gvg_typesOrdeal[1] = "Lob_Ordeal_Dawn_Amber_Underground";
+    gvg_typesOrdeal[2] = "Lob_Ordeal_Dawn_Crimson";
+    gvg_typesOrdeal[3] = "Lob_Ordeal_Dawn_Green";
+    gvg_typesOrdeal[4] = "Lob_Ordeal_Dawn_Violet";
+    gvg_typesOrdeal[5] = "Lob_Ordeal_Noon_Amber";
     gvg_typesOrdeal_Dawn[0] = "Lob_Ordeal_Dawn_Amber";
-    gvg_typesOrdeal_Dawn[1] = "Lob_Ordeal_Dawn_Crimson";
-    gvg_typesOrdeal_Dawn[2] = "Lob_Ordeal_Dawn_Green";
-    gvg_typesOrdeal_Dawn[3] = "Lob_Ordeal_Dawn_Violet";
+    gvg_typesOrdeal_Dawn[1] = "Lob_Ordeal_Dawn_Amber_Underground";
+    gvg_typesOrdeal_Dawn[2] = "Lob_Ordeal_Dawn_Crimson";
+    gvg_typesOrdeal_Dawn[3] = "Lob_Ordeal_Dawn_Green";
+    gvg_typesOrdeal_Dawn[4] = "Lob_Ordeal_Dawn_Violet";
     gvg_typesOrdeal_Dawn_Amber[0] = "Lob_Ordeal_Dawn_Amber";
+    gvg_typesOrdeal_Dawn_Amber[1] = "Lob_Ordeal_Dawn_Amber_Underground";
+    gvg_typesOrdeal_Dawn_Amber_Underground[0] = "Lob_Ordeal_Dawn_Amber_Underground";
     gvg_typesOrdeal_Dawn_Crimson[0] = "Lob_Ordeal_Dawn_Crimson";
     gvg_typesOrdeal_Dawn_Green[0] = "Lob_Ordeal_Dawn_Green";
     gvg_typesOrdeal_Dawn_Violet[0] = "Lob_Ordeal_Dawn_Violet";
@@ -9166,9 +9210,16 @@ int Ordeal_ActOf (string type) {
     if (type == "Lob_Ordeal_Dawn_Violet") {
         return c_ordealActBomb;
     }
-    if (type == "Lob_Ordeal_Dawn_Amber") {
-        return c_ordealActDigger;
-    }
+    // SHELVED, one line from working: there is no worm model, and the Locust
+    // standing in for one has no Burrow animation to sink with -- stock's own
+    // LocustMP actor carries the burrow macros by template and has never once
+    // run them, because a Locust cannot burrow. Uncomment when a model turns up;
+    // everything below Ordeal_DigStep is written and built. The data side still
+    // owes the three wirings listed in systems/ordeal.md.
+    //
+    // if (type == "Lob_Ordeal_Dawn_Amber") {
+    //     return c_ordealActDigger;
+    // }
     return c_ordealActPlain;
 }
 

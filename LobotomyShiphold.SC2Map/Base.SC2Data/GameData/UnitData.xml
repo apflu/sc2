@@ -1123,8 +1123,7 @@
         <RankDisplay value="Always"/>
     </CUnit>
     <CUnit id="Lob_Ordeal_Dawn_Amber_Underground">
-        <Name value="Unit/Name/Zergling"/>
-        <Description value="Button/Tooltip/Zergling"/>
+        <Name value="Unit/Name/Lob_Ordeal_Dawn_Amber"/>
         <DeathRevealRadius value="3"/>
         <Race value="Zerg"/>
         <Mob value="Multiplayer"/>

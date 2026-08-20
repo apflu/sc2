@@ -18,6 +18,9 @@ one. So:
     referenced but not defined   ->  build error
     defined but never referenced ->  warning, because a key can also be built by
                                      concatenation and this cannot see that
+
+And one check on the editor's half of the file, which the build otherwise
+copies through without looking: check_shadow, below.
 """
 
 import re
@@ -78,6 +81,57 @@ def read_all() -> tuple:
     return table, origin
 
 
+ID_RE = re.compile(r'\bid="([^"]+)"')
+
+# Namespaces where a value is a DISPLAY NAME -- something a player reads. A
+# player never reads an object id, so an id turning up on the right-hand side of
+# one of these is the editor having filled a blank in, not a name anybody chose.
+NAME_SPACES = ("Unit/", "Abil/", "Weapon/", "Behavior/", "Button/", "Effect/",
+               "Upgrade/", "Actor/", "Requirement/", "Validator/")
+
+
+def check_shadow(merged: dict) -> bool:
+    """Refuse a display name whose value is some OTHER object's id.
+
+    This catches one specific accident with a blast radius far wider than it
+    looks. Point a new unit's <Name> at a key that already belongs to a STOCK
+    object -- <Name value="Unit/Name/Zergling"/>, say, which is what copying a
+    Zergling and forgetting to rename gets you -- and the editor helpfully
+    writes that key into the MAP's GameStrings.txt with the new unit's id as the
+    value. From then on the map's copy shadows Blizzard's for every zergling in
+    the game, and 50_waves spawns zerglings. Nothing errors. The name is just
+    wrong, everywhere, and the file that says so is the one file the build
+    copies through untouched.
+
+    The rule is narrow on purpose: the value has to be an id THIS MAP defines,
+    and not the key's own id. Renaming a stock object on purpose is ordinary and
+    stays legal -- ContainGate and DestructibleGateDiagonalBLUR are both renamed
+    stock and both have real names on the right. And Unit/Name/Lob_SCV_Worker=
+    Lob_SCV_Worker is a placeholder, not a mistake, so a key naming itself is
+    left alone.
+    """
+    ids = set()
+    for path in sorted((ROOT / "LobotomyShiphold.SC2Map" / "Base.SC2Data"
+                        / "GameData").glob("*.xml")):
+        ids.update(ID_RE.findall(path.read_text(encoding="utf-8")))
+
+    bad = []
+    for key in sorted(merged):
+        if not key.startswith(NAME_SPACES):
+            continue
+        value = merged[key]
+        if value in ids and value != key.rsplit("/", 1)[-1]:
+            bad.append((key, value))
+
+    if bad:
+        print(f"  ! {len(bad)} display name(s) set to an object id:")
+        for key, value in bad:
+            print(f"    {key}={value}")
+        print("    A <Name> pointing at another object's string key makes the")
+        print("    map shadow that name everywhere. Point it at its own key.")
+    return bool(bad)
+
+
 def main() -> int:
     ours, origin = read_all()
 
@@ -123,6 +177,9 @@ def main() -> int:
 
     print(f"generated {OUT.relative_to(ROOT)}")
     print(f"  {len(ours)} Lob/ strings, {len(theirs)} left to the editor")
+
+    if check_shadow(merged):
+        return 1
 
     unused = sorted(k for k in ours
                     if k not in refs and not any(k.startswith(p) for p in prefixes))
