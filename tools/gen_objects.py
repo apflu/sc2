@@ -699,7 +699,7 @@ def generate():
 
 
 if __name__ == "__main__":
-    path, cats, grps, regs, upgs = generate()
+    path, cats, grps, regs, upgs, blds = generate()
     print(f"generated {path.relative_to(ROOT)}")
     for name, types in cats.items():
         print(f"  {name}: {', '.join(types)}")

@@ -273,10 +273,7 @@ void Dmg_OverkillGroup (unitgroup people, unit dead, point at, int loc) {
     j = 1;
     while (j <= count) {
         who = UnitGroupUnit(people, j);
-        if (who != null && who != dead && UnitIsAlive(who)
-            && ((loc >= 0 && RegionContainsPoint(gvg_locRegion[loc], UnitGetPosition(who)))
-                || (loc < 0 && DistanceBetweenPoints(UnitGetPosition(who), at)
-                               <= c_dmgOverkillReach))) {
+        if (who != dead && Fort_InRoom(who, at, loc, c_dmgOverkillReach)) {
             hit = 0;
             while (hit < c_dmgOverkillHits) {
                 Emp_CombatDamage(who, c_dmgWhite, c_dmgOverkillEach);
