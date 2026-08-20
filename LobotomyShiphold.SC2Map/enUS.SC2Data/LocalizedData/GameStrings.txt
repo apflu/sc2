@@ -108,6 +108,7 @@ Lob/Msg/OrdealBurst=%NAME% went off. Every counter in that department is at zero
 Lob/Msg/OrdealDone=%NAME% suppressed. +%ENERGY% energy.
 Lob/Msg/OrdealLost=%NAME% was not put down in time. Nothing was earned.
 Lob/Msg/OrdealNext=%NAME% will arrive at meltdown level %LEVEL%.
+Lob/Msg/OrdealNoDig=%NAME% has no burrow ability, so it will stay where it is.
 Lob/Msg/OrdealRobbed=%NAME% robbed %ABNO% -- %BOXES% PE boxes taken, Qliphoth counter down one.
 Lob/Msg/Overkill=A machine is taking its time with somebody. Get out of the room.
 Lob/Msg/Suppressed=%RISK% suppressed

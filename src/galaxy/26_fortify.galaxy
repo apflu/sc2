@@ -195,6 +195,29 @@ int Fort_LocOfPoint (point where) {
     return -1;
 }
 
+//--------------------------------------------------------------------------------------------------
+// Is this unit in the same place as that point?
+//
+// A LOC is the honest answer -- a corridor's drawn region is what "the room"
+// means, and it is what stops an explosion in one hallway from being felt
+// through a wall. The radius is a fallback for a point that is in no drawn
+// region at all, which most of the map still is: an effect that quietly hits
+// nobody reads as a broken mechanic rather than as an unfinished map.
+//
+// Lives here because locations live here, and because two callers in two later
+// files want the same question -- a worm coming up out of the floor and a robot
+// finishing somebody are the same shape of "everyone who was standing there".
+//--------------------------------------------------------------------------------------------------
+bool Fort_InRoom (unit who, point at, int loc, fixed reach) {
+    if (who == null || !UnitIsAlive(who)) {
+        return false;
+    }
+    if (loc >= 0 && loc < gv_locCount) {
+        return RegionContainsPoint(gvg_locRegion[loc], UnitGetPosition(who));
+    }
+    return DistanceBetweenPoints(UnitGetPosition(who), at) <= reach;
+}
+
 int Fort_LocByName (string name) {
     int i;
 

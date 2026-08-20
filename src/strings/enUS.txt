@@ -181,6 +181,7 @@ Lob/Msg/OrdealBegin=%NAME% has begun.
 Lob/Msg/OrdealDone=%NAME% suppressed. +%ENERGY% energy.
 Lob/Msg/OrdealLost=%NAME% was not put down in time. Nothing was earned.
 Lob/Msg/OrdealRobbed=%NAME% robbed %ABNO% -- %BOXES% PE boxes taken, Qliphoth counter down one.
+Lob/Msg/OrdealNoDig=%NAME% has no burrow ability, so it will stay where it is.
 Lob/Msg/OrdealBurst=%NAME% went off. Every counter in that department is at zero.
 Lob/Msg/FortLevel=%PLACE% defence level %LEVEL%
 

@@ -70,9 +70,10 @@ bool[4] gvg_ordealSpent;
 // What an Ordeal DOES beyond existing and being killable.
 //
 // Most of an Ordeal is unit data -- life, damage, speed, the four defences --
-// and needs nothing here. Two of the dawns are not: Crimson robs cells and
-// moves on, Violet is a timer that ends the night early if it is ignored.
-// Neither is expressible as a stat.
+// and needs nothing here. Three of the dawns are not: Crimson robs cells and
+// moves on, Violet is a timer that ends the night early if it is ignored, and
+// Amber will not stay in the hallway you found it in. None of the three is
+// expressible as a stat.
 //
 // The type-to-behaviour map is a hardcoded list in Ordeal_ActOf, which is worth
 // being uncomfortable about: it is the one place an Ordeal's unit id has to be
@@ -83,6 +84,7 @@ bool[4] gvg_ordealSpent;
 const int c_ordealActPlain = 0;
 const int c_ordealActThief = 1;
 const int c_ordealActBomb = 2;
+const int c_ordealActDigger = 3;
 
 int gv_ordealAct;
 
@@ -110,6 +112,35 @@ const int c_ordealBlastMin = 10;
 const int c_ordealBlastMax = 15;
 const fixed c_ordealBlastRadius = 2.0;
 
+// How long a worm stays in one hallway before it goes under. The wiki's 40-60
+// seconds, drawn per entity so the departments do not all lose sight of theirs
+// on the same second.
+const fixed c_ordealDigMin = 40.0;
+const fixed c_ordealDigMax = 60.0;
+
+// What comes up with it: Red on everyone standing where it surfaces. Small,
+// because the point of a relocation is that it MOVED, not that it hit.
+const int c_ordealSproutMin = 1;
+const int c_ordealSproutMax = 2;
+const fixed c_ordealSproutReach = 4.0;
+
+// The two halves of a burrow, FOUND rather than named.
+//
+// Burrowing is a CAbilMorph pair -- BurrowRoachDown turns a Roach into a
+// RoachBurrowed and BurrowRoachUp turns it back -- so which two ids a worm
+// carries depends entirely on which stock unit it was copied from, and the
+// data side of this map is not this file's to know. Every burrow in stock is
+// named Burrow<something>Down / Burrow<something>Up, across thirty-odd of them,
+// so the convention is a real one and Ordeal_DigAbil reads it off the unit.
+//
+// It also has to be read off the unit rather than remembered, because the Down
+// half only exists while the worm is above ground and the Up half only exists
+// while it is under: a morph swaps the unit's whole ability list along with its
+// type.
+const string c_ordealDigPrefix = "Burrow";
+const string c_ordealDigDown = "Down";
+const string c_ordealDigUp = "Up";
+
 // The two explosions, as pictures. See Ordeal_Boom for why they are only that.
 const string c_ordealBlastModel = "DOM_Explosion_Sm";
 const string c_ordealGlowModel = "ArchonMergeExplosion";
@@ -124,8 +155,10 @@ const fixed c_ordealReach = 4.0;
 //   gvg_ordealHome   the department it belongs to -- a bomb's burst is scoped
 //                    to it, and a thief prefers its own cells
 //   gvg_ordealMark   the cell a thief is walking to or working on
-//   gvg_ordealAt     when the fuse burns out. Only a bomb uses it -- a thief's
-//                    twenty seconds belong to the ability, not to this file
+//   gvg_ordealAt     the entity's one deadline, and each act reads it as its
+//                    own: a bomb's fuse burning out, a worm's stay in this
+//                    hallway running out. A thief has none -- its twenty
+//                    seconds belong to the ability, not to this file
 int[64] gvg_ordealHome;
 unit[64] gvg_ordealMark;
 fixed[64] gvg_ordealAt;
@@ -136,6 +169,9 @@ int Ordeal_ActOf (string type) {
     }
     if (type == "Lob_Ordeal_Dawn_Violet") {
         return c_ordealActBomb;
+    }
+    if (type == "Lob_Ordeal_Dawn_Amber") {
+        return c_ordealActDigger;
     }
     return c_ordealActPlain;
 }
@@ -206,14 +242,14 @@ int Ordeal_LevelMax (int tier) {
 }
 
 //--------------------------------------------------------------------------------------------------
-// How many types are authored for a tier, and one of them by index.
+// Every type authored for a tier, drawable or not.
 //
 // Galaxy has no array parameters, so a tier cannot be looked up in a table --
 // hence the four-way branch. It is written twice rather than once because the
 // alternative is copying the type names into a table this file owns, and then
 // there would be two lists of Ordeals that could disagree.
 //--------------------------------------------------------------------------------------------------
-int Ordeal_PoolSize (int tier) {
+int Ordeal_TierSize (int tier) {
     if (tier == c_ordealDawn) { return c_typesOrdeal_DawnCount; }
     if (tier == c_ordealNoon) { return c_typesOrdeal_NoonCount; }
     if (tier == c_ordealDusk) { return c_typesOrdeal_DuskCount; }
@@ -221,14 +257,77 @@ int Ordeal_PoolSize (int tier) {
     return 0;
 }
 
-string Ordeal_PoolAt (int tier, int i) {
-    if (i < 0 || i >= Ordeal_PoolSize(tier)) {
+string Ordeal_TierAt (int tier, int i) {
+    if (i < 0 || i >= Ordeal_TierSize(tier)) {
         return "";
     }
     if (tier == c_ordealDawn) { return gvg_typesOrdeal_Dawn[i]; }
     if (tier == c_ordealNoon) { return gvg_typesOrdeal_Noon[i]; }
     if (tier == c_ordealDusk) { return gvg_typesOrdeal_Dusk[i]; }
     if (tier == c_ordealMidnight) { return gvg_typesOrdeal_Midnight[i]; }
+    return "";
+}
+
+//--------------------------------------------------------------------------------------------------
+// A unit that is the OTHER SHAPE of an Ordeal rather than an Ordeal.
+//
+// Burrowing is a morph, so a worm that can hide needs a second CUnit for the
+// hidden form, and the id convention that puts it in the right generated table
+// -- Lob_Ordeal_Dawn_Amber_Underground, exactly as Lob_Turret_Fire_Underground
+// is the buried half of a turret -- also drops it into the Dawn DRAW POOL. One
+// night in five would then open with an Ordeal that spawns underground and
+// never comes up, because nothing above ground would ever order it to.
+//
+// The suffix is load-bearing in both directions and it is already the map's
+// convention for this exact thing, which is why it is read here rather than
+// worked around by naming the burrowed form something unrelated: a unit that
+// falls out of the Ordeal_ namespace also falls out of every scan that has to
+// find it.
+//--------------------------------------------------------------------------------------------------
+const string c_ordealFormSuffix = "_Underground";
+
+bool Ordeal_IsForm (string type) {
+    return StringContains(type, c_ordealFormSuffix, c_stringEnd, c_stringNoCase);
+}
+
+//--------------------------------------------------------------------------------------------------
+// The same tier, less the alternate forms: what a draw is allowed to land on.
+//--------------------------------------------------------------------------------------------------
+int Ordeal_PoolSize (int tier) {
+    int size;
+    int found;
+    int i;
+
+    size = Ordeal_TierSize(tier);
+    found = 0;
+    i = 0;
+    while (i < size) {
+        if (!Ordeal_IsForm(Ordeal_TierAt(tier, i))) {
+            found = found + 1;
+        }
+        i = i + 1;
+    }
+    return found;
+}
+
+string Ordeal_PoolAt (int tier, int i) {
+    int size;
+    int j;
+
+    if (i < 0) {
+        return "";
+    }
+    size = Ordeal_TierSize(tier);
+    j = 0;
+    while (j < size) {
+        if (!Ordeal_IsForm(Ordeal_TierAt(tier, j))) {
+            if (i == 0) {
+                return Ordeal_TierAt(tier, j);
+            }
+            i = i - 1;
+        }
+        j = j + 1;
+    }
     return "";
 }
 
@@ -345,6 +444,53 @@ void Ordeal_ScheduleNext () {
 }
 
 //--------------------------------------------------------------------------------------------------
+// One of a player's corridors or rooms, at random, or -1 if they have none.
+//
+// AVOID is a loc to leave out of the draw, which is what makes a worm's
+// relocation a relocation: coming up in the hallway you just left reads as the
+// mechanic being broken, not as bad luck. Pass -1 to draw from all of them.
+//
+// A department with exactly one drawn location has nowhere else to be, and the
+// draw falls back to including it rather than returning nothing -- staying put
+// is the honest answer to "go somewhere else" when there is no somewhere else,
+// and it still costs the room the sprout.
+//--------------------------------------------------------------------------------------------------
+int Ordeal_HallFor (int player, int avoid) {
+    int found;
+    int pick;
+    int loc;
+
+    found = 0;
+    loc = 0;
+    while (loc < gv_locCount) {
+        if (Fort_OwnerOf(loc) == player && loc != avoid) {
+            found = found + 1;
+        }
+        loc = loc + 1;
+    }
+
+    if (found == 0) {
+        if (avoid >= 0) {
+            return Ordeal_HallFor(player, -1);
+        }
+        return -1;
+    }
+
+    pick = RandomInt(1, found);
+    loc = 0;
+    while (loc < gv_locCount) {
+        if (Fort_OwnerOf(loc) == player && loc != avoid) {
+            pick = pick - 1;
+            if (pick == 0) {
+                return loc;
+            }
+        }
+        loc = loc + 1;
+    }
+    return -1;
+}
+
+//--------------------------------------------------------------------------------------------------
 // Where one entity belonging to a player appears.
 //
 // A corridor or room of theirs, chosen at random, which is the doc's "one per
@@ -354,31 +500,11 @@ void Ordeal_ScheduleNext () {
 //--------------------------------------------------------------------------------------------------
 point Ordeal_SpawnPointFor (int player) {
     unit core;
-    int found;
-    int pick;
     int loc;
 
-    found = 0;
-    loc = 0;
-    while (loc < gv_locCount) {
-        if (Fort_OwnerOf(loc) == player) {
-            found = found + 1;
-        }
-        loc = loc + 1;
-    }
-
-    if (found > 0) {
-        pick = RandomInt(1, found);
-        loc = 0;
-        while (loc < gv_locCount) {
-            if (Fort_OwnerOf(loc) == player) {
-                pick = pick - 1;
-                if (pick == 0) {
-                    return gvg_locCenter[loc];
-                }
-            }
-            loc = loc + 1;
-        }
+    loc = Ordeal_HallFor(player, -1);
+    if (loc >= 0) {
+        return gvg_locCenter[loc];
     }
 
     core = Sector_AnyCore(player);
@@ -777,6 +903,160 @@ void Ordeal_Burst (int i) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// Which ability on this unit is the half of a burrow we want.
+//
+// Read off the unit every time rather than looked up once, because a burrow is
+// a MORPH: BurrowRoachDown does not toggle a flag on a Roach, it turns it into
+// a RoachBurrowed, and the two unit types carry one half of the pair each. There
+// is no moment at which a worm has both.
+//
+// The same fact is a trap on the data side and it is worth writing here because
+// this is where somebody will be standing when it bites: the burrowed form is a
+// SECOND CUnit, so it needs the same Lob_Def_ table as the form above ground or
+// the worm's four defences change every time it hides. 26_fortify already lost
+// an afternoon to the other end of this -- a turret that burrows stops answering
+// to its own unit type, and every search for it reads empty.
+//--------------------------------------------------------------------------------------------------
+string Ordeal_DigAbil (unit who, string tail) {
+    string abil;
+    int count;
+    int i;
+
+    if (who == null) {
+        return "";
+    }
+    count = UnitAbilityCount(who);
+    i = 1;
+    while (i <= count) {
+        abil = UnitAbilityGet(who, i);
+        if (StringContains(abil, c_ordealDigPrefix, c_stringBegin, c_stringNoCase)
+            && StringContains(abil, tail, c_stringEnd, c_stringNoCase)) {
+            return abil;
+        }
+        i = i + 1;
+    }
+    return "";
+}
+
+//--------------------------------------------------------------------------------------------------
+// Everyone standing where a worm comes up.
+//
+// The room if there is one drawn and a radius if there is not, which is
+// Fort_InRoom's whole job -- a hallway's walls are the honest scope and most of
+// the map does not have them yet.
+//--------------------------------------------------------------------------------------------------
+void Ordeal_SproutGroup (unitgroup people, point at, int loc, int amount) {
+    unit who;
+    int count;
+    int j;
+
+    count = UnitGroupCount(people, c_unitCountAlive);
+    j = 1;
+    while (j <= count) {
+        who = UnitGroupUnit(people, j);
+        if (Fort_InRoom(who, at, loc, c_ordealSproutReach)) {
+            Emp_CombatDamage(who, c_dmgRed, amount);
+        }
+        j = j + 1;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// The floor opening up. Rolled once for the room, the same way a blast is.
+//--------------------------------------------------------------------------------------------------
+void Ordeal_Sprout (unit who) {
+    point at;
+    int loc;
+    int amount;
+
+    if (who == null) {
+        return;
+    }
+    at = UnitGetPosition(who);
+    loc = Fort_LocOfPoint(at);
+    amount = RandomInt(c_ordealSproutMin, c_ordealSproutMax);
+
+    Ordeal_SproutGroup(ObjectsGen_ScanEmp(), at, loc, amount);
+    Ordeal_SproutGroup(ObjectsGen_ScanHero(), at, loc, amount);
+}
+
+//--------------------------------------------------------------------------------------------------
+// One worm, once a tick.
+//
+// Three states again, and again none of them is a bit somebody has to remember
+// to clear. Two of the three questions are asked of the engine -- is it under
+// (c_unitStateBuried), is it busy (an order, which is what a half-finished morph
+// looks like from out here) -- and the third is the deadline it already had.
+//
+// The deadline does double duty on purpose. Above ground it means "time to go
+// under". Under, still reading as expired, it means "this one has not moved
+// yet", because SETTING THE NEXT DEADLINE IS THE SAME ACT AS ARRIVING. A
+// separate has-moved flag would be a fourth thing that can disagree with the
+// other three.
+//
+// A worm is only under for about a second of that -- the tick that orders it
+// down and the tick that moves it and sends it back up. The forty to sixty
+// seconds are spent in the hallway, which is where the wiki spends them and
+// where it has to be spent for the mechanic to mean anything: a worm underground
+// is a worm that cannot be shot, and one that hid for half its life would be
+// unkillable rather than annoying.
+//
+// The sprout lands when the worm is ORDERED up rather than when it finishes
+// surfacing, which is about half a second early. Half a second inside a
+// forty-second cycle is not a thing a player can perceive, and the alternative
+// -- an ability-completed event, the way Ordeal_Rob_Func hears a robbery -- would
+// mean naming the Up ability in a trigger registration, which is exactly the
+// thing Ordeal_DigAbil exists to avoid having to know.
+//--------------------------------------------------------------------------------------------------
+void Ordeal_DigStep (int i) {
+    unit who;
+    string abil;
+    fixed now;
+    int loc;
+
+    who = gvg_ordealUnit[i];
+    if (who == null || !UnitIsAlive(who)) {
+        return;
+    }
+
+    // Mid-morph. The engine is holding an order for as long as the animation
+    // runs, and an entity with an order is an entity with nothing to decide.
+    if (UnitOrderCount(who) > 0) {
+        return;
+    }
+
+    now = GameGetMissionTime();
+
+    if (!UnitTestState(who, c_unitStateBuried)) {
+        if (now < gvg_ordealAt[i]) {
+            return;
+        }
+        abil = Ordeal_DigAbil(who, c_ordealDigDown);
+        if (abil != "") {
+            UnitIssueOrder(who, Order(AbilityCommand(abil, 0)), c_orderQueueReplace);
+        }
+        return;
+    }
+
+    if (now >= gvg_ordealAt[i]) {
+        loc = Ordeal_HallFor(gvg_ordealHome[i], Fort_LocOfPoint(UnitGetPosition(who)));
+        if (loc >= 0) {
+            UnitSetPosition(who, gvg_locCenter[loc], false);
+        }
+        gvg_ordealAt[i] = now + RandomFixed(c_ordealDigMin, c_ordealDigMax);
+        Ordeal_Sprout(who);
+    }
+
+    // Re-issued every tick until it takes, rather than once and hoped for. A
+    // worm that failed to come up is a worm that is gone from the fight, and
+    // nothing else on the map would ever notice.
+    abil = Ordeal_DigAbil(who, c_ordealDigUp);
+    if (abil != "") {
+        UnitIssueOrder(who, Order(AbilityCommand(abil, 0)), c_orderQueueReplace);
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
 // Puts the drawn Ordeal on the map, one entity per player at the table.
 //
 // One each, not a number scaled by anything. How many an Ordeal brings is a
@@ -817,6 +1097,11 @@ void Ordeal_Begin (int tier, string type) {
                         GameGetMissionTime()
                         + RandomFixed(c_ordealFuseMin, c_ordealFuseMax);
                 }
+                else if (gv_ordealAct == c_ordealActDigger) {
+                    gvg_ordealAt[gv_ordealCount] =
+                        GameGetMissionTime()
+                        + RandomFixed(c_ordealDigMin, c_ordealDigMax);
+                }
                 else {
                     gvg_ordealAt[gv_ordealCount] = 0.0;
                 }
@@ -834,6 +1119,18 @@ void Ordeal_Begin (int tier, string type) {
 
     UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle,
                      Msg1("Lob/Msg/OrdealBegin", "%NAME%", Ordeal_NameOf(type)));
+
+    // Scaffolding, and it should never fire in a finished map: a worm whose unit
+    // was never given a burrow will simply stand in one hallway for the rest of
+    // the night, which is indistinguishable from the whole mechanic being
+    // unwritten. Asked once, of one entity, at the moment somebody would
+    // otherwise start wondering.
+    if (gv_ordealAct == c_ordealActDigger
+        && Ordeal_DigAbil(gvg_ordealUnit[0], c_ordealDigDown) == "") {
+        UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle,
+                         Msg1("Lob/Msg/OrdealNoDig", "%NAME%", Ordeal_NameOf(type)));
+    }
+
     Ordeal_Refresh();
 }
 
@@ -929,6 +1226,9 @@ bool Ordeal_Tick_Func (bool testConds, bool runActions) {
             if (gvg_ordealUnit[i] != null && UnitIsAlive(gvg_ordealUnit[i])) {
                 if (gv_ordealAct == c_ordealActThief) {
                     Ordeal_ThiefStep(i);
+                }
+                else if (gv_ordealAct == c_ordealActDigger) {
+                    Ordeal_DigStep(i);
                 }
                 else if (gv_ordealAct == c_ordealActBomb && now >= gvg_ordealAt[i]) {
                     Ordeal_Burst(i);
