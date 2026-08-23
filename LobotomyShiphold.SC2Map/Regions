@@ -6,52 +6,52 @@
             <quad value="82.9387,132.9697,88.667,136.613"/>
         </shape>
     </region>
-    <region id="1">
+    <region id="2">
         <name value="resthall1"/>
         <shape type="rect">
             <quad value="37.903,96.6037,54.14,111.78"/>
         </shape>
     </region>
-    <region id="2">
+    <region id="3">
         <name value="corridor_a"/>
         <shape type="rect">
             <quad value="35.9243,116.1076,56.4013,122.1354"/>
         </shape>
     </region>
-    <region id="3">
+    <region id="4">
         <name value="zone_aft_port"/>
         <shape type="rect">
-            <quad value="10,8,95,89"/>
-        </shape>
-    </region>
-    <region id="4">
-        <name value="zone_aft_starboard"/>
-        <shape type="rect">
-            <quad value="96,8,182,89"/>
+            <quad value="18.0000,24.0000,95.0000,93.0000"/>
         </shape>
     </region>
     <region id="5">
-        <name value="zone_engine_port"/>
+        <name value="zone_aft_starboard"/>
         <shape type="rect">
-            <quad value="10,90,66,157"/>
+            <quad value="96.0000,24.0000,173.0000,93.0000"/>
         </shape>
     </region>
     <region id="6">
-        <name value="zone_amidships"/>
+        <name value="zone_engine_port"/>
         <shape type="rect">
-            <quad value="67,90,125,157"/>
+            <quad value="18.0000,94.0000,66.0000,157.0000"/>
         </shape>
     </region>
     <region id="7">
-        <name value="zone_engine_starboard"/>
+        <name value="zone_amidships"/>
         <shape type="rect">
-            <quad value="126,90,182,157"/>
+            <quad value="67.0000,94.0000,125.0000,157.0000"/>
         </shape>
     </region>
     <region id="8">
+        <name value="zone_engine_starboard"/>
+        <shape type="rect">
+            <quad value="126.0000,94.0000,173.0000,157.0000"/>
+        </shape>
+    </region>
+    <region id="10">
         <name value="zone_bow"/>
         <shape type="rect">
-            <quad value="10,158,182,228"/>
+            <quad value="18.0000,158.0000,173.0000,215.0000"/>
         </shape>
     </region>
     <region id="9">

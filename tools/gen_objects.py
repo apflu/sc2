@@ -326,6 +326,20 @@ def check_unique(kind: str, items: list[tuple[str, int]]) -> None:
             )
         seen[name] = ident
 
+    # And the id, which is the EDITOR's key rather than ours. A duplicate there
+    # is not a script problem at all -- the entry loads, the build prints it,
+    # and the object is simply not selectable in the editor, which is a symptom
+    # nothing on this side would ever produce or explain.
+    by_id: dict[int, str] = {}
+    for name, ident in items:
+        if ident in by_id:
+            raise SystemExit(
+                f"{kind} id {ident} is used by both '{by_id[ident]}' and "
+                f"'{name}'. The editor keys these by id, so one of the two "
+                f"stops being selectable there. Renumber one."
+            )
+        by_id[ident] = name
+
 
 def read_groups() -> list[tuple[str, list[int]]]:
     """Editor object groups, as (name, [placed object ids])."""
