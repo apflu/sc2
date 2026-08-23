@@ -3387,17 +3387,17 @@ void ObjectsGen_Init () {
     gvg_regionNames[1] = "resthall1";
     gvg_regionIds[1] = 1;
     gvg_regionNames[2] = "zone_aft_port";
-    gvg_regionIds[2] = 7;
+    gvg_regionIds[2] = 3;
     gvg_regionNames[3] = "zone_aft_starboard";
-    gvg_regionIds[3] = 8;
+    gvg_regionIds[3] = 4;
     gvg_regionNames[4] = "zone_amidships";
-    gvg_regionIds[4] = 4;
+    gvg_regionIds[4] = 6;
     gvg_regionNames[5] = "zone_bow";
-    gvg_regionIds[5] = 3;
+    gvg_regionIds[5] = 8;
     gvg_regionNames[6] = "zone_engine_port";
     gvg_regionIds[6] = 5;
     gvg_regionNames[7] = "zone_engine_starboard";
-    gvg_regionIds[7] = 6;
+    gvg_regionIds[7] = 7;
 }
 
 //--------------------------------------------------------------------------------------------------
