@@ -1503,10 +1503,10 @@ string[1] gvg_typesTurret_Fire_Underground;
 
 // Editor object groups, flattened: names[i] owns the members
 // slice starting at groupFirst[i] and running groupSize[i] long.
-const int c_groupCount = 2;
-string[2] gvg_groupNames;
-int[2] gvg_groupFirst;
-int[2] gvg_groupSize;
+const int c_groupCount = 11;
+string[11] gvg_groupNames;
+int[11] gvg_groupFirst;
+int[11] gvg_groupSize;
 int[3] gvg_groupMembers;
 
 //--------------------------------------------------------------------------------------------------
@@ -3233,9 +3233,9 @@ int[2] gvg_deptUpgradeLevel;
 bool[2] gvg_deptUpgradeIsAlly;
 
 // Editor regions, by the name typed in the editor.
-const int c_regionCount = 2;
-string[2] gvg_regionNames;
-int[2] gvg_regionIds;
+const int c_regionCount = 8;
+string[8] gvg_regionNames;
+int[8] gvg_regionIds;
 
 //--------------------------------------------------------------------------------------------------
 // The ability command that builds this unit type, and its index.
@@ -3333,12 +3333,39 @@ void ObjectsGen_Init () {
     gvg_typesTurret_Fire[0] = "Lob_Turret_Fire";
     gvg_typesTurret_Fire[1] = "Lob_Turret_Fire_Underground";
     gvg_typesTurret_Fire_Underground[0] = "Lob_Turret_Fire_Underground";
-    gvg_groupNames[0] = "debris";
+    gvg_groupNames[0] = "Binah";
     gvg_groupFirst[0] = 0;
-    gvg_groupSize[0] = 2;
-    gvg_groupNames[1] = "fort1";
-    gvg_groupFirst[1] = 2;
-    gvg_groupSize[1] = 1;
+    gvg_groupSize[0] = 0;
+    gvg_groupNames[1] = "Chesed";
+    gvg_groupFirst[1] = 0;
+    gvg_groupSize[1] = 0;
+    gvg_groupNames[2] = "Geburah";
+    gvg_groupFirst[2] = 0;
+    gvg_groupSize[2] = 0;
+    gvg_groupNames[3] = "Hod";
+    gvg_groupFirst[3] = 0;
+    gvg_groupSize[3] = 0;
+    gvg_groupNames[4] = "Hokma";
+    gvg_groupFirst[4] = 0;
+    gvg_groupSize[4] = 0;
+    gvg_groupNames[5] = "Malkuth";
+    gvg_groupFirst[5] = 0;
+    gvg_groupSize[5] = 0;
+    gvg_groupNames[6] = "Netzach";
+    gvg_groupFirst[6] = 0;
+    gvg_groupSize[6] = 0;
+    gvg_groupNames[7] = "Tiphereth";
+    gvg_groupFirst[7] = 0;
+    gvg_groupSize[7] = 0;
+    gvg_groupNames[8] = "Yesod";
+    gvg_groupFirst[8] = 0;
+    gvg_groupSize[8] = 0;
+    gvg_groupNames[9] = "debris";
+    gvg_groupFirst[9] = 0;
+    gvg_groupSize[9] = 2;
+    gvg_groupNames[10] = "fort1";
+    gvg_groupFirst[10] = 2;
+    gvg_groupSize[10] = 1;
     gvg_groupMembers[0] = 982629277;
     gvg_groupMembers[1] = 1070187309;
     gvg_groupMembers[2] = 889780748;
@@ -3359,6 +3386,18 @@ void ObjectsGen_Init () {
     gvg_regionIds[0] = 2;
     gvg_regionNames[1] = "resthall1";
     gvg_regionIds[1] = 1;
+    gvg_regionNames[2] = "zone_aft_port";
+    gvg_regionIds[2] = 7;
+    gvg_regionNames[3] = "zone_aft_starboard";
+    gvg_regionIds[3] = 8;
+    gvg_regionNames[4] = "zone_amidships";
+    gvg_regionIds[4] = 4;
+    gvg_regionNames[5] = "zone_bow";
+    gvg_regionIds[5] = 3;
+    gvg_regionNames[6] = "zone_engine_port";
+    gvg_regionIds[6] = 5;
+    gvg_regionNames[7] = "zone_engine_starboard";
+    gvg_regionIds[7] = 6;
 }
 
 //--------------------------------------------------------------------------------------------------

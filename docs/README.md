@@ -17,6 +17,7 @@
 | 改难度、波次强度 | [`design/systems/difficulty.md`](design/systems/difficulty.md) | |
 | 改考验 | [`design/systems/ordeal.md`](design/systems/ordeal.md) | |
 | 改存档 / 跨局解锁 | [`design/systems/persistence.md`](design/systems/persistence.md) | |
+| 改船体分区、区域大小 | [`design/systems/ship.md`](design/systems/ship.md) | |
 | 改防御设施、房间、守军 | [`design/systems/fortify.md`](design/systems/fortify.md) | |
 | 改任务计数、解锁 | [`design/systems/quests.md`](design/systems/quests.md) | |
 | 改理智、崩溃、白伤 | [`design/systems/sanity.md`](design/systems/sanity.md) | |

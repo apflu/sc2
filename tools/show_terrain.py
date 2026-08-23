@@ -38,6 +38,9 @@ VOID = " "
 BLOCKED = "#"
 LEVEL = {1: ".", 2: "+", 3: "^"}
 
+# Region shading. Digits, so a unit letter drawn on top is unmistakable.
+LABELS = "123456789abcdefghijklmnopqrstuvwxyz"
+
 # One letter per placed thing. Ordered so that the specific prefixes win over
 # the general ones -- Lob_CoreDown before Lob_Core, and so on.
 MARKS = [
@@ -152,11 +155,14 @@ def main() -> int:
     flags = read_grid("t3CellFlags", b"LFCT", 1, w, h)
 
     grid = []
+    grid_walkable = []
     for y in range(h):
         row = []
+        walk = []
         for x in range(w):
             i = y * w + x
             lv = level[i] // 64
+            walk.append(lv > 0 and not (flags[i] & 1))
             if lv == 0:
                 row.append(VOID)
             elif flags[i] & 1:
@@ -164,16 +170,22 @@ def main() -> int:
             else:
                 row.append(LEVEL.get(lv, "?"))
         grid.append(row)
+        grid_walkable.append(walk)
 
     regions = read_regions()
     marks: dict[tuple[int, int], str] = {}
     if not args.plain:
-        # Regions first, so a unit standing in one still shows as the unit.
-        for n, (name, x0, y0, x1, y1) in enumerate(regions):
+        # Biggest first, so a small region painted inside a zone survives, and
+        # so a unit standing in either still shows as the unit.
+        order = sorted(range(len(regions)),
+                       key=lambda n: -((regions[n][3] - regions[n][1])
+                                       * (regions[n][4] - regions[n][2])))
+        for n in order:
+            name, x0, y0, x1, y1 = regions[n]
             for y in range(max(0, int(y0)), min(h, int(y1) + 1)):
                 for x in range(max(0, int(x0)), min(w, int(x1) + 1)):
-                    if grid[y][x] in (".", "+"):
-                        grid[y][x] = str(n + 1)
+                    if grid[y][x] in (".", "+") or grid[y][x].isalnum():
+                        grid[y][x] = LABELS[n % len(LABELS)]
         for x, y, unit_type in read_objects():
             cx, cy = int(x), int(y)
             if 0 <= cx < w and 0 <= cy < h:
@@ -210,8 +222,20 @@ def main() -> int:
     print()
     print(f"  {VOID}=off-ship  {BLOCKED}=wall or cliff  .=deck  +=raised deck")
     if not args.plain:
+        # How much DECK each region holds, as a share of the playable deck.
+        # Regions may overlap, so these do not have to sum to 100 -- what they
+        # are for is the one question a zone map is drawn to answer, which is
+        # whether the zones are the sizes somebody meant them to be.
+        pl, pb, pr, pt = read_bounds()
+        deck = sum(1 for y in range(pb, pt) for x in range(pl, pr)
+                   if grid_walkable[y][x])
         for n, (name, x0, y0, x1, y1) in enumerate(regions):
-            print(f"  {n + 1}={name}  ({x0:.0f},{y0:.0f})-({x1:.0f},{y1:.0f})")
+            held = sum(1 for y in range(max(pb, int(y0)), min(pt, int(y1) + 1))
+                       for x in range(max(pl, int(x0)), min(pr, int(x1) + 1))
+                       if grid_walkable[y][x])
+            print(f"  {LABELS[n % len(LABELS)]}={name}"
+                  f"  ({x0:.0f},{y0:.0f})-({x1:.0f},{y1:.0f})"
+                  f"  {held} deck cells, {100.0 * held / deck:.1f}%")
         seen = {}
         for x, y, unit_type in read_objects():
             seen.setdefault(mark_for(unit_type), set()).add(unit_type)
