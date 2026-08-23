@@ -301,6 +301,32 @@ def read_categories() -> dict[str, list[str]]:
     return {k: sorted(v) for k, v in sorted(categories.items())}
 
 
+def check_unique(kind: str, items: list[tuple[str, int]]) -> None:
+    """Refuse two editor objects that answer to the same name.
+
+    Everything the script asks the editor for, it asks for BY NAME --
+    ObjectsGen_Region, Fort_LocByName, the fort/debris groups. A duplicate name
+    is therefore not a cosmetic mess, it is one lookup with two answers and no
+    way to say which: Fort_BuildRegistry would register the same corridor as two
+    locations, so a fortification bought on one leaves the other at level zero,
+    ordeals draw that hallway twice as often, and every count over locations is
+    wrong by one. Nothing in game would say a word.
+
+    This is not hypothetical. Resizing the map duplicated resthall1 and
+    corridor_a in the Regions file -- same name, same id, same rectangle, twice
+    -- and the build printed both without complaint.
+    """
+    seen: dict[str, int] = {}
+    for name, ident in items:
+        if name in seen:
+            raise SystemExit(
+                f"{kind} '{name}' appears twice (ids {seen[name]} and {ident}). "
+                f"Everything here is looked up by name, so two of them is one "
+                f"question with two answers. Delete one in the editor."
+            )
+        seen[name] = ident
+
+
 def read_groups() -> list[tuple[str, list[int]]]:
     """Editor object groups, as (name, [placed object ids])."""
     if not OBJECTS.is_file():
@@ -322,6 +348,7 @@ def read_groups() -> list[tuple[str, list[int]]]:
                 )
         groups.append((name, ids))
 
+    check_unique("group", [(n, i) for i, (n, _) in enumerate(groups)])
     return sorted(groups)
 
 
@@ -400,6 +427,7 @@ def read_regions() -> list[tuple[str, int]]:
         if name:
             regions.append((name, int(rid)))
 
+    check_unique("region", regions)
     return sorted(regions)
 
 
