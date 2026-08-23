@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PlacedObjects Version="27">
-    <ObjectUnit Id="851874472" Position="44,94,0" Rotation="4.7121" Scale="1,1,1" UnitType="ContainGateHorizontal" Player="1"/>
     <ObjectUnit Id="1792828457" Position="42,97,0" Rotation="3.4772" Scale="1,1,1" UnitType="ContainGateControl" Player="1">
         <Flag Index="ForcePlacement" Value="1"/>
     </ObjectUnit>
@@ -24,13 +23,4 @@
     <Group Type="ObjectUnit" Name="fort1" Id="2">
         <GroupObject Id="889780748"/>
     </Group>
-    <Group Type="ObjectDoodad" Name="Malkuth " Id="3"/>
-    <Group Type="ObjectDoodad" Name="Yesod " Id="5"/>
-    <Group Type="ObjectDoodad" Name="Netzach " Id="4"/>
-    <Group Type="ObjectDoodad" Name="Tiphereth " Id="6"/>
-    <Group Type="ObjectDoodad" Name="Hod " Id="7"/>
-    <Group Type="ObjectDoodad" Name="Geburah " Id="8"/>
-    <Group Type="ObjectDoodad" Name="Chesed " Id="9"/>
-    <Group Type="ObjectDoodad" Name="Hokma" Id="10"/>
-    <Group Type="ObjectDoodad" Name="Binah " Id="11"/>
 </PlacedObjects>
