@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Regions>
     <region id="1">
+        <name value="Region 001"/>
+        <shape type="rect">
+            <quad value="82.9387,132.9697,88.667,136.613"/>
+        </shape>
+    </region>
+    <region id="1">
         <name value="resthall1"/>
         <shape type="rect">
             <quad value="37.903,96.6037,54.14,111.78"/>
@@ -46,6 +52,12 @@
         <name value="zone_bow"/>
         <shape type="rect">
             <quad value="10,158,182,228"/>
+        </shape>
+    </region>
+    <region id="9">
+        <name value="Region 002"/>
+        <shape type="rect">
+            <quad value="66.319,111.0942,75.6838,116.5825"/>
         </shape>
     </region>
 </Regions>
