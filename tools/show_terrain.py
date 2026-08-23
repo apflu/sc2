@@ -94,20 +94,29 @@ def read_grid(name: str, magic: bytes, stride: int, w: int, h: int) -> list[int]
 
 
 def read_bounds() -> tuple[int, int, int, int]:
-    """The playable rectangle, out of MapInfo.
+    """The PLAYABLE rectangle, out of MapInfo. Not the camera bounds.
 
-    Read positionally rather than by parsing the whole record: the four ints
-    sit together after the tileset name, and they are the only four in that
-    stretch that describe a rectangle inside the map. Falls back to the whole
-    map, which is never wrong, only wider.
+    Stored as four fixed-point values with eight fractional bits, in the run
+    right after the tileset name. Falls back to the whole map, which is never
+    wrong, only wider.
+
+    THE CAMERA BOUNDS ARE A DIFFERENT AND SMALLER RECTANGLE and they are not in
+    this file, nor anywhere else under the map that a scan for their value
+    finds -- as an int, as fixed point, or as a float. So this cannot report
+    what a player can actually see, and saying "playable" everywhere rather
+    than "bounds" is the whole of the fix: a picture drawn to the playable area
+    has a rim around it the camera never reaches, and the ship reads longer
+    than it plays. Pass --bounds to draw and measure the real thing.
     """
     raw = (MAP / "MapInfo").read_bytes()
     w = struct.unpack_from("<I", raw, 16)[0]
     h = struct.unpack_from("<I", raw, 20)[0]
     for off in range(24, len(raw) - 16):
-        l, b, r, t = struct.unpack_from("<4i", raw, off)
-        if 0 <= l < r <= w and 0 <= b < t <= h and (r - l) > 16 and (t - b) > 16:
-            return l, b, r, t
+        q = struct.unpack_from("<4i", raw, off)
+        if all(v % 256 == 0 for v in q):
+            l, b, r, t = (v // 256 for v in q)
+            if 0 <= l < r <= w and 0 <= b < t <= h and (r - l) > 16 and (t - b) > 16:
+                return l, b, r, t
     return 0, 0, w, h
 
 
@@ -148,6 +157,10 @@ def main() -> int:
                     help="centre on this world point")
     ap.add_argument("--span", type=int, default=0,
                     help="how many cells across, with --at")
+    ap.add_argument("--bounds", nargs=4, type=int, metavar=("L", "B", "R", "T"),
+                    help="draw and measure this rectangle instead of the "
+                         "playable area -- use it to pass the CAMERA bounds, "
+                         "which are set in the editor and are not in MapInfo")
     args = ap.parse_args()
 
     w, h = read_dims()
@@ -196,12 +209,15 @@ def main() -> int:
         cx, cy = int(args.at[0]), int(args.at[1])
         left, right = max(0, cx - span // 2), min(w, cx + span // 2)
         bottom, top = max(0, cy - span // 4), min(h, cy + span // 4)
+    elif args.bounds:
+        left, bottom, right, top = args.bounds
     else:
         left, bottom, right, top = read_bounds()
 
     # Two cells per printed row, one per column: a terminal cell is about twice
     # as tall as it is wide, so this comes out roughly square.
-    print(f"{w}x{h} cells, showing x {left}..{right}  y {bottom}..{top}"
+    what = "given" if args.bounds else ("window" if args.at else "playable area")
+    print(f"{w}x{h} cells, showing x {left}..{right}  y {bottom}..{top} ({what})"
           + ("" if args.plain else "  (1 col = 1 cell, 1 row = 2 cells)"))
     # Every OTHER row is printed, so an object on a skipped row would simply
     # not exist. Two-cell-tall rows are the only way the plan comes out square
@@ -226,7 +242,7 @@ def main() -> int:
         # Regions may overlap, so these do not have to sum to 100 -- what they
         # are for is the one question a zone map is drawn to answer, which is
         # whether the zones are the sizes somebody meant them to be.
-        pl, pb, pr, pt = read_bounds()
+        pl, pb, pr, pt = tuple(args.bounds) if args.bounds else read_bounds()
         deck = sum(1 for y in range(pb, pt) for x in range(pl, pr)
                    if grid_walkable[y][x])
         for n, (name, x0, y0, x1, y1) in enumerate(regions):
