@@ -4,56 +4,70 @@
         <name value="resthall1"/>
         <invisible/>
         <shape type="rect">
-            <quad value="37.903,72.6037,54.14,87.78"/>
+            <quad value="37.903,96.6037,54.14,111.78"/>
         </shape>
     </region>
     <region id="2">
         <name value="corridor_a"/>
         <invisible/>
         <shape type="rect">
-            <quad value="35.9243,92.1076,56.4013,98.1354"/>
+            <quad value="35.9243,116.1076,56.4013,122.1354"/>
+        </shape>
+    </region>
+    <region id="1">
+        <name value="resthall1"/>
+        <invisible/>
+        <shape type="rect">
+            <quad value="37.903,96.6037,54.14,111.78"/>
+        </shape>
+    </region>
+    <region id="2">
+        <name value="corridor_a"/>
+        <invisible/>
+        <shape type="rect">
+            <quad value="35.9243,116.1076,56.4013,122.1354"/>
         </shape>
     </region>
     <region id="3">
         <name value="zone_bow"/>
         <invisible/>
         <shape type="rect">
-            <quad value="10,133,182,172"/>
+            <quad value="10,157,182,196"/>
         </shape>
     </region>
     <region id="4">
         <name value="zone_amidships"/>
         <invisible/>
         <shape type="rect">
-            <quad value="66,74,125,132"/>
+            <quad value="66,98,125,156"/>
         </shape>
     </region>
     <region id="5">
         <name value="zone_engine_port"/>
         <invisible/>
         <shape type="rect">
-            <quad value="10,74,65,132"/>
+            <quad value="10,98,65,156"/>
         </shape>
     </region>
     <region id="6">
         <name value="zone_engine_starboard"/>
         <invisible/>
         <shape type="rect">
-            <quad value="126,74,182,132"/>
+            <quad value="126,98,182,156"/>
         </shape>
     </region>
     <region id="7">
         <name value="zone_aft_port"/>
         <invisible/>
         <shape type="rect">
-            <quad value="10,8,95,73"/>
+            <quad value="10,32,95,97"/>
         </shape>
     </region>
     <region id="8">
         <name value="zone_aft_starboard"/>
         <invisible/>
         <shape type="rect">
-            <quad value="96,8,182,73"/>
+            <quad value="96,32,182,97"/>
         </shape>
     </region>
 </Regions>
