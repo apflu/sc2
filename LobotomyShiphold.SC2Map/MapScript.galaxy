@@ -3233,9 +3233,9 @@ int[2] gvg_deptUpgradeLevel;
 bool[2] gvg_deptUpgradeIsAlly;
 
 // Editor regions, by the name typed in the editor.
-const int c_regionCount = 10;
-string[10] gvg_regionNames;
-int[10] gvg_regionIds;
+const int c_regionCount = 17;
+string[17] gvg_regionNames;
+int[17] gvg_regionIds;
 
 //--------------------------------------------------------------------------------------------------
 // The ability command that builds this unit type, and its index.
@@ -3361,20 +3361,34 @@ void ObjectsGen_Init () {
     gvg_regionIds[1] = 9;
     gvg_regionNames[2] = "corridor_a";
     gvg_regionIds[2] = 3;
-    gvg_regionNames[3] = "resthall1";
-    gvg_regionIds[3] = 2;
-    gvg_regionNames[4] = "zone_aft_port";
-    gvg_regionIds[4] = 4;
-    gvg_regionNames[5] = "zone_aft_starboard";
-    gvg_regionIds[5] = 5;
-    gvg_regionNames[6] = "zone_amidships";
-    gvg_regionIds[6] = 7;
-    gvg_regionNames[7] = "zone_bow";
-    gvg_regionIds[7] = 10;
-    gvg_regionNames[8] = "zone_engine_port";
-    gvg_regionIds[8] = 6;
-    gvg_regionNames[9] = "zone_engine_starboard";
-    gvg_regionIds[9] = 8;
+    gvg_regionNames[3] = "note_1_entrance";
+    gvg_regionIds[3] = 11;
+    gvg_regionNames[4] = "note_2_mouth";
+    gvg_regionIds[4] = 12;
+    gvg_regionNames[5] = "note_3_bypass";
+    gvg_regionIds[5] = 13;
+    gvg_regionNames[6] = "note_4_midroom";
+    gvg_regionIds[6] = 14;
+    gvg_regionNames[7] = "note_5_uproute";
+    gvg_regionIds[7] = 15;
+    gvg_regionNames[8] = "note_6_longhall";
+    gvg_regionIds[8] = 16;
+    gvg_regionNames[9] = "note_7_lowerroom";
+    gvg_regionIds[9] = 17;
+    gvg_regionNames[10] = "resthall1";
+    gvg_regionIds[10] = 2;
+    gvg_regionNames[11] = "zone_aft_port";
+    gvg_regionIds[11] = 4;
+    gvg_regionNames[12] = "zone_aft_starboard";
+    gvg_regionIds[12] = 5;
+    gvg_regionNames[13] = "zone_amidships";
+    gvg_regionIds[13] = 7;
+    gvg_regionNames[14] = "zone_bow";
+    gvg_regionIds[14] = 10;
+    gvg_regionNames[15] = "zone_engine_port";
+    gvg_regionIds[15] = 6;
+    gvg_regionNames[16] = "zone_engine_starboard";
+    gvg_regionIds[16] = 8;
 }
 
 //--------------------------------------------------------------------------------------------------

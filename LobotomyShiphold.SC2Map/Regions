@@ -60,4 +60,46 @@
             <quad value="66.319,111.0942,75.6838,116.5825"/>
         </shape>
     </region>
+    <region id="11">
+        <name value="note_1_entrance"/>
+        <shape type="rect">
+            <quad value="18.0000,144.0000,25.0000,151.0000"/>
+        </shape>
+    </region>
+    <region id="12">
+        <name value="note_2_mouth"/>
+        <shape type="rect">
+            <quad value="22.0000,141.0000,25.0000,143.0000"/>
+        </shape>
+    </region>
+    <region id="13">
+        <name value="note_3_bypass"/>
+        <shape type="rect">
+            <quad value="32.0000,152.0000,51.0000,159.0000"/>
+        </shape>
+    </region>
+    <region id="14">
+        <name value="note_4_midroom"/>
+        <shape type="rect">
+            <quad value="44.0000,138.0000,61.0000,151.0000"/>
+        </shape>
+    </region>
+    <region id="15">
+        <name value="note_5_uproute"/>
+        <shape type="rect">
+            <quad value="44.0000,152.0000,49.0000,169.0000"/>
+        </shape>
+    </region>
+    <region id="16">
+        <name value="note_6_longhall"/>
+        <shape type="rect">
+            <quad value="22.0000,98.0000,25.0000,143.0000"/>
+        </shape>
+    </region>
+    <region id="17">
+        <name value="note_7_lowerroom"/>
+        <shape type="rect">
+            <quad value="32.0000,96.0000,59.0000,111.0000"/>
+        </shape>
+    </region>
 </Regions>
