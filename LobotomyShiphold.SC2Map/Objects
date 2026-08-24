@@ -1,19 +1,46 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PlacedObjects Version="27">
-    <ObjectUnit Id="1792828457" Position="42,97,0" Rotation="3.4772" Scale="1,1,1" UnitType="ContainGateControl" Player="1">
+    <ObjectUnit Id="697488975" Position="145,162,0" Rotation="3.1413" Scale="1,1,1" UnitType="CompoundMansion_DoorNLowered" Player="1"/>
+    <ObjectUnit Id="1342273323" Position="64,121,0" Rotation="4.7121" Scale="1,1,1" UnitType="CompoundMansion_DoorELowered" Player="1"/>
+    <ObjectUnit Id="264441703" Position="133,102,0" Rotation="1.5705" Scale="1,1,1" UnitType="ContainGateHorizontal" Player="1">
         <Flag Index="ForcePlacement" Value="1"/>
     </ObjectUnit>
-    <ObjectUnit Id="1441002002" Position="30.848,119.505,0" Scale="1,1,1" UnitType="Lob_Marker_Spawn"/>
     <ObjectUnit Id="1441002003" Position="41.9272,104.464,0" Rotation="1.5703" Scale="1,1,1" UnitType="Lob_Hero_Agent" Player="1"/>
-    <ObjectUnit Id="1650842594" Position="44.7324,97.337,0" Rotation="1.5532" Scale="1,1,1" UnitType="Lob_SCV_Worker" Player="1"/>
     <ObjectUnit Id="889780748" Position="44,119,0" Rotation="5.7106" Scale="1,1,1" UnitType="Lob_Turret_Fire" Player="1"/>
     <ObjectUnit Id="1441002001" Position="45.5,108.5,0" Rotation="5.4975" Scale="1,1,1" UnitType="Lob_Device_Basic" Player="1"/>
-    <ObjectUnit Id="1150254942" Position="44,89.7797,0" Rotation="2.0588" Scale="1,1,1" UnitType="O_03_03" Player="8"/>
     <ObjectUnit Id="1441002007" Position="41.5,108.5,0" Scale="1,1,1" UnitType="Lob_Core_Basic" Player="1"/>
     <ObjectUnit Id="1209983674" Position="48.3132,106.227,0" Rotation="0.8247" Scale="1,1,1" UnitType="Lob_SCV_Miner" Player="1"/>
-    <ObjectUnit Id="1441002006" Position="51,104.5,0" Scale="1,1,1" UnitType="Lob_Pile_Ore"/>
+    <ObjectUnit Id="1342321538" Position="59,154,0" Rotation="4.7121" Scale="1,1,1" UnitType="ContainGateHorizontal" Player="1">
+        <Flag Index="ForcePlacement" Value="1"/>
+    </ObjectUnit>
+    <ObjectUnit Id="824408532" Position="47,162,0" Rotation="3.1413" Scale="1,1,1" UnitType="CompoundMansion_DoorNLowered" Player="1"/>
+    <ObjectUnit Id="1358307967" Position="33,122,0" Rotation="1.5705" Scale="1,1,1" UnitType="ContainGateHorizontal" Player="1">
+        <Flag Index="ForcePlacement" Value="1"/>
+    </ObjectUnit>
     <ObjectUnit Id="1441002005" Position="45.5,104.5,0" Rotation="5.4975" Scale="1,1,1" UnitType="Lob_Recycler_Basic" Player="1"/>
     <ObjectUnit Id="1070187309" Position="49,98,0" Rotation="3.0197" Scale="1,1,1" UnitType="Lob_Debris_Normal"/>
+    <ObjectUnit Id="2113285213" Position="128,121,0" Rotation="1.5705" Scale="1,1,1" UnitType="CompoundMansion_DoorELowered" Player="1"/>
+    <ObjectUnit Id="2006698407" Position="66,145,0" Rotation="4.7121" Scale="1,1,1" UnitType="CompoundMansion_DoorELowered" Player="1"/>
+    <ObjectUnit Id="1441002002" Position="19.6743,149.555,0" Scale="1,1,1" UnitType="Lob_Marker_Spawn"/>
+    <ObjectUnit Id="970651357" Position="126,145,0" Rotation="1.5705" Scale="1,1,1" UnitType="CompoundMansion_DoorELowered" Player="1"/>
+    <ObjectUnit Id="1650842594" Position="44.7324,97.337,0" Rotation="1.5532" Scale="1,1,1" UnitType="Lob_SCV_Worker" Player="1"/>
+    <ObjectUnit Id="74305710" Position="159,122,0" Rotation="4.7121" Scale="1,1,1" UnitType="ContainGateHorizontal" Player="1">
+        <Flag Index="ForcePlacement" Value="1"/>
+    </ObjectUnit>
+    <ObjectUnit Id="1150254942" Position="59.0781,99.078,0" Rotation="2.0588" Scale="1,1,1" UnitType="O_03_03" Player="8"/>
+    <ObjectUnit Id="2117450787" Position="59,102,0" Rotation="4.7121" Scale="1,1,1" UnitType="ContainGateHorizontal" Player="1">
+        <Flag Index="ForcePlacement" Value="1"/>
+    </ObjectUnit>
+    <ObjectUnit Id="1441002006" Position="51,104.5,0" Scale="1,1,1" UnitType="Lob_Pile_Ore"/>
+    <ObjectUnit Id="1448151551" Position="133,154,0" Rotation="1.5705" Scale="1,1,1" UnitType="ContainGateHorizontal" Player="1">
+        <Flag Index="ForcePlacement" Value="1"/>
+    </ObjectUnit>
+    <ObjectUnit Id="524816405" Position="25,104,0" Rotation="1.5705" Scale="1,1,1" UnitType="ContainGateHorizontal" Player="1">
+        <Flag Index="ForcePlacement" Value="1"/>
+    </ObjectUnit>
+    <ObjectUnit Id="877130999" Position="167,104,0" Rotation="4.7121" Scale="1,1,1" UnitType="ContainGateHorizontal" Player="1">
+        <Flag Index="ForcePlacement" Value="1"/>
+    </ObjectUnit>
     <ObjectUnit Id="982629277" Position="41,99,0" Rotation="1.5703" Scale="1,1,1" UnitType="Lob_Debris_Normal"/>
     <ObjectUnit Id="1441002004" Position="47.351,102.0441,0" Rotation="0.8247" Scale="1,1,1" UnitType="Lob_SCV_Miner" Player="1"/>
     <Group Type="ObjectUnit" Name="debris " Id="1">

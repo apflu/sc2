@@ -2,8 +2,12 @@
 <Preload>
 <Actor id="SYSTEM_ActorConfig"/>
 <Terrain id="KorhalPlatformEx2"/>
+<TerrainObject id="TerrainObjectBraxisAlphaBridgeArrow1_1"/>
+<TerrainObject id="TerrainObjectBraxisAlphaBridgeArrow2_1"/>
+<Unit id="CompoundMansion_DoorNLowered"/>
+<Unit id="CompoundMansion_DoorELowered"/>
 <Unit id="Lob_Turret_Fire"/>
-<Unit id="ContainGateControl"/>
+<Unit id="ContainGateHorizontal"/>
 <Unit id="Lob_Marker_Spawn"/>
 <Unit id="Lob_Device_Basic"/>
 <Unit id="Lob_Pile_Ore" Variations="0"/>
